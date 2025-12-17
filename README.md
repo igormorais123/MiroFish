@@ -206,4 +206,4 @@ A: 使用 `.venv\Scripts\activate` 而不是 `source .venv/bin/activate`。
 
 ## 📄 License
 
-MIT License
+Apache License 2.0
