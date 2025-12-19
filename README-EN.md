@@ -19,7 +19,7 @@
 
 ### Our Vision
 
-MiroFish is dedicated to creating a swarm intelligence mirror that maps reality. By capturing the "collective emergence" triggered by individual interactions, we break through the limitations of traditional prediction:
+MiroFish is dedicated to creating a swarm intelligence mirror that maps reality. By capturing the collective emergence triggered by individual interactions, we break through the limitations of traditional prediction:
 
 - **At the Macro Level**: We are a rehearsal laboratory for decision-makers, allowing policies and public relations to be tested at zero risk
 - **At the Micro Level**: We are a creative sandbox for individual users — whether deducing novel endings or exploring imaginative scenarios, everything can be fun, playful, and accessible
@@ -31,6 +31,14 @@ From serious predictions to playful simulations, we let every "what if" see its 
 1. Complete demo video for prediction based on BettaFish-generated public opinion report
 2. Complete demo video for "Dream of the Red Chamber" ending prediction
 3. Complete demo video for financial prediction
+
+## 🔄 Workflow
+
+1. **Graph Building**: Seed extraction & Individual/collective memory injection & GraphRAG construction
+2. **Environment Setup**: Entity relationship extraction & Persona generation & Agent configuration injection
+3. **Simulation**: Dual-platform parallel simulation & Auto-parse prediction requirements & Dynamic temporal memory updates
+4. **Report Generation**: ReportAgent with rich toolset for deep interaction with post-simulation environment
+5. **Deep Interaction**: Chat with any agent in the simulated world & Interact with ReportAgent
 
 ## 🚀 Quick Start
 
