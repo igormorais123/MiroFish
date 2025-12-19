@@ -2,7 +2,8 @@
 
 <img src="./static/image/MiroFish_logo_compressed.jpeg" alt="MiroFish Logo" width="75%"/>
 
-<strong>简洁通用的群体智能引擎，预测万物</strong>
+简洁通用的群体智能引擎，预测万物
+</br>
 <em>A Simple and Universal Swarm Intelligence Engine, Predicting Anything</em>
 
 [English](./README-EN.md) | [中文文档](./README.md)
