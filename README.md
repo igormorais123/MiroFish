@@ -1,19 +1,20 @@
-<p align="center">
-  <img src="./static/image/MiroFish_logo_compressed.jpeg" alt="MiroFish Logo" width="75%"/>
-</p>
+<div align="center">
 
-<p align="center">
-  <strong>简洁通用的群体智能引擎，预测万物</strong>
-  <br />
-  <em>A Simple and Universal Swarm Intelligence Engine, Predicting Anything</em>
-</p>
+<img src="./static/image/MiroFish_logo_compressed.jpeg" alt="MiroFish Logo" width="75%"/>
+
+<strong>简洁通用的群体智能引擎，预测万物</strong>
+<em>A Simple and Universal Swarm Intelligence Engine, Predicting Anything</em>
+
+[English](./README-EN.md) | [中文文档](./README.md)
+
+</div>
 
 ## ⚡ 项目概述
 
 **MiroFish** 是一款基于多智能体技术的新一代 AI 预测引擎。通过提取现实世界的种子信息（如突发新闻、政策草案、金融信号），自动构建出高保真的平行数字世界。在此空间内，成千上万个具备独立人格、长期记忆与行为逻辑的智能体进行自由交互与社会演化。你可透过「上帝视角」动态注入变量，精准推演未来走向——**让未来在数字沙盘中预演，助决策在百战模拟后胜出**。
 
-> 你只需：上传一份或多份「种子材料」（舆情分析报告、量化分析报告，甚至有趣的小说故事），并用自然语言描述你的模拟/预测需求
-> MiroFish 将返回：一份详尽的模拟/预测报告，以及一个可深度交互、可按你意愿持续推演的高保真数字世界
+> 你只需：上传种子材料（数据分析报告或者有趣的小说故事），并用自然语言描述预测需求
+> MiroFish 将返回：一份详尽的预测报告，以及一个可深度交互的高保真数字世界
 
 #### 我们的愿景
 
@@ -22,7 +23,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 - **于宏观**：我们是决策者的预演实验室，让政策与公关在零风险中试错
 - **于微观**：我们是个人用户的创意沙盘，无论是推演小说结局还是探索脑洞，皆可有趣、好玩、触手可及
 
-从严肃预测到趣味仿真，我们让每一个「如果」都能看见结果，让**预测万物**成为可能。
+从严肃预测到趣味仿真，我们让每一个如果都能看见结果，让预测万物成为可能。
 
 ## 🎬 演示视频-待上传
 
@@ -53,7 +54,7 @@ cp .env.example .env
 
 ```env
 # LLM API配置（支持 OpenAI SDK 格式的任意 LLM）
-# 推荐使用阿里百炼平台Qwen-plus模型：https://bailian.console.aliyun.com/
+# 推荐使用阿里百炼平台qwen-plus模型：https://bailian.console.aliyun.com/
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_MODEL_NAME=qwen-plus
