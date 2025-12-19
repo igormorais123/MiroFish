@@ -17,7 +17,7 @@
 > You only need to: Upload seed materials (data analysis reports or interesting novel stories) and describe your prediction requirements in natural language</br>
 > MiroFish will return: A detailed prediction report and a deeply interactive high-fidelity digital world
 
-#### Our Vision
+### Our Vision
 
 MiroFish is dedicated to creating a swarm intelligence mirror that maps reality. By capturing the "collective emergence" triggered by individual interactions, we break through the limitations of traditional prediction:
 
@@ -100,6 +100,6 @@ npm run backend   # Start backend only
 npm run frontend  # Start frontend only
 ```
 
-## 📄 License
+## 📄 Acknowledgments
 
-This project is licensed under the [Apache-2.0 License](./LICENSE).
+MiroFish's core simulation engine is powered by **[OASIS (Open Agent Social Interaction Simulations)](https://github.com/camel-ai/oasis)**. OASIS is a high-performance social media simulation framework developed by the [CAMEL-AI](https://github.com/camel-ai) team, supporting million-scale agent interaction simulations, providing a solid technical foundation for MiroFish's swarm intelligence emergence. We sincerely thank the CAMEL-AI team for their open-source contributions!

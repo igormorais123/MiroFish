@@ -17,7 +17,7 @@
 > 你只需：上传种子材料（数据分析报告或者有趣的小说故事），并用自然语言描述预测需求</br>
 > MiroFish 将返回：一份详尽的预测报告，以及一个可深度交互的高保真数字世界
 
-#### 我们的愿景
+### 我们的愿景
 
 MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体互动引发的「群体涌现」，突破传统预测的局限：
 
@@ -99,3 +99,7 @@ npm run dev
 npm run backend   # 仅启动后端
 npm run frontend  # 仅启动前端
 ```
+
+## 📄 致谢
+
+MiroFish 的核心仿真引擎由 **[OASIS](https://github.com/camel-ai/oasis)** 驱动。OASIS 是由 [CAMEL-AI](https://github.com/camel-ai) 团队开发的高性能社交媒体模拟框架，支持百万级智能体交互仿真，为 MiroFish 的群体智能涌现提供了坚实的技术基础。我们衷心感谢 CAMEL-AI 团队的开源贡献！
