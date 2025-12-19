@@ -40,7 +40,7 @@ From serious predictions to playful simulations, we let every "what if" see its 
 |------|---------|-------------|-------------------|
 | **Node.js** | 18+ | Frontend runtime, includes npm | `node -v` |
 | **Python** | 3.11+ | Backend runtime | `python --version` |
-| **uv** | Latest | Python package manager (pip alternative) | `uv --version` |
+| **uv** | Latest | Python package manager | `uv --version` |
 
 ### 1. Configure Environment Variables
 

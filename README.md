@@ -40,7 +40,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 |------|---------|------|---------|
 | **Node.js** | 18+ | 前端运行环境，包含 npm | `node -v` |
 | **Python** | 3.11+ | 后端运行环境 | `python --version` |
-| **uv** | 最新版 | Python 包管理器（替代 pip） | `uv --version` |
+| **uv** | 最新版 | Python 包管理器 | `uv --version` |
 
 ### 1. 配置环境变量
 
