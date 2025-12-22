@@ -64,12 +64,13 @@ cp .env.example .env
 ```env
 # LLM API配置（支持 OpenAI SDK 格式的任意 LLM）
 # 推荐使用阿里百炼平台qwen-plus模型：https://bailian.console.aliyun.com/
+# 注意消耗较大，可先进行小于40轮的模拟尝试
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_MODEL_NAME=qwen-plus
 
 # Zep Cloud 配置
-# 每月免费额度即可支撑使用：https://app.getzep.com/
+# 每月免费额度即可支撑简单使用：https://app.getzep.com/
 ZEP_API_KEY=your_zep_api_key
 ```
 
