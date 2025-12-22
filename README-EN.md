@@ -29,7 +29,7 @@ From serious predictions to playful simulations, we let every "what if" see its 
 ## 🎬 Demo Videos
 
 <div align="center">
-<a href="https://www.bilibili.com/"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
+<a href="https://www.bilibili.com/video/BV1VYBsBHEMY/"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
 
 Complete demo video for prediction using BettaFish-generated "Wuhan University Public Opinion Report"
 </div>
