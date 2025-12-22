@@ -26,11 +26,15 @@ MiroFish is dedicated to creating a swarm intelligence mirror that maps reality.
 
 From serious predictions to playful simulations, we let every "what if" see its outcome, making it possible to predict anything.
 
-## 🎬 Demo Videos - Coming Soon
+## 🎬 Demo Videos
 
-1. Complete demo video for prediction based on BettaFish-generated public opinion report
-2. Complete demo video for "Dream of the Red Chamber" ending prediction
-3. Complete demo video for financial prediction
+<div align="center">
+<a href="https://www.bilibili.com/"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
+
+Complete demo video for prediction using BettaFish-generated "Wuhan University Public Opinion Report"
+</div>
+
+> More demo videos coming soon: "Dream of the Red Chamber" ending simulation, financial prediction examples...
 
 ## 🔄 Workflow
 
