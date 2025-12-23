@@ -40,7 +40,7 @@ From serious predictions to playful simulations, we let every "what if" see its 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
 
-Complete demo video for prediction using BettaFish-generated "Wuhan University Public Opinion Report"
+Click the image to watch the complete demo video for prediction using BettaFish-generated "Wuhan University Public Opinion Report"
 </div>
 
 > More demo videos coming soon: "Dream of the Red Chamber" ending simulation, financial prediction examples...
