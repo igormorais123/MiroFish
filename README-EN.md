@@ -57,6 +57,8 @@ Complete demo video for prediction using BettaFish-generated "Wuhan University P
 
 ### Prerequisites
 
+> Note: MiroFish was developed and tested on Mac. Windows compatibility is unknown and currently under testing.
+
 | Tool | Version | Description | Check Installation |
 |------|---------|-------------|-------------------|
 | **Node.js** | 18+ | Frontend runtime, includes npm | `node -v` |
