@@ -128,7 +128,7 @@ npm run frontend  # Start frontend only
 
 ## 📄 Acknowledgments
 
-MiroFish has received strategic support and incubation from Shanda Group!
+**MiroFish has received strategic support and incubation from Shanda Group!**
 
 MiroFish's core simulation engine is powered by **[OASIS (Open Agent Social Interaction Simulations)](https://github.com/camel-ai/oasis)**. OASIS is a high-performance social media simulation framework developed by the [CAMEL-AI](https://github.com/camel-ai) team, supporting million-scale agent interaction simulations, providing a solid technical foundation for MiroFish's swarm intelligence emergence. We sincerely thank the CAMEL-AI team for their open-source contributions!
 
