@@ -4,9 +4,23 @@
 """
 
 import os
+import sys
 import logging
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+
+
+def _ensure_utf8_stdout():
+    """
+    确保 stdout/stderr 使用 UTF-8 编码
+    解决 Windows 控制台中文乱码问题
+    """
+    if sys.platform == 'win32':
+        # Windows 下重新配置标准输出为 UTF-8
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 
 # 日志目录
@@ -61,7 +75,9 @@ def setup_logger(name: str = 'mirofish', level: int = logging.DEBUG) -> logging.
     file_handler.setFormatter(detailed_formatter)
     
     # 2. 控制台处理器 - 简洁日志（INFO及以上）
-    console_handler = logging.StreamHandler()
+    # 确保 Windows 下使用 UTF-8 编码，避免中文乱码
+    _ensure_utf8_stdout()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(simple_formatter)
     

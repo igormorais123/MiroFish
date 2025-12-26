@@ -5,6 +5,16 @@ MiroFish Backend 启动入口
 import os
 import sys
 
+# 解决 Windows 控制台中文乱码问题：在所有导入之前设置 UTF-8 编码
+if sys.platform == 'win32':
+    # 设置环境变量确保 Python 使用 UTF-8
+    os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
+    # 重新配置标准输出流为 UTF-8
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
