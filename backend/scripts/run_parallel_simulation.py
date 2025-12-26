@@ -25,16 +25,53 @@ OASIS 双平台并行模拟预设脚本
     └── run_state.json       # 运行状态（API 查询用）
 """
 
+# ============================================================
+# 解决 Windows 编码问题：在所有 import 之前设置 UTF-8 编码
+# 这是为了修复 OASIS 第三方库读取文件时未指定编码的问题
+# ============================================================
+import sys
+import os
+
+if sys.platform == 'win32':
+    # 设置 Python 默认 I/O 编码为 UTF-8
+    # 这会影响所有未指定编码的 open() 调用
+    os.environ.setdefault('PYTHONUTF8', '1')
+    os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
+    
+    # 重新配置标准输出流为 UTF-8（解决控制台中文乱码）
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    
+    # 强制设置默认编码（影响 open() 函数的默认编码）
+    # 注意：这需要在 Python 启动时就设置，运行时设置可能不生效
+    # 所以我们还需要 monkey-patch 内置的 open 函数
+    import builtins
+    _original_open = builtins.open
+    
+    def _utf8_open(file, mode='r', buffering=-1, encoding=None, errors=None, 
+                   newline=None, closefd=True, opener=None):
+        """
+        包装 open() 函数，对于文本模式默认使用 UTF-8 编码
+        这可以修复第三方库（如 OASIS）读取文件时未指定编码的问题
+        """
+        # 只对文本模式（非二进制）且未指定编码的情况设置默认编码
+        if encoding is None and 'b' not in mode:
+            encoding = 'utf-8'
+        return _original_open(file, mode, buffering, encoding, errors, 
+                              newline, closefd, opener)
+    
+    builtins.open = _utf8_open
+
 import argparse
 import asyncio
 import json
 import logging
 import multiprocessing
-import os
 import random
 import signal
 import sqlite3
-import sys
 import warnings
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple

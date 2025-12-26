@@ -423,6 +423,12 @@ class SimulationRunner:
             main_log_path = os.path.join(sim_dir, "simulation.log")
             main_log_file = open(main_log_path, 'w', encoding='utf-8')
             
+            # 设置子进程环境变量，确保 Windows 上使用 UTF-8 编码
+            # 这可以修复第三方库（如 OASIS）读取文件时未指定编码的问题
+            env = os.environ.copy()
+            env['PYTHONUTF8'] = '1'  # Python 3.7+ 支持，让所有 open() 默认使用 UTF-8
+            env['PYTHONIOENCODING'] = 'utf-8'  # 确保 stdout/stderr 使用 UTF-8
+            
             # 设置工作目录为模拟目录（数据库等文件会生成在此）
             # 使用 start_new_session=True 创建新的进程组，确保可以通过 os.killpg 终止所有子进程
             process = subprocess.Popen(
@@ -431,7 +437,9 @@ class SimulationRunner:
                 stdout=main_log_file,
                 stderr=subprocess.STDOUT,  # stderr 也写入同一个文件
                 text=True,
+                encoding='utf-8',  # 显式指定编码
                 bufsize=1,
+                env=env,  # 传递带有 UTF-8 设置的环境变量
                 start_new_session=True,  # 创建新进程组，确保服务器关闭时能终止所有相关进程
             )
             
