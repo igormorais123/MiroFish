@@ -315,7 +315,8 @@ const startSimulation = () => {
     确保已在 index.html 引入这些 Google Fonts 
   */
   --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'Space Grotesk', -apple-system, sans-serif;
+  --font-sans: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  --font-cn: 'Noto Sans SC', system-ui, sans-serif;
 }
 
 .home-container {
@@ -415,7 +416,7 @@ const startSimulation = () => {
 .main-title {
   font-size: 4.5rem;
   line-height: 1.2;
-  font-weight: 800;
+  font-weight: 500;
   margin: 0 0 40px 0;
   letter-spacing: -2px;
   color: var(--black);
@@ -465,7 +466,7 @@ const startSimulation = () => {
 
 .slogan-text {
   font-size: 1.2rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--black);
   letter-spacing: 1px;
   border-left: 3px solid var(--orange);
@@ -565,7 +566,7 @@ const startSimulation = () => {
 
 .section-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0 0 15px 0;
 }
 
@@ -590,7 +591,7 @@ const startSimulation = () => {
 .metric-value {
   font-family: var(--font-mono);
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 5px;
 }
 
@@ -645,7 +646,7 @@ const startSimulation = () => {
 }
 
 .step-title {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 1rem;
   margin-bottom: 4px;
 }
@@ -714,7 +715,7 @@ const startSimulation = () => {
 }
 
 .upload-title {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   margin-bottom: 5px;
 }

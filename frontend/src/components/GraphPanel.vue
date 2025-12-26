@@ -1018,7 +1018,7 @@ input:checked + .slider:before {
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   overflow: hidden;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Noto Sans SC', system-ui, sans-serif;
   font-size: 13px;
   z-index: 20;
   display: flex;
