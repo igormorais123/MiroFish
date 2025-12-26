@@ -466,7 +466,7 @@ const startSimulation = () => {
 
 .slogan-text {
   font-size: 1.2rem;
-  font-weight: 500;
+  font-weight: 520;
   color: var(--black);
   letter-spacing: 1px;
   border-left: 3px solid var(--orange);
@@ -566,7 +566,7 @@ const startSimulation = () => {
 
 .section-title {
   font-size: 2rem;
-  font-weight: 500;
+  font-weight: 520;
   margin: 0 0 15px 0;
 }
 
@@ -591,7 +591,7 @@ const startSimulation = () => {
 .metric-value {
   font-family: var(--font-mono);
   font-size: 1.8rem;
-  font-weight: 500;
+  font-weight: 520;
   margin-bottom: 5px;
 }
 
@@ -646,7 +646,7 @@ const startSimulation = () => {
 }
 
 .step-title {
-  font-weight: 500;
+  font-weight: 520;
   font-size: 1rem;
   margin-bottom: 4px;
 }
