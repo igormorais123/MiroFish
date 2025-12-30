@@ -1270,6 +1270,11 @@ class SimulationRunner:
         # 保存原有的信号处理器
         original_sigint = signal.getsignal(signal.SIGINT)
         original_sigterm = signal.getsignal(signal.SIGTERM)
+        # SIGHUP 只在 Unix 系统存在（macOS/Linux），Windows 没有
+        original_sighup = None
+        has_sighup = hasattr(signal, 'SIGHUP')
+        if has_sighup:
+            original_sighup = signal.getsignal(signal.SIGHUP)
         
         def cleanup_handler(signum=None, frame=None):
             """信号处理器：先清理模拟进程，再调用原处理器"""
@@ -1283,6 +1288,13 @@ class SimulationRunner:
                 original_sigint(signum, frame)
             elif signum == signal.SIGTERM and callable(original_sigterm):
                 original_sigterm(signum, frame)
+            elif has_sighup and signum == signal.SIGHUP:
+                # SIGHUP: 终端关闭时发送
+                if callable(original_sighup):
+                    original_sighup(signum, frame)
+                else:
+                    # 默认行为：正常退出
+                    sys.exit(0)
             else:
                 # 如果原处理器不可调用（如 SIG_DFL），则使用默认行为
                 raise KeyboardInterrupt
@@ -1296,6 +1308,9 @@ class SimulationRunner:
             signal.signal(signal.SIGTERM, cleanup_handler)
             # SIGINT: Ctrl+C
             signal.signal(signal.SIGINT, cleanup_handler)
+            # SIGHUP: 终端关闭（仅 Unix 系统）
+            if has_sighup:
+                signal.signal(signal.SIGHUP, cleanup_handler)
         except ValueError:
             # 不在主线程中，只能使用 atexit
             logger.warning("无法注册信号处理器（不在主线程），仅使用 atexit")
