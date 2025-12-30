@@ -28,6 +28,9 @@ logger = get_logger('mirofish.simulation_runner')
 # 标记是否已注册清理函数
 _cleanup_registered = False
 
+# 平台检测
+IS_WINDOWS = sys.platform == 'win32'
+
 
 class RunnerStatus(str, Enum):
     """运行器状态"""
@@ -710,6 +713,62 @@ class SimulationRunner:
         return twitter_enabled or reddit_enabled
     
     @classmethod
+    def _terminate_process(cls, process: subprocess.Popen, simulation_id: str, timeout: int = 10):
+        """
+        跨平台终止进程及其子进程
+        
+        Args:
+            process: 要终止的进程
+            simulation_id: 模拟ID（用于日志）
+            timeout: 等待进程退出的超时时间（秒）
+        """
+        if IS_WINDOWS:
+            # Windows: 使用 taskkill 命令终止进程树
+            # /F = 强制终止, /T = 终止进程树（包括子进程）
+            logger.info(f"终止进程树 (Windows): simulation={simulation_id}, pid={process.pid}")
+            try:
+                # 先尝试优雅终止
+                subprocess.run(
+                    ['taskkill', '/PID', str(process.pid), '/T'],
+                    capture_output=True,
+                    timeout=5
+                )
+                try:
+                    process.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    # 强制终止
+                    logger.warning(f"进程未响应，强制终止: {simulation_id}")
+                    subprocess.run(
+                        ['taskkill', '/F', '/PID', str(process.pid), '/T'],
+                        capture_output=True,
+                        timeout=5
+                    )
+                    process.wait(timeout=5)
+            except Exception as e:
+                logger.warning(f"taskkill 失败，尝试 terminate: {e}")
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+        else:
+            # Unix: 使用进程组终止
+            # 由于使用了 start_new_session=True，进程组 ID 等于主进程 PID
+            pgid = os.getpgid(process.pid)
+            logger.info(f"终止进程组 (Unix): simulation={simulation_id}, pgid={pgid}")
+            
+            # 先发送 SIGTERM 给整个进程组
+            os.killpg(pgid, signal.SIGTERM)
+            
+            try:
+                process.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                # 如果超时后还没结束，强制发送 SIGKILL
+                logger.warning(f"进程组未响应 SIGTERM，强制终止: {simulation_id}")
+                os.killpg(pgid, signal.SIGKILL)
+                process.wait(timeout=5)
+    
+    @classmethod
     def stop_simulation(cls, simulation_id: str) -> SimulationRunState:
         """停止模拟"""
         state = cls.get_run_state(simulation_id)
@@ -726,22 +785,7 @@ class SimulationRunner:
         process = cls._processes.get(simulation_id)
         if process and process.poll() is None:
             try:
-                # 使用进程组 ID 终止整个进程组（包括所有子进程）
-                # 由于使用了 start_new_session=True，进程组 ID 等于主进程 PID
-                pgid = os.getpgid(process.pid)
-                logger.info(f"终止进程组: simulation={simulation_id}, pgid={pgid}")
-                
-                # 先发送 SIGTERM 给整个进程组
-                os.killpg(pgid, signal.SIGTERM)
-                
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    # 如果 10 秒后还没结束，强制发送 SIGKILL
-                    logger.warning(f"进程组未响应 SIGTERM，强制终止: {simulation_id}")
-                    os.killpg(pgid, signal.SIGKILL)
-                    process.wait(timeout=5)
-                    
+                cls._terminate_process(process, simulation_id)
             except ProcessLookupError:
                 # 进程已经不存在
                 pass
@@ -1171,17 +1215,8 @@ class SimulationRunner:
                     logger.info(f"终止模拟进程: {simulation_id}, pid={process.pid}")
                     
                     try:
-                        # 使用进程组终止（包括所有子进程）
-                        pgid = os.getpgid(process.pid)
-                        os.killpg(pgid, signal.SIGTERM)
-                        
-                        try:
-                            process.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
-                            logger.warning(f"进程组未响应 SIGTERM，强制终止: {simulation_id}")
-                            os.killpg(pgid, signal.SIGKILL)
-                            process.wait(timeout=5)
-                            
+                        # 使用跨平台的进程终止方法
+                        cls._terminate_process(process, simulation_id, timeout=5)
                     except (ProcessLookupError, OSError):
                         # 进程可能已经不存在，尝试直接终止
                         try:
