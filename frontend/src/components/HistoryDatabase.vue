@@ -10,10 +10,9 @@
       <div class="gradient-overlay"></div>
     </div>
 
-    <!-- CTA 按钮 -->
+    <!-- CTA 按钮 - 位置固定不变 -->
     <div 
       class="cta-button" 
-      :style="{ transform: `translateY(${ctaOffset}px)` }"
       @click="toggleExpand"
     >
       <div class="cta-inner">
@@ -101,7 +100,6 @@ const projects = ref([])
 const loading = ref(true)
 const isExpanded = ref(false)
 const hoveringCard = ref(null)
-const ctaOffset = ref(0)
 const imageErrors = ref({}) // 追踪图片加载错误
 
 // 卡片布局配置 - 调整为更宽的比例
@@ -133,18 +131,6 @@ const getRandomImageUrl = (simulationId, index) => {
 const handleImageError = (event, index) => {
   imageErrors.value[index] = true
   event.target.style.display = 'none'
-}
-
-// 计算 CTA 按钮偏移
-const calculateCtaOffset = () => {
-  if (!isExpanded.value) {
-    ctaOffset.value = 0
-    return
-  }
-  
-  const rowCount = Math.ceil(projects.value.length / CARDS_PER_ROW)
-  // 调整 CTA 偏移量以适应网格高度
-  ctaOffset.value = -(rowCount * EXPANDED_ROW_HEIGHT + 100)
 }
 
 // 获取卡片样式
@@ -187,14 +173,9 @@ const getCardStyle = (index) => {
     const colInRow = index % CARDS_PER_ROW
     const x = startX + colInRow * (CARD_WIDTH + CARD_GAP)
     
-    // translateY: 向上堆叠逻辑. 行高 230px.
-    // Row 0 is at the bottom? "Upward stacking logic (first row pushed up)".
-    // Assuming "first row pushed up" means visually higher. 
-    // In CSS translate Y, negative is up.
-    // So row 0 should have the most negative Y? Or row 0 is at the bottom and subsequent rows stack up?
-    // "向上生长：如果卡片超过4个，生成的第二行应该在第一行上方" -> Row 1 is above Row 0.
-    // So Row 0 is at y=0 (or base), Row 1 is at y = -230px, etc.
-    const y = -(row * EXPANDED_ROW_HEIGHT)
+    // translateY: 向下展开逻辑. 行高 300px (包含卡片高度280+间距).
+    // Row 0 在顶部，后续行向下排列
+    const y = row * (CARD_HEIGHT + CARD_GAP)
 
     return {
       transform: `translate(${x}px, ${y}px) rotate(0deg) scale(1)`,
@@ -277,17 +258,14 @@ const truncateText = (text, maxLength) => {
 // 事件处理
 const handleMouseEnter = () => {
   isExpanded.value = true
-  calculateCtaOffset()
 }
 
 const handleMouseLeave = () => {
   isExpanded.value = false
-  ctaOffset.value = 0
 }
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
-  calculateCtaOffset()
 }
 
 // 导航到项目
@@ -376,14 +354,13 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* CTA 按钮 */
+/* CTA 按钮 - 位置固定不变 */
 .cta-button {
   position: relative;
   z-index: 100;
   display: flex;
   justify-content: center;
   margin-bottom: 48px;
-  transition: transform 700ms cubic-bezier(0.23, 1, 0.32, 1); /* Match card duration */
   cursor: pointer;
 }
 
@@ -430,14 +407,14 @@ onMounted(() => {
   position: relative;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  min-height: 340px;
+  align-items: flex-start; /* 从顶部开始排列 */
+  min-height: 420px; /* 折叠时的最小高度 */
   padding: 0 40px;
   transition: min-height 700ms cubic-bezier(0.23, 1, 0.32, 1); /* Match card duration */
 }
 
 .cards-container.expanded {
-  min-height: 520px;
+  min-height: 620px; /* 展开时增加高度，页面自动向下延长 */
 }
 
 /* 项目卡片 - 完全参照参考图 */
