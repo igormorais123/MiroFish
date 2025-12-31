@@ -176,3 +176,12 @@ export const interviewAgents = (data) => {
   return requestWithRetry(() => service.post('/api/simulation/interview/batch', data), 3, 1000)
 }
 
+/**
+ * 获取历史模拟列表（带项目详情）
+ * 用于首页历史项目展示
+ * @param {number} limit - 返回数量限制
+ */
+export const getSimulationHistory = (limit = 20) => {
+  return service.get('/api/simulation/history', { params: { limit } })
+}
+

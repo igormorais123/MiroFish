@@ -465,6 +465,11 @@ class SimulationManager:
         
         if os.path.exists(self.SIMULATION_DATA_DIR):
             for sim_id in os.listdir(self.SIMULATION_DATA_DIR):
+                # 跳过隐藏文件（如 .DS_Store）和非目录文件
+                sim_path = os.path.join(self.SIMULATION_DATA_DIR, sim_id)
+                if sim_id.startswith('.') or not os.path.isdir(sim_path):
+                    continue
+                
                 state = self._load_simulation_state(sim_id)
                 if state:
                     if project_id is None or state.project_id == project_id:

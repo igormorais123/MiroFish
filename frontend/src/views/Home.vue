@@ -199,6 +199,9 @@
           </div>
         </div>
       </section>
+
+      <!-- 历史项目数据库 -->
+      <HistoryDatabase />
     </div>
   </div>
 </template>
@@ -206,6 +209,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import HistoryDatabase from '../components/HistoryDatabase.vue'
 
 const router = useRouter()
 
