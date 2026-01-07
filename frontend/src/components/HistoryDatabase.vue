@@ -1,8 +1,7 @@
 <template>
   <div 
     class="history-database"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
+    ref="historyContainer"
   >
     <!-- 背景装饰：技术网格线（使用CSS背景，固定间距正方形网格） -->
     <div class="tech-grid-bg">
@@ -10,16 +9,11 @@
       <div class="gradient-overlay"></div>
     </div>
 
-    <!-- CTA 按钮 - 位置固定不变 -->
-    <div 
-      class="cta-button" 
-      @click="toggleExpand"
-    >
-      <div class="cta-inner">
-        <span class="cta-icon">◎</span>
-        <span class="cta-text">HISTORY DATABASE ({{ projects.length }})</span>
-        <span class="cta-arrow" :class="{ expanded: isExpanded }">→</span>
-      </div>
+    <!-- 标题区域 -->
+    <div class="section-header">
+      <div class="section-line"></div>
+      <span class="section-title">HISTORY DATABASE</span>
+      <div class="section-line"></div>
     </div>
 
     <!-- 卡片容器 -->
@@ -34,39 +28,47 @@
         @mouseleave="hoveringCard = null"
         @click="navigateToProject(project)"
       >
-        <!-- 卡片头部：ID和状态 -->
+        <!-- 卡片头部：simulation_id和状态 -->
         <div class="card-header">
-          <span class="card-id">ID_{{ String(index + 1).padStart(3, '0') }}</span>
+          <span class="card-id">{{ formatSimulationId(project.simulation_id) }}</span>
           <span class="card-status" :class="getStatusClass(project.status)">
             <span class="status-dot">●</span> {{ getStatusText(project.status) }}
           </span>
         </div>
 
-        <!-- 卡片图片区域（带角落装饰） -->
-        <div class="card-image-wrapper">
+        <!-- 文件列表区域 -->
+        <div class="card-files-wrapper">
           <!-- 角落装饰 - 取景框风格 -->
           <div class="corner-mark top-left-only"></div>
-
-          <!-- 图片 -->
-          <img 
-            class="card-image"
-            :src="getRandomImageUrl(project.simulation_id, index)"
-            :alt="project.project_name"
-            loading="lazy"
-            @error="handleImageError($event, index)"
-          />
+          
+          <!-- 文件列表 -->
+          <div class="files-list" v-if="project.files && project.files.length > 0">
+            <div 
+              v-for="(file, fileIndex) in project.files.slice(0, 3)" 
+              :key="fileIndex"
+              class="file-item"
+            >
+              <span class="file-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
+              <span class="file-name">{{ truncateFilename(file.filename, 20) }}</span>
+            </div>
+          </div>
+          <!-- 无文件时的占位 -->
+          <div class="files-empty" v-else>
+            <span class="empty-file-icon">◇</span>
+            <span class="empty-file-text">暂无文件</span>
+          </div>
         </div>
 
-        <!-- 卡片标题 -->
-        <h3 class="card-title">{{ project.project_name || 'Unnamed Project' }}</h3>
+        <!-- 卡片标题（使用模拟需求的前20字作为标题） -->
+        <h3 class="card-title">{{ getSimulationTitle(project.simulation_requirement) }}</h3>
 
-        <!-- 卡片描述 -->
+        <!-- 卡片描述（模拟需求完整展示） -->
         <p class="card-desc">{{ truncateText(project.simulation_requirement, 55) }}</p>
 
         <!-- 卡片底部 -->
         <div class="card-footer">
           <span class="card-date">{{ formatDate(project.created_at) }}</span>
-          <span class="card-version">{{ project.version || 'v1.0.2' }}</span>
+          <span class="card-rounds">{{ formatRounds(project) }}</span>
         </div>
         
         <!-- 底部装饰线 (hover时展开) -->
@@ -89,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSimulationHistory } from '../api/simulation'
 
@@ -100,38 +102,14 @@ const projects = ref([])
 const loading = ref(true)
 const isExpanded = ref(false)
 const hoveringCard = ref(null)
-const imageErrors = ref({}) // 追踪图片加载错误
+const historyContainer = ref(null)
+let observer = null
 
 // 卡片布局配置 - 调整为更宽的比例
 const CARDS_PER_ROW = 4
 const CARD_WIDTH = 280  
 const CARD_HEIGHT = 280 
 const CARD_GAP = 24
-const EXPANDED_ROW_HEIGHT = 230 // 行高 230px (Requirements)
-const EXPANDED_COL_WIDTH = 280 // 列宽 (Requirements spacing 280px)
-
-// 随机图片服务配置（中国可访问）
-const IMAGE_SERVICES = {
-  // Lorem Picsum - 国际服务，中国大部分地区可访问
-  picsum: (seed, width, height) => 
-    `https://picsum.photos/seed/${seed}/${width}/${height}`,
-}
-
-// 生成随机图片URL - 调整图片比例为超扁平 (280x64)
-const getRandomImageUrl = (simulationId, index) => {
-  if (imageErrors.value[index]) {
-    return null 
-  }
-  const seed = simulationId || `project-${index}`
-  // 宽280，高64，约4.4:1比例，极度扁平
-  return IMAGE_SERVICES.picsum(seed, 280, 64)
-}
-
-// 处理图片加载错误
-const handleImageError = (event, index) => {
-  imageErrors.value[index] = true
-  event.target.style.display = 'none'
-}
 
 // 获取卡片样式
 const getCardStyle = (index) => {
@@ -139,7 +117,6 @@ const getCardStyle = (index) => {
   
   if (isExpanded.value) {
     // 展开态：网格布局
-    // 物理特性：Easing: cubic-bezier(0.23, 1, 0.32, 1), Duration: 700ms
     const transition = 'transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease'
 
     const col = index % CARDS_PER_ROW
@@ -149,64 +126,38 @@ const getCardStyle = (index) => {
     const currentRowStart = row * CARDS_PER_ROW
     const currentRowCards = Math.min(CARDS_PER_ROW, total - currentRowStart)
     
-    // 水平居中偏移
-    // 间距 280px (Based on CARD_WIDTH being 280px. Assuming standard grid gap is included or minimal)
-    // Using CARD_WIDTH + CARD_GAP for spacing calculation to be safe, but requirements said "spacing 280px".
-    // If spacing means column width, then grid width is ColWidth * count.
-    // Let's stick to the previous logic but ensure center alignment.
-    
     const rowWidth = currentRowCards * CARD_WIDTH + (currentRowCards - 1) * CARD_GAP
-    const containerWidth = CARDS_PER_ROW * CARD_WIDTH + (CARDS_PER_ROW - 1) * CARD_GAP // Full width of a complete row
-    
-    // Calculate offset to center the current row relative to the full container width
-    // Actually, the requirements say "translateX: based on colIndex, centered per row"
-    // So for a row with 3 items, they should be centered.
-    // The visual center is 0. 
-    // Leftmost item x = - (rowWidth / 2) + (CARD_WIDTH / 2)
-    // Next item x += CARD_WIDTH + CARD_GAP
     
     const startX = -(rowWidth / 2) + (CARD_WIDTH / 2)
-    const offsetX = (col % CARDS_PER_ROW) * (CARD_WIDTH + CARD_GAP) // offset within the row
-    
-    // Wait, the calculation needs to be based on the column index WITHIN the current row (0 to currentRowCards-1)
-    // Since col = index % 4, it resets for each row.
     const colInRow = index % CARDS_PER_ROW
     const x = startX + colInRow * (CARD_WIDTH + CARD_GAP)
     
-    // translateY: 向下展开逻辑. 行高 300px (包含卡片高度280+间距).
-    // Row 0 在顶部，后续行向下排列
+    // 向下展开
     const y = row * (CARD_HEIGHT + CARD_GAP)
 
     return {
       transform: `translate(${x}px, ${y}px) rotate(0deg) scale(1)`,
-      zIndex: 100 + index, // Requirements: 100 + gridIndex
+      zIndex: 100 + index,
       opacity: 1,
       transition: transition
     }
   } else {
     // 折叠态：扇形堆叠
-    // 物理特性：Easing: cubic-bezier(0.23, 1, 0.32, 1), Duration: 700ms
     const transition = 'transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease'
 
-    const centerIndex = (total - 1) / 2 // Center index (float)
-    const offset = index - centerIndex // Offset from center
+    const centerIndex = (total - 1) / 2
+    const offset = index - centerIndex
     
-    // translateX: offset * 35px
     const x = offset * 35
-    
-    // translateY: 130px + Math.abs(offset) * 8px
-    const y = 130 + Math.abs(offset) * 8
-    
-    // rotate: offset * 3deg
+    // 调整起始位置，更靠近标题
+    const y = 40 + Math.abs(offset) * 8
     const r = offset * 3
-    
-    // scale: 0.95 - Math.abs(offset) * 0.05
     const s = 0.95 - Math.abs(offset) * 0.05
     
     return {
       transform: `translate(${x}px, ${y}px) rotate(${r}deg) scale(${s})`,
-      zIndex: 10 + index, // Requirements: 10 + index
-      opacity: 1, // Collapsed cards are usually fully opaque in the stack
+      zIndex: 10 + index,
+      opacity: 1,
       transition: transition
     }
   }
@@ -255,32 +206,68 @@ const truncateText = (text, maxLength) => {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
 }
 
-// 事件处理
-const handleMouseEnter = () => {
-  isExpanded.value = true
+// 从模拟需求生成标题（取前20字）
+const getSimulationTitle = (requirement) => {
+  if (!requirement) return '未命名模拟'
+  const title = requirement.slice(0, 20)
+  return requirement.length > 20 ? title + '...' : title
 }
 
-const handleMouseLeave = () => {
-  isExpanded.value = false
+// 格式化 simulation_id 显示（截取前6位）
+const formatSimulationId = (simulationId) => {
+  if (!simulationId) return 'SIM_UNKNOWN'
+  const prefix = simulationId.replace('sim_', '').slice(0, 6)
+  return `SIM_${prefix.toUpperCase()}`
 }
 
-const toggleExpand = () => {
-  isExpanded.value = !isExpanded.value
+// 格式化轮数显示（当前轮/总轮数）
+const formatRounds = (simulation) => {
+  const current = simulation.current_round || 0
+  const total = simulation.total_rounds || 0
+  if (total === 0) return '未开始'
+  return `${current}/${total} 轮`
 }
 
-// 导航到项目
-const navigateToProject = (project) => {
-  if (project.status === 'completed' || project.status === 'running' || project.status === 'ready') {
-    router.push({
-      name: 'SimulationRun',
-      params: { simulationId: project.simulation_id }
-    })
-  } else {
-    router.push({
-      name: 'Process',
-      params: { projectId: project.project_id }
-    })
+// 获取文件类型（用于样式）
+const getFileType = (filename) => {
+  if (!filename) return 'other'
+  const ext = filename.split('.').pop()?.toLowerCase()
+  const typeMap = {
+    'pdf': 'pdf',
+    'doc': 'doc', 'docx': 'doc',
+    'xls': 'xls', 'xlsx': 'xls', 'csv': 'xls',
+    'ppt': 'ppt', 'pptx': 'ppt',
+    'txt': 'txt', 'md': 'txt', 'json': 'code',
+    'jpg': 'img', 'jpeg': 'img', 'png': 'img', 'gif': 'img',
+    'zip': 'zip', 'rar': 'zip', '7z': 'zip'
   }
+  return typeMap[ext] || 'other'
+}
+
+// 获取文件类型标签文本
+const getFileTypeLabel = (filename) => {
+  if (!filename) return 'FILE'
+  const ext = filename.split('.').pop()?.toUpperCase()
+  return ext || 'FILE'
+}
+
+// 截断文件名（保留扩展名）
+const truncateFilename = (filename, maxLength) => {
+  if (!filename) return '未知文件'
+  if (filename.length <= maxLength) return filename
+  
+  const ext = filename.includes('.') ? '.' + filename.split('.').pop() : ''
+  const nameWithoutExt = filename.slice(0, filename.length - ext.length)
+  const truncatedName = nameWithoutExt.slice(0, maxLength - ext.length - 3) + '...'
+  return truncatedName + ext
+}
+
+// 导航到模拟详情页
+const navigateToProject = (simulation) => {
+  router.push({
+    name: 'SimulationRun',
+    params: { simulationId: simulation.simulation_id }
+  })
 }
 
 // 加载历史项目
@@ -301,6 +288,37 @@ const loadHistory = async () => {
 
 onMounted(() => {
   loadHistory()
+  
+  // 使用 Intersection Observer 监听滚动，自动展开/收起卡片
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          isExpanded.value = true
+        } else {
+          isExpanded.value = false
+        }
+      })
+    },
+    {
+      threshold: [0.5],
+      rootMargin: '0px 0px -150px 0px'
+    }
+  )
+  
+  // 等待 DOM 渲染后开始观察
+  setTimeout(() => {
+    if (historyContainer.value) {
+      observer.observe(historyContainer.value)
+    }
+  }, 100)
+})
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
 })
 </script>
 
@@ -333,7 +351,6 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  /* 40px x 40px 的正方形网格 */
   background-image: 
     linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
@@ -347,59 +364,38 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  /* 四边渐变遮罩，让网格在边缘淡出 */
   background: 
     linear-gradient(to right, rgba(255, 255, 255, 0.9) 0%, transparent 15%, transparent 85%, rgba(255, 255, 255, 0.9) 100%),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, transparent 20%, transparent 80%, rgba(255, 255, 255, 0.8) 100%);
   pointer-events: none;
 }
 
-/* CTA 按钮 - 位置固定不变 */
-.cta-button {
+/* 标题区域 */
+.section-header {
   position: relative;
   z-index: 100;
   display: flex;
-  justify-content: center;
-  margin-bottom: 48px;
-  cursor: pointer;
-}
-
-.cta-inner {
-  display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 32px;
-  background: #FFFFFF;
-  border: 1px solid #E0E0E0;
-  border-radius: 30px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 加深阴影 */
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
-  font-size: 0.78rem;
-  font-weight: 600; /* 加粗 */
-  color: #1a1a1a;
-  letter-spacing: 1.2px;
-  transition: all 0.3s ease;
+  padding: 0 40px;
 }
 
-.cta-inner:hover {
-  background: #FAFAFA;
-  border-color: #CCCCCC;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
+  max-width: 200px;
 }
 
-.cta-icon {
-  color: #666; /* 加深颜色 */
-  font-size: 1rem;
-}
-
-.cta-arrow {
-  color: #666; /* 加深颜色 */
-  transition: transform 0.3s ease;
-}
-
-.cta-arrow.expanded {
-  transform: rotate(90deg);
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #9CA3AF;
+  letter-spacing: 3px;
+  text-transform: uppercase;
 }
 
 /* 卡片容器 */
@@ -407,37 +403,32 @@ onMounted(() => {
   position: relative;
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* 从顶部开始排列 */
-  min-height: 420px; /* 折叠时的最小高度 */
+  align-items: flex-start;
+  min-height: 420px;
   padding: 0 40px;
-  transition: min-height 700ms cubic-bezier(0.23, 1, 0.32, 1); /* Match card duration */
+  transition: min-height 700ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .cards-container.expanded {
-  min-height: 620px; /* 展开时增加高度，页面自动向下延长 */
+  min-height: 620px;
 }
 
-/* 项目卡片 - 完全参照参考图 */
+/* 项目卡片 */
 .project-card {
   position: absolute;
-  width: 280px; /* 调整宽度 */
+  width: 280px;
   background: #FFFFFF;
-  border: 1px solid #E5E7EB; /* border-gray-200 */
-  border-radius: 0; /* 直角或极小圆角 */
-  padding: 14px; /* 稍微减小内边距，让内容更紧凑 */
+  border: 1px solid #E5E7EB;
+  border-radius: 0;
+  padding: 14px;
   cursor: pointer;
-  /* Transitions are handled inline for transform/opacity, CSS for others */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-  /* Remove transition property from here as it's overridden by inline styles for transform/opacity */
-  /* Add specific transitions for border and shadow */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* 悬停效果 - 黑色粗边框，阴影加深 */
-/* Micro-interaction: Hover: border-black/40 shadow-lg */
 .project-card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
-  border-color: rgba(0, 0, 0, 0.4); /* border-black/40 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.4);
   z-index: 1000 !important;
 }
 
@@ -452,13 +443,13 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #F3F4F6; /* 增加分割线 */
+  border-bottom: 1px solid #F3F4F6;
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 0.7rem;
 }
 
 .card-id {
-  color: #6B7280; /* 加深灰色 */
+  color: #6B7280;
   letter-spacing: 0.5px;
   font-weight: 500;
 }
@@ -477,61 +468,120 @@ onMounted(() => {
   font-size: 0.5rem;
 }
 
-.card-status.completed {
-  color: #10B981; /* 更鲜艳的绿 */
+.card-status.completed { color: #10B981; }
+.card-status.processing { color: #F59E0B; }
+.card-status.ready { color: #3B82F6; }
+.card-status.failed { color: #EF4444; }
+.card-status.pending { color: #9CA3AF; }
+
+/* 文件列表区域 */
+.card-files-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 64px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+  border-radius: 4px;
+  border: 1px solid #e8eaed;
 }
 
-.card-status.processing {
-  color: #F59E0B;
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.card-status.ready {
-  color: #3B82F6;
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 3px;
+  transition: all 0.2s ease;
 }
 
-.card-status.failed {
-  color: #EF4444;
+.file-item:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateX(2px);
+  border-color: #e5e7eb;
 }
 
-.card-status.pending {
+/* 简约文件标签样式 */
+.file-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+/* 低饱和度配色方案 - Morandi色系 */
+.file-tag.pdf { background: #f2e6e6; color: #a65a5a; }
+.file-tag.doc { background: #e6eff5; color: #5a7ea6; }
+.file-tag.xls { background: #e6f2e8; color: #5aa668; }
+.file-tag.ppt { background: #f5efe6; color: #a6815a; }
+.file-tag.txt { background: #f0f0f0; color: #757575; }
+.file-tag.code { background: #eae6f2; color: #815aa6; }
+.file-tag.img { background: #e6f2f2; color: #5aa6a6; }
+.file-tag.zip { background: #f2f0e6; color: #a69b5a; }
+.file-tag.other { background: #f3f4f6; color: #6b7280; }
+
+.file-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+/* 无文件时的占位 */
+.files-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
   color: #9CA3AF;
 }
 
-/* 卡片图片区域 */
-.card-image-wrapper {
-  position: relative;
-  width: 100%;
-  height: 64px; /* 极度压扁，复刻参考图的宽银幕感 */
-  margin-bottom: 12px;
-  overflow: hidden;
-  background: #f0f0f0;
+.empty-file-icon {
+  font-size: 1rem;
+  opacity: 0.5;
 }
 
-.card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* Micro-interaction: Default: opacity-80 grayscale */
-  filter: grayscale(100%); 
-  opacity: 0.8;
-  transition: all 500ms ease; /* Duration 500ms */
+.empty-file-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
 }
 
-/* 悬停时图片变彩色 */
-/* Micro-interaction: Hover: opacity-100 grayscale-0 */
-.project-card:hover .card-image {
-  filter: grayscale(0%);
-  opacity: 1;
+/* 悬停时文件区域效果 */
+.project-card:hover .card-files-wrapper {
+  border-color: #d1d5db;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
 }
 
-/* 角落装饰 - 只保留左上角，颜色加深 */
+/* 角落装饰 */
 .corner-mark.top-left-only {
   position: absolute;
   top: 6px;
   left: 6px;
   width: 8px;
   height: 8px;
-  border-top: 1.5px solid rgba(0, 0, 0, 0.4); /* 加粗一点，颜色更深 */
+  border-top: 1.5px solid rgba(0, 0, 0, 0.4);
   border-left: 1.5px solid rgba(0, 0, 0, 0.4);
   pointer-events: none;
   z-index: 10;
@@ -540,10 +590,10 @@ onMounted(() => {
 /* 卡片标题 */
 .card-title {
   font-family: 'Inter', -apple-system, sans-serif;
-  font-size: 0.9rem; /* 稍微调小一点点 */
+  font-size: 0.9rem;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 6px 0; /* 减小间距 */
+  margin: 0 0 6px 0;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
@@ -551,19 +601,18 @@ onMounted(() => {
   transition: color 0.3s ease;
 }
 
-/* 悬停时标题变蓝 - 参考图细节 */
 .project-card:hover .card-title {
-  color: #2563EB; /* 蓝色 */
+  color: #2563EB;
 }
 
 /* 卡片描述 */
 .card-desc {
   font-family: 'Inter', sans-serif;
   font-size: 0.75rem;
-  color: #6B7280; /* 灰色 */
+  color: #6B7280;
   margin: 0 0 16px 0;
   line-height: 1.5;
-  height: 34px; /* 两行高度 */
+  height: 34px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -572,12 +621,12 @@ onMounted(() => {
 
 /* 卡片底部 */
 .card-footer {
-  position: relative; /* For absolute positioning of the line */
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding-top: 12px;
-  border-top: 1px solid #F3F4F6; /* 增加分割线 */
+  border-top: 1px solid #F3F4F6;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   color: #9CA3AF;
@@ -585,7 +634,6 @@ onMounted(() => {
 }
 
 /* 底部装饰线 */
-/* Micro-interaction: Height 2px, bg-black, Default w-0, Hover w-full */
 .card-bottom-line {
   position: absolute;
   bottom: 0;
@@ -594,7 +642,7 @@ onMounted(() => {
   width: 0;
   background-color: #000;
   transition: width 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-  z-index: 20; /* 确保在内容之上 */
+  z-index: 20;
 }
 
 .project-card:hover .card-bottom-line {

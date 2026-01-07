@@ -849,41 +849,48 @@ def get_simulation_history():
         manager = SimulationManager()
         simulations = manager.list_simulations()[:limit]
         
-        # 增强模拟数据，添加项目详情
+        # 增强模拟数据，只从 Simulation 文件读取
         enriched_simulations = []
         for sim in simulations:
             sim_dict = sim.to_dict()
             
-            # 获取关联的项目信息
-            project = ProjectManager.get_project(sim.project_id)
-            if project:
-                sim_dict["project_name"] = project.name
-                sim_dict["simulation_requirement"] = project.simulation_requirement
-            else:
-                sim_dict["project_name"] = "未知项目"
-                sim_dict["simulation_requirement"] = ""
-            
-            # 获取模拟配置信息
+            # 获取模拟配置信息（从 simulation_config.json 读取 simulation_requirement）
             config = manager.get_simulation_config(sim.simulation_id)
             if config:
+                sim_dict["simulation_requirement"] = config.get("simulation_requirement", "")
                 time_config = config.get("time_config", {})
                 sim_dict["total_simulation_hours"] = time_config.get("total_simulation_hours", 0)
-                sim_dict["total_rounds"] = int(
+                # 推荐轮数（后备值）
+                recommended_rounds = int(
                     time_config.get("total_simulation_hours", 0) * 60 / 
                     max(time_config.get("minutes_per_round", 60), 1)
                 )
             else:
+                sim_dict["simulation_requirement"] = ""
                 sim_dict["total_simulation_hours"] = 0
-                sim_dict["total_rounds"] = 0
+                recommended_rounds = 0
             
-            # 获取运行状态
+            # 获取运行状态（从 run_state.json 读取用户设置的实际轮数）
             run_state = SimulationRunner.get_run_state(sim.simulation_id)
             if run_state:
                 sim_dict["current_round"] = run_state.current_round
                 sim_dict["runner_status"] = run_state.runner_status.value
+                # 使用用户设置的 total_rounds，若无则使用推荐轮数
+                sim_dict["total_rounds"] = run_state.total_rounds if run_state.total_rounds > 0 else recommended_rounds
             else:
                 sim_dict["current_round"] = 0
                 sim_dict["runner_status"] = "idle"
+                sim_dict["total_rounds"] = recommended_rounds
+            
+            # 获取关联项目的文件列表（最多3个）
+            project = ProjectManager.get_project(sim.project_id)
+            if project and hasattr(project, 'files') and project.files:
+                sim_dict["files"] = [
+                    {"filename": f.get("filename", "未知文件")} 
+                    for f in project.files[:3]
+                ]
+            else:
+                sim_dict["files"] = []
             
             # 添加版本号
             sim_dict["version"] = "v1.0.2"
