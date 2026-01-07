@@ -128,11 +128,15 @@ npm run backend   # 仅启动后端
 npm run frontend  # 仅启动前端
 ```
 
+## 📬 联系我们
+
+MiroFish 团队长期招募 **Agent 算法工程师**（全职/实习），如果你对多智能体仿真、大语言模型应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
+
 ## 📄 致谢
 
 **MiroFish 得到了盛大集团的战略支持和孵化！**
 
-MiroFish 的核心仿真引擎由 **[OASIS](https://github.com/camel-ai/oasis)** 驱动。OASIS 是由 [CAMEL-AI](https://github.com/camel-ai) 团队开发的高性能社交媒体模拟框架，支持百万级智能体交互仿真，为 MiroFish 的群体智能涌现提供了坚实的技术基础。我们衷心感谢 CAMEL-AI 团队的开源贡献！
+MiroFish 的仿真引擎由 **[OASIS](https://github.com/camel-ai/oasis)** 驱动。我们衷心感谢 CAMEL-AI 团队的开源贡献！
 
 ## 📈 项目统计
 
