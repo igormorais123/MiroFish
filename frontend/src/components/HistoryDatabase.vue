@@ -12,7 +12,7 @@
     <!-- 标题区域 -->
     <div class="section-header">
       <div class="section-line"></div>
-      <span class="section-title">HISTORY DATABASE</span>
+      <span class="section-title">推演记录</span>
       <div class="section-line"></div>
     </div>
 
