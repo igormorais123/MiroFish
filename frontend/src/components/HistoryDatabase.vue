@@ -106,6 +106,7 @@ const historyContainer = ref(null)
 let observer = null
 let isAnimating = false  // 动画锁，防止闪烁
 let expandDebounceTimer = null  // 防抖定时器
+let pendingState = null  // 记录待执行的目标状态
 
 // 卡片布局配置 - 调整为更宽的比例
 const CARDS_PER_ROW = 4
@@ -316,18 +317,24 @@ onMounted(() => {
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        // 如果正在动画中，忽略新的触发
-        if (isAnimating) return
-        
         const shouldExpand = entry.isIntersecting
         
-        // 如果状态没有变化，不做任何处理
-        if (shouldExpand === isExpanded.value) return
+        // 更新待执行的目标状态（无论是否在动画中都要记录最新的目标状态）
+        pendingState = shouldExpand
         
-        // 清除之前的防抖定时器
+        // 清除之前的防抖定时器（新的滚动意图会覆盖旧的）
         if (expandDebounceTimer) {
           clearTimeout(expandDebounceTimer)
           expandDebounceTimer = null
+        }
+        
+        // 如果正在动画中，只记录状态，等动画结束后处理
+        if (isAnimating) return
+        
+        // 如果目标状态与当前状态相同，不需要处理
+        if (shouldExpand === isExpanded.value) {
+          pendingState = null
+          return
         }
         
         // 使用防抖延迟状态切换，防止快速闪烁
@@ -335,16 +342,35 @@ onMounted(() => {
         const delay = shouldExpand ? 50 : 200
         
         expandDebounceTimer = setTimeout(() => {
-          // 再次检查是否正在动画
+          // 检查是否正在动画
           if (isAnimating) return
+          
+          // 检查待执行状态是否仍需要执行（可能已被后续滚动覆盖）
+          if (pendingState === null || pendingState === isExpanded.value) return
           
           // 设置动画锁
           isAnimating = true
-          isExpanded.value = shouldExpand
+          isExpanded.value = pendingState
+          pendingState = null
           
-          // 动画完成后解除锁定（700ms 是动画时长）
+          // 动画完成后解除锁定，并检查是否有待处理的状态变化
           setTimeout(() => {
             isAnimating = false
+            
+            // 动画结束后，检查是否有新的待执行状态
+            if (pendingState !== null && pendingState !== isExpanded.value) {
+              // 延迟一小段时间再执行，避免太快切换
+              expandDebounceTimer = setTimeout(() => {
+                if (pendingState !== null && pendingState !== isExpanded.value) {
+                  isAnimating = true
+                  isExpanded.value = pendingState
+                  pendingState = null
+                  setTimeout(() => {
+                    isAnimating = false
+                  }, 750)
+                }
+              }, 100)
+            }
           }, 750)
         }, delay)
       })
