@@ -434,7 +434,7 @@ onUnmounted(() => {
   width: 100%;
   min-height: 280px;
   margin-top: 40px;
-  padding: 40px 0 40px;
+  padding: 35px 0 40px;
   overflow: visible;
 }
 
@@ -499,7 +499,7 @@ onUnmounted(() => {
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
-  max-width: 200px;
+  max-width: 300px;
 }
 
 .section-title {
