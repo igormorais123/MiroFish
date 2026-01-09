@@ -86,11 +86,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, onActivated, watch, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { getSimulationHistory } from '../api/simulation'
 
 const router = useRouter()
+const route = useRoute()
 
 // 状态
 const projects = ref([])
@@ -150,8 +151,8 @@ const getCardStyle = (index) => {
     const colInRow = index % CARDS_PER_ROW
     const x = startX + colInRow * (CARD_WIDTH + CARD_GAP)
     
-    // 向下展开
-    const y = row * (CARD_HEIGHT + CARD_GAP)
+    // 向下展开，增加与标题的间距
+    const y = 20 + row * (CARD_HEIGHT + CARD_GAP)
 
     return {
       transform: `translate(${x}px, ${y}px) rotate(0deg) scale(1)`,
@@ -167,8 +168,8 @@ const getCardStyle = (index) => {
     const offset = index - centerIndex
     
     const x = offset * 35
-    // 调整起始位置，更靠近标题
-    const y = 40 + Math.abs(offset) * 8
+    // 调整起始位置，靠近标题但保持适当间距
+    const y = 25 + Math.abs(offset) * 8
     const r = offset * 3
     const s = 0.95 - Math.abs(offset) * 0.05
     
@@ -308,11 +309,12 @@ const loadHistory = async () => {
   }
 }
 
-onMounted(() => {
-  loadHistory()
+// 初始化 IntersectionObserver
+const initObserver = () => {
+  if (observer) {
+    observer.disconnect()
+  }
   
-  // 使用 Intersection Observer 监听滚动，自动展开/收起卡片
-  // 优化：使用防抖和动画锁防止闪烁
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -382,12 +384,33 @@ onMounted(() => {
     }
   )
   
-  // 等待 DOM 渲染后开始观察
+  // 开始观察
+  if (historyContainer.value) {
+    observer.observe(historyContainer.value)
+  }
+}
+
+// 监听路由变化，当返回首页时重新加载数据
+watch(() => route.path, (newPath) => {
+  if (newPath === '/') {
+    loadHistory()
+  }
+})
+
+onMounted(async () => {
+  // 确保 DOM 渲染完成后再加载数据
+  await nextTick()
+  await loadHistory()
+  
+  // 等待 DOM 渲染后初始化观察器
   setTimeout(() => {
-    if (historyContainer.value) {
-      observer.observe(historyContainer.value)
-    }
+    initObserver()
   }, 100)
+})
+
+// 如果使用 keep-alive，在组件激活时重新加载数据
+onActivated(() => {
+  loadHistory()
 })
 
 onUnmounted(() => {
@@ -410,8 +433,8 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   min-height: 280px;
-  margin-top: 80px;
-  padding: 60px 0 40px;
+  margin-top: 40px;
+  padding: 40px 0 40px;
   overflow: visible;
 }
 
