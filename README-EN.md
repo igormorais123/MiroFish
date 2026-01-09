@@ -133,7 +133,9 @@ npm run frontend  # Start frontend only
 <img src="./static/image/QQ群.png" alt="QQ Group" width="60%"/>
 </div>
 
-The MiroFish team is always looking for **Agent Algorithm Engineers** (full-time/internship). If you're passionate about multi-agent simulation and large language model applications, we'd love to hear from you! Send your resume to: **mirofish@shanda.com**
+&nbsp;
+
+The MiroFish team is recruiting full-time/internship positions. If you're interested in multi-agent simulation and LLM applications, feel free to send your resume to: **mirofish@shanda.com**
 
 ## 📄 Acknowledgments
 

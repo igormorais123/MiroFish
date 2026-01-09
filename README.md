@@ -134,7 +134,9 @@ npm run frontend  # 仅启动前端
 <img src="./static/image/QQ群.png" alt="QQ交流群" width="60%"/>
 </div>
 
-MiroFish 团队长期招募 **Agent 算法工程师**（全职/实习），如果你对多Agent仿真、LLM应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
+&nbsp;
+
+MiroFish 团队长期招募全职/实习，如果你对多Agent仿真、LLM应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
 
 ## 📄 致谢
 
