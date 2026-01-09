@@ -65,7 +65,7 @@ Click the image to watch the complete demo video for prediction using BettaFish-
 | Tool | Version | Description | Check Installation |
 |------|---------|-------------|-------------------|
 | **Node.js** | 18+ | Frontend runtime, includes npm | `node -v` |
-| **Python** | 3.11+ | Backend runtime | `python --version` |
+| **Python** | ≥3.11, ≤3.12 | Backend runtime | `python --version` |
 | **uv** | Latest | Python package manager | `uv --version` |
 
 ### 1. Configure Environment Variables
@@ -127,7 +127,11 @@ npm run backend   # Start backend only
 npm run frontend  # Start frontend only
 ```
 
-## 📬 Contact Us
+## 📬 Join the Conversation
+
+<div align="center">
+<img src="./static/image/QQ群.png" alt="QQ Group" width="60%"/>
+</div>
 
 The MiroFish team is always looking for **Agent Algorithm Engineers** (full-time/internship). If you're passionate about multi-agent simulation and large language model applications, we'd love to hear from you! Send your resume to: **mirofish@shanda.com**
 
