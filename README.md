@@ -142,7 +142,7 @@ MiroFish 团队长期招募全职/实习，如果你对多Agent仿真、LLM应�
 
 **MiroFish 得到了盛大集团的战略支持和孵化！**
 
-MiroFish 的仿真引擎由 **[OASIS](https://github.com/camel-ai/oasis)** 驱动。我们衷心感谢 CAMEL-AI 团队的开源贡献！
+MiroFish 的仿真引擎由 **[OASIS](https://github.com/camel-ai/oasis)** 驱动，我们衷心感谢 CAMEL-AI 团队的开源贡献！
 
 ## 📈 项目统计
 

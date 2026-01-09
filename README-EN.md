@@ -141,7 +141,7 @@ The MiroFish team is recruiting full-time/internship positions. If you're intere
 
 **MiroFish has received strategic support and incubation from Shanda Group!**
 
-MiroFish's simulation engine is powered by **[OASIS (Open Agent Social Interaction Simulations)](https://github.com/camel-ai/oasis)**. We sincerely thank the CAMEL-AI team for their open-source contributions!
+MiroFish's simulation engine is powered by **[OASIS (Open Agent Social Interaction Simulations)](https://github.com/camel-ai/oasis)**, We sincerely thank the CAMEL-AI team for their open-source contributions!
 
 ## 📈 Project Statistics
 
