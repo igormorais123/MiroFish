@@ -154,7 +154,7 @@ npm run frontend  # 仅启动前端
 
 &nbsp;
 
-MiroFish 团队长期招募全职/实习，如果你对多Agent仿真、LLM应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
+MiroFish团队长期招募全职/实习，如果你对多Agent应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
 
 ## 📄 致谢
 
