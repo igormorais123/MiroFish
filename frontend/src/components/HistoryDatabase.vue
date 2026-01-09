@@ -85,76 +85,78 @@
 
     <!-- 历史回放详情弹窗 -->
     <Teleport to="body">
-      <div v-if="selectedProject" class="modal-overlay" @click.self="closeModal">
-        <div class="modal-content">
-          <!-- 弹窗头部 -->
-          <div class="modal-header">
-            <div class="modal-title-section">
-              <span class="modal-id">{{ formatSimulationId(selectedProject.simulation_id) }}</span>
-              <span class="modal-progress" :class="getProgressClass(selectedProject)">
-                <span class="status-dot">●</span> {{ formatRounds(selectedProject) }}
-              </span>
-            </div>
-            <button class="modal-close" @click="closeModal">×</button>
-          </div>
-
-          <!-- 弹窗内容 -->
-          <div class="modal-body">
-            <!-- 模拟需求 -->
-            <div class="modal-section">
-              <div class="modal-label">模拟需求</div>
-              <div class="modal-requirement">{{ selectedProject.simulation_requirement || '无' }}</div>
+      <Transition name="modal">
+        <div v-if="selectedProject" class="modal-overlay" @click.self="closeModal">
+          <div class="modal-content">
+            <!-- 弹窗头部 -->
+            <div class="modal-header">
+              <div class="modal-title-section">
+                <span class="modal-id">{{ formatSimulationId(selectedProject.simulation_id) }}</span>
+                <span class="modal-progress" :class="getProgressClass(selectedProject)">
+                  <span class="status-dot">●</span> {{ formatRounds(selectedProject) }}
+                </span>
+              </div>
+              <button class="modal-close" @click="closeModal">×</button>
             </div>
 
-            <!-- 文件列表 -->
-            <div class="modal-section">
-              <div class="modal-label">关联文件</div>
-              <div class="modal-files" v-if="selectedProject.files && selectedProject.files.length > 0">
-                <div v-for="(file, index) in selectedProject.files" :key="index" class="modal-file-item">
-                  <span class="file-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
-                  <span class="modal-file-name">{{ file.filename }}</span>
+            <!-- 弹窗内容 -->
+            <div class="modal-body">
+              <!-- 模拟需求 -->
+              <div class="modal-section">
+                <div class="modal-label">模拟需求</div>
+                <div class="modal-requirement">{{ selectedProject.simulation_requirement || '无' }}</div>
+              </div>
+
+              <!-- 文件列表 -->
+              <div class="modal-section">
+                <div class="modal-label">关联文件</div>
+                <div class="modal-files" v-if="selectedProject.files && selectedProject.files.length > 0">
+                  <div v-for="(file, index) in selectedProject.files" :key="index" class="modal-file-item">
+                    <span class="file-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
+                    <span class="modal-file-name">{{ file.filename }}</span>
+                  </div>
+                </div>
+                <div class="modal-empty" v-else>暂无关联文件</div>
+              </div>
+
+              <!-- 时间信息 -->
+              <div class="modal-section modal-time-section">
+                <div class="modal-time-item">
+                  <span class="modal-time-label">创建时间</span>
+                  <span class="modal-time-value">{{ formatDate(selectedProject.created_at) }} {{ formatTime(selectedProject.created_at) }}</span>
                 </div>
               </div>
-              <div class="modal-empty" v-else>暂无关联文件</div>
             </div>
 
-            <!-- 时间信息 -->
-            <div class="modal-section modal-time-section">
-              <div class="modal-time-item">
-                <span class="modal-time-label">创建时间</span>
-                <span class="modal-time-value">{{ formatDate(selectedProject.created_at) }} {{ formatTime(selectedProject.created_at) }}</span>
-              </div>
+            <!-- 导航按钮 -->
+            <div class="modal-actions">
+              <button 
+                class="modal-btn btn-project" 
+                @click="goToProject"
+                :disabled="!selectedProject.project_id"
+              >
+                <span class="btn-icon">◇</span>
+                <span class="btn-text">图谱构建</span>
+              </button>
+              <button 
+                class="modal-btn btn-simulation" 
+                @click="goToSimulation"
+              >
+                <span class="btn-icon">◈</span>
+                <span class="btn-text">环境配置</span>
+              </button>
+              <button 
+                class="modal-btn btn-report" 
+                @click="goToReport"
+                :disabled="!selectedProject.report_id"
+              >
+                <span class="btn-icon">◆</span>
+                <span class="btn-text">分析报告</span>
+              </button>
             </div>
-          </div>
-
-          <!-- 导航按钮 -->
-          <div class="modal-actions">
-            <button 
-              class="modal-btn btn-project" 
-              @click="goToProject"
-              :disabled="!selectedProject.project_id"
-            >
-              <span class="btn-icon">◇</span>
-              <span class="btn-text">图谱构建</span>
-            </button>
-            <button 
-              class="modal-btn btn-simulation" 
-              @click="goToSimulation"
-            >
-              <span class="btn-icon">◈</span>
-              <span class="btn-text">环境配置</span>
-            </button>
-            <button 
-              class="modal-btn btn-report" 
-              @click="goToReport"
-              :disabled="!selectedProject.report_id"
-            >
-              <span class="btn-icon">◆</span>
-              <span class="btn-text">分析报告</span>
-            </button>
           </div>
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -918,7 +920,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -928,12 +930,42 @@ onUnmounted(() => {
 
 .modal-content {
   background: #FFFFFF;
-  width: 480px;
+  width: 560px;
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
   border: 1px solid #E5E7EB;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 动画过渡 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .modal-content {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-leave-active .modal-content {
+  transition: all 0.2s ease-in;
+}
+
+.modal-enter-from .modal-content {
+  transform: scale(0.95) translateY(10px);
+  opacity: 0;
+}
+
+.modal-leave-to .modal-content {
+  transform: scale(0.95) translateY(10px);
+  opacity: 0;
 }
 
 /* 弹窗头部 */
@@ -941,22 +973,22 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 20px 32px;
   border-bottom: 1px solid #F3F4F6;
-  background: #FAFAFA;
+  background: #FFFFFF;
 }
 
 .modal-title-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .modal-id {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: #374151;
+  color: #111827;
   letter-spacing: 0.5px;
 }
 
@@ -965,41 +997,44 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #F9FAFB;
 }
 
-.modal-progress.completed { color: #10B981; }
-.modal-progress.in-progress { color: #F59E0B; }
-.modal-progress.not-started { color: #9CA3AF; }
+.modal-progress.completed { color: #10B981; background: rgba(16, 185, 129, 0.1); }
+.modal-progress.in-progress { color: #F59E0B; background: rgba(245, 158, 11, 0.1); }
+.modal-progress.not-started { color: #9CA3AF; background: #F3F4F6; }
 
 .modal-close {
   width: 32px;
   height: 32px;
-  border: 1px solid #E5E7EB;
-  background: #FFFFFF;
-  font-size: 1.2rem;
-  color: #6B7280;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #9CA3AF;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  border-radius: 6px;
 }
 
 .modal-close:hover {
   background: #F3F4F6;
-  border-color: #D1D5DB;
   color: #111827;
 }
 
 /* 弹窗内容 */
 .modal-body {
-  padding: 24px;
+  padding: 24px 32px;
 }
 
 .modal-section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .modal-section:last-child {
@@ -1008,39 +1043,48 @@ onUnmounted(() => {
 
 .modal-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: #9CA3AF;
+  font-size: 0.75rem;
+  color: #6B7280;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-weight: 500;
 }
 
 .modal-requirement {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: #374151;
   line-height: 1.6;
-  padding: 12px;
+  padding: 16px;
   background: #F9FAFB;
   border: 1px solid #F3F4F6;
+  border-radius: 8px;
 }
 
 .modal-files {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .modal-file-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #F9FAFB;
-  border: 1px solid #F3F4F6;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.modal-file-item:hover {
+  border-color: #D1D5DB;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .modal-file-name {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #4B5563;
   flex: 1;
   overflow: hidden;
@@ -1051,26 +1095,29 @@ onUnmounted(() => {
 .modal-empty {
   font-size: 0.85rem;
   color: #9CA3AF;
-  padding: 12px;
+  padding: 16px;
   background: #F9FAFB;
-  border: 1px solid #F3F4F6;
+  border: 1px dashed #E5E7EB;
+  border-radius: 6px;
   text-align: center;
 }
 
 .modal-time-section {
   display: flex;
-  gap: 24px;
+  gap: 32px;
+  padding-top: 16px;
+  border-top: 1px solid #F3F4F6;
 }
 
 .modal-time-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .modal-time-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: #9CA3AF;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1078,17 +1125,18 @@ onUnmounted(() => {
 
 .modal-time-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #374151;
+  font-weight: 500;
 }
 
 /* 导航按钮 */
 .modal-actions {
   display: flex;
-  gap: 12px;
-  padding: 20px 24px;
+  gap: 16px;
+  padding: 24px 32px;
   border-top: 1px solid #F3F4F6;
-  background: #FAFAFA;
+  background: #FFFFFF;
 }
 
 .modal-btn {
@@ -1096,42 +1144,48 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 16px 12px;
+  gap: 8px;
+  padding: 16px;
   border: 1px solid #E5E7EB;
+  border-radius: 8px;
   background: #FFFFFF;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .modal-btn:hover:not(:disabled) {
   border-color: #000000;
-  background: #000000;
-  color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .modal-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
+  background: #F9FAFB;
 }
 
 .btn-icon {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   line-height: 1;
+  transition: color 0.2s ease;
 }
 
 .btn-text {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.5px;
+  color: #4B5563;
 }
 
 .modal-btn.btn-project .btn-icon { color: #3B82F6; }
 .modal-btn.btn-simulation .btn-icon { color: #F59E0B; }
 .modal-btn.btn-report .btn-icon { color: #10B981; }
 
-.modal-btn:hover:not(:disabled) .btn-icon {
-  color: #FFFFFF;
+.modal-btn:hover:not(:disabled) .btn-text {
+  color: #111827;
 }
 </style>
