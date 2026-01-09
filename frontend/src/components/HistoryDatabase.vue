@@ -17,7 +17,7 @@
     </div>
 
     <!-- 卡片容器 -->
-    <div class="cards-container" :class="{ expanded: isExpanded }">
+    <div class="cards-container" :class="{ expanded: isExpanded }" :style="containerStyle">
       <div 
         v-for="(project, index) in projects" 
         :key="project.simulation_id"
@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSimulationHistory } from '../api/simulation'
 
@@ -112,6 +112,26 @@ const CARDS_PER_ROW = 4
 const CARD_WIDTH = 280  
 const CARD_HEIGHT = 280 
 const CARD_GAP = 24
+
+// 动态计算容器高度样式
+const containerStyle = computed(() => {
+  if (!isExpanded.value) {
+    // 折叠态：固定高度
+    return { minHeight: '420px' }
+  }
+  
+  // 展开态：根据卡片数量动态计算高度
+  const total = projects.value.length
+  if (total === 0) {
+    return { minHeight: '280px' }
+  }
+  
+  const rows = Math.ceil(total / CARDS_PER_ROW)
+  // 计算实际需要的高度：行数 * 卡片高度 + (行数-1) * 间距 + 额外padding
+  const expandedHeight = rows * CARD_HEIGHT + (rows - 1) * CARD_GAP + 40
+  
+  return { minHeight: `${expandedHeight}px` }
+})
 
 // 获取卡片样式
 const getCardStyle = (index) => {
@@ -441,13 +461,9 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  min-height: 420px;
   padding: 0 40px;
   transition: min-height 700ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.cards-container.expanded {
-  min-height: 620px;
+  /* min-height 由 JS 动态计算，根据卡片数量自适应 */
 }
 
 /* 项目卡片 */
