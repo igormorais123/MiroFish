@@ -38,8 +38,26 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 
 从严肃预测到趣味仿真，我们让每一个如果都能看见结果，让预测万物成为可能。
 
-## 🎬 演示视频
+## 📸 系统截图
 
+<div align="center">
+<table>
+<tr>
+<td><img src="./static/image/Screenshot/运行截图1.png" alt="截图1" width="100%"/></td>
+<td><img src="./static/image/Screenshot/运行截图2.png" alt="截图2" width="100%"/></td>
+</tr>
+<tr>
+<td><img src="./static/image/Screenshot/运行截图3.png" alt="截图3" width="100%"/></td>
+<td><img src="./static/image/Screenshot/运行截图4.png" alt="截图4" width="100%"/></td>
+</tr>
+<tr>
+<td><img src="./static/image/Screenshot/运行截图5.png" alt="截图5" width="100%"/></td>
+<td><img src="./static/image/Screenshot/运行截图6.png" alt="截图6" width="100%"/></td>
+</tr>
+</table>
+</div>
+
+## 🎬 演示视频
 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
