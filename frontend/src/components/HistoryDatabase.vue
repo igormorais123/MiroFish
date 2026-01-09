@@ -28,11 +28,11 @@
         @mouseleave="hoveringCard = null"
         @click="navigateToProject(project)"
       >
-        <!-- 卡片头部：simulation_id和状态 -->
+        <!-- 卡片头部：simulation_id和轮数进度 -->
         <div class="card-header">
           <span class="card-id">{{ formatSimulationId(project.simulation_id) }}</span>
-          <span class="card-status" :class="getStatusClass(project.status)">
-            <span class="status-dot">●</span> {{ getStatusText(project.status) }}
+          <span class="card-progress" :class="getProgressClass(project)">
+            <span class="status-dot">●</span> {{ formatRounds(project) }}
           </span>
         </div>
 
@@ -68,7 +68,7 @@
         <!-- 卡片底部 -->
         <div class="card-footer">
           <span class="card-date">{{ formatDate(project.created_at) }}</span>
-          <span class="card-rounds">{{ formatRounds(project) }}</span>
+          <span class="card-time">{{ formatTime(project.created_at) }}</span>
         </div>
         
         <!-- 底部装饰线 (hover时展开) -->
@@ -128,8 +128,8 @@ const containerStyle = computed(() => {
   }
   
   const rows = Math.ceil(total / CARDS_PER_ROW)
-  // 计算实际需要的高度：行数 * 卡片高度 + (行数-1) * 间距 + 额外padding
-  const expandedHeight = rows * CARD_HEIGHT + (rows - 1) * CARD_GAP + 40
+  // 计算实际需要的高度：行数 * 卡片高度 + (行数-1) * 间距 + 少量底部间距
+  const expandedHeight = rows * CARD_HEIGHT + (rows - 1) * CARD_GAP + 10
   
   return { minHeight: `${expandedHeight}px` }
 })
@@ -186,33 +186,24 @@ const getCardStyle = (index) => {
   }
 }
 
-// 获取状态样式类
-const getStatusClass = (status) => {
-  const statusMap = {
-    completed: 'completed',
-    running: 'processing',
-    ready: 'ready',
-    failed: 'failed',
-    preparing: 'processing',
-    created: 'pending'
+// 根据轮数进度获取样式类
+const getProgressClass = (simulation) => {
+  const current = simulation.current_round || 0
+  const total = simulation.total_rounds || 0
+  
+  if (total === 0 || current === 0) {
+    // 未开始
+    return 'not-started'
+  } else if (current >= total) {
+    // 已完成
+    return 'completed'
+  } else {
+    // 进行中
+    return 'in-progress'
   }
-  return statusMap[status] || 'pending'
 }
 
-// 获取状态文本
-const getStatusText = (status) => {
-  const textMap = {
-    completed: 'COMPLETED',
-    running: 'PROCESSING',
-    ready: 'READY',
-    failed: 'FAILED',
-    preparing: 'PREPARING',
-    created: 'CREATED'
-  }
-  return textMap[status] || 'PENDING'
-}
-
-// 格式化日期
+// 格式化日期（只显示日期部分）
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   try {
@@ -220,6 +211,19 @@ const formatDate = (dateStr) => {
     return date.toISOString().slice(0, 10)
   } catch {
     return dateStr?.slice(0, 10) || ''
+  }
+}
+
+// 格式化时间（显示时:分）
+const formatTime = (dateStr) => {
+  if (!dateStr) return ''
+  try {
+    const date = new Date(dateStr)
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
+    return `${hours}:${minutes}`
+  } catch {
+    return ''
   }
 }
 
@@ -377,9 +381,9 @@ onMounted(() => {
     },
     {
       // 使用多个阈值，使检测更平滑
-      threshold: [0.3, 0.5, 0.7],
-      // 调整 rootMargin，使触发区域更稳定
-      rootMargin: '0px 0px -100px 0px'
+      threshold: [0.4, 0.6, 0.8],
+      // 调整 rootMargin，视口底部向上收缩，需要滚动更多才触发展开
+      rootMargin: '0px 0px -150px 0px'
     }
   )
   
@@ -412,7 +416,7 @@ onUnmounted(() => {
   width: 100%;
   min-height: 280px;
   margin-top: 80px;
-  padding: 60px 0 120px;
+  padding: 60px 0 40px;
   overflow: visible;
 }
 
@@ -534,11 +538,11 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.card-status {
+/* 轮数进度显示 */
+.card-progress {
   display: flex;
   align-items: center;
   gap: 6px;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
   font-size: 0.65rem;
@@ -548,10 +552,10 @@ onUnmounted(() => {
   font-size: 0.5rem;
 }
 
-.card-status.completed { color: #10B981; }
-.card-status.processing { color: #F59E0B; }
-.card-status.ready { color: #3B82F6; }
-.card-status.failed { color: #EF4444; }
+/* 进度状态颜色 */
+.card-progress.completed { color: #10B981; }    /* 已完成 - 绿色 */
+.card-progress.in-progress { color: #F59E0B; }  /* 进行中 - 橙色 */
+.card-progress.not-started { color: #9CA3AF; }  /* 未开始 - 灰色 */
 .card-status.pending { color: #9CA3AF; }
 
 /* 文件列表区域 */
