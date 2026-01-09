@@ -104,6 +104,8 @@ const isExpanded = ref(false)
 const hoveringCard = ref(null)
 const historyContainer = ref(null)
 let observer = null
+let isAnimating = false  // 动画锁，防止闪烁
+let expandDebounceTimer = null  // 防抖定时器
 
 // 卡片布局配置 - 调整为更宽的比例
 const CARDS_PER_ROW = 4
@@ -290,19 +292,48 @@ onMounted(() => {
   loadHistory()
   
   // 使用 Intersection Observer 监听滚动，自动展开/收起卡片
+  // 优化：使用防抖和动画锁防止闪烁
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          isExpanded.value = true
-        } else {
-          isExpanded.value = false
+        // 如果正在动画中，忽略新的触发
+        if (isAnimating) return
+        
+        const shouldExpand = entry.isIntersecting
+        
+        // 如果状态没有变化，不做任何处理
+        if (shouldExpand === isExpanded.value) return
+        
+        // 清除之前的防抖定时器
+        if (expandDebounceTimer) {
+          clearTimeout(expandDebounceTimer)
+          expandDebounceTimer = null
         }
+        
+        // 使用防抖延迟状态切换，防止快速闪烁
+        // 展开时延迟较短(50ms)，收起时延迟较长(200ms)以增加稳定性
+        const delay = shouldExpand ? 50 : 200
+        
+        expandDebounceTimer = setTimeout(() => {
+          // 再次检查是否正在动画
+          if (isAnimating) return
+          
+          // 设置动画锁
+          isAnimating = true
+          isExpanded.value = shouldExpand
+          
+          // 动画完成后解除锁定（700ms 是动画时长）
+          setTimeout(() => {
+            isAnimating = false
+          }, 750)
+        }, delay)
       })
     },
     {
-      threshold: [0.5],
-      rootMargin: '0px 0px -150px 0px'
+      // 使用多个阈值，使检测更平滑
+      threshold: [0.3, 0.5, 0.7],
+      // 调整 rootMargin，使触发区域更稳定
+      rootMargin: '0px 0px -100px 0px'
     }
   )
   
@@ -315,9 +346,15 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 清理 Intersection Observer
   if (observer) {
     observer.disconnect()
     observer = null
+  }
+  // 清理防抖定时器
+  if (expandDebounceTimer) {
+    clearTimeout(expandDebounceTimer)
+    expandDebounceTimer = null
   }
 })
 </script>
