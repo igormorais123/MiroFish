@@ -40,7 +40,7 @@
             >◇</span>
             <span 
               class="status-icon available" 
-              title="环境配置"
+              title="环境搭建"
             >◈</span>
             <span 
               class="status-icon" 
@@ -117,6 +117,7 @@
                 <span class="modal-progress" :class="getProgressClass(selectedProject)">
                   <span class="status-dot">●</span> {{ formatRounds(selectedProject) }}
                 </span>
+                <span class="modal-create-time">{{ formatDate(selectedProject.created_at) }} {{ formatTime(selectedProject.created_at) }}</span>
               </div>
               <button class="modal-close" @click="closeModal">×</button>
             </div>
@@ -140,14 +141,13 @@
                 </div>
                 <div class="modal-empty" v-else>暂无关联文件</div>
               </div>
+            </div>
 
-              <!-- 时间信息 -->
-              <div class="modal-section modal-time-section">
-                <div class="modal-time-item">
-                  <span class="modal-time-label">创建时间</span>
-                  <span class="modal-time-value">{{ formatDate(selectedProject.created_at) }} {{ formatTime(selectedProject.created_at) }}</span>
-                </div>
-              </div>
+            <!-- 推演回放分割线 -->
+            <div class="modal-divider">
+              <span class="divider-line"></span>
+              <span class="divider-text">推演回放</span>
+              <span class="divider-line"></span>
             </div>
 
             <!-- 导航按钮 -->
@@ -157,6 +157,7 @@
                 @click="goToProject"
                 :disabled="!selectedProject.project_id"
               >
+                <span class="btn-step">Step1</span>
                 <span class="btn-icon">◇</span>
                 <span class="btn-text">图谱构建</span>
               </button>
@@ -164,17 +165,23 @@
                 class="modal-btn btn-simulation" 
                 @click="goToSimulation"
               >
+                <span class="btn-step">Step2</span>
                 <span class="btn-icon">◈</span>
-                <span class="btn-text">环境配置</span>
+                <span class="btn-text">环境搭建</span>
               </button>
               <button 
                 class="modal-btn btn-report" 
                 @click="goToReport"
                 :disabled="!selectedProject.report_id"
               >
+                <span class="btn-step">Step4</span>
                 <span class="btn-icon">◆</span>
                 <span class="btn-text">分析报告</span>
               </button>
+            </div>
+            <!-- 不可回放提示 -->
+            <div class="modal-playback-hint">
+              <span class="hint-text">Step3「开始模拟」与 Step5「深度互动」需在运行中启动，不支持历史回放</span>
             </div>
           </div>
         </div>
@@ -715,7 +722,7 @@ onUnmounted(() => {
 
 /* 不同功能的颜色 */
 .status-icon:nth-child(1).available { color: #3B82F6; } /* 图谱构建 - 蓝色 */
-.status-icon:nth-child(2).available { color: #F59E0B; } /* 环境配置 - 橙色 */
+.status-icon:nth-child(2).available { color: #F59E0B; } /* 环境搭建 - 橙色 */
 .status-icon:nth-child(3).available { color: #10B981; } /* 分析报告 - 绿色 */
 
 .status-icon.unavailable {
@@ -1099,6 +1106,13 @@ onUnmounted(() => {
 .modal-progress.in-progress { color: #F59E0B; background: rgba(245, 158, 11, 0.1); }
 .modal-progress.not-started { color: #9CA3AF; background: #F3F4F6; }
 
+.modal-create-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  letter-spacing: 0.3px;
+}
+
 .modal-close {
   width: 32px;
   height: 32px;
@@ -1215,40 +1229,35 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.modal-time-section {
+/* 推演回放分割线 */
+.modal-divider {
   display: flex;
-  gap: 32px;
-  padding-top: 16px;
-  border-top: 1px solid #F3F4F6;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 32px 0;
+  background: #FFFFFF;
 }
 
-.modal-time-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
 }
 
-.modal-time-label {
+.divider-text {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
   color: #9CA3AF;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.modal-time-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  color: #374151;
-  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* 导航按钮 */
 .modal-actions {
   display: flex;
   gap: 16px;
-  padding: 24px 32px;
-  border-top: 1px solid #F3F4F6;
+  padding: 20px 32px;
   background: #FFFFFF;
 }
 
@@ -1280,6 +1289,15 @@ onUnmounted(() => {
   background: #F9FAFB;
 }
 
+.btn-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: #9CA3AF;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .btn-icon {
   font-size: 1.4rem;
   line-height: 1;
@@ -1300,5 +1318,23 @@ onUnmounted(() => {
 
 .modal-btn:hover:not(:disabled) .btn-text {
   color: #111827;
+}
+
+/* 不可回放提示 */
+.modal-playback-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px 20px;
+  background: #FFFFFF;
+}
+
+.hint-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #9CA3AF;
+  letter-spacing: 0.3px;
+  text-align: center;
+  line-height: 1.5;
 }
 </style>
