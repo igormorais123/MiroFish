@@ -82,6 +82,80 @@
       <span class="loading-spinner"></span>
       <span class="loading-text">加载中...</span>
     </div>
+
+    <!-- 历史回放详情弹窗 -->
+    <Teleport to="body">
+      <div v-if="selectedProject" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-content">
+          <!-- 弹窗头部 -->
+          <div class="modal-header">
+            <div class="modal-title-section">
+              <span class="modal-id">{{ formatSimulationId(selectedProject.simulation_id) }}</span>
+              <span class="modal-progress" :class="getProgressClass(selectedProject)">
+                <span class="status-dot">●</span> {{ formatRounds(selectedProject) }}
+              </span>
+            </div>
+            <button class="modal-close" @click="closeModal">×</button>
+          </div>
+
+          <!-- 弹窗内容 -->
+          <div class="modal-body">
+            <!-- 模拟需求 -->
+            <div class="modal-section">
+              <div class="modal-label">模拟需求</div>
+              <div class="modal-requirement">{{ selectedProject.simulation_requirement || '无' }}</div>
+            </div>
+
+            <!-- 文件列表 -->
+            <div class="modal-section">
+              <div class="modal-label">关联文件</div>
+              <div class="modal-files" v-if="selectedProject.files && selectedProject.files.length > 0">
+                <div v-for="(file, index) in selectedProject.files" :key="index" class="modal-file-item">
+                  <span class="file-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
+                  <span class="modal-file-name">{{ file.filename }}</span>
+                </div>
+              </div>
+              <div class="modal-empty" v-else>暂无关联文件</div>
+            </div>
+
+            <!-- 时间信息 -->
+            <div class="modal-section modal-time-section">
+              <div class="modal-time-item">
+                <span class="modal-time-label">创建时间</span>
+                <span class="modal-time-value">{{ formatDate(selectedProject.created_at) }} {{ formatTime(selectedProject.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 导航按钮 -->
+          <div class="modal-actions">
+            <button 
+              class="modal-btn btn-project" 
+              @click="goToProject"
+              :disabled="!selectedProject.project_id"
+            >
+              <span class="btn-icon">◇</span>
+              <span class="btn-text">图谱构建</span>
+            </button>
+            <button 
+              class="modal-btn btn-simulation" 
+              @click="goToSimulation"
+            >
+              <span class="btn-icon">◈</span>
+              <span class="btn-text">环境配置</span>
+            </button>
+            <button 
+              class="modal-btn btn-report" 
+              @click="goToReport"
+              :disabled="!selectedProject.report_id"
+            >
+              <span class="btn-icon">◆</span>
+              <span class="btn-text">分析报告</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -99,6 +173,7 @@ const loading = ref(true)
 const isExpanded = ref(false)
 const hoveringCard = ref(null)
 const historyContainer = ref(null)
+const selectedProject = ref(null)  // 当前选中的项目（用于弹窗）
 let observer = null
 let isAnimating = false  // 动画锁，防止闪烁
 let expandDebounceTimer = null  // 防抖定时器
@@ -285,12 +360,47 @@ const truncateFilename = (filename, maxLength) => {
   return truncatedName + ext
 }
 
-// 导航到模拟详情页
+// 打开项目详情弹窗
 const navigateToProject = (simulation) => {
-  router.push({
-    name: 'SimulationRun',
-    params: { simulationId: simulation.simulation_id }
-  })
+  selectedProject.value = simulation
+}
+
+// 关闭弹窗
+const closeModal = () => {
+  selectedProject.value = null
+}
+
+// 导航到图谱构建页面（Project）
+const goToProject = () => {
+  if (selectedProject.value?.project_id) {
+    router.push({
+      name: 'Process',
+      params: { projectId: selectedProject.value.project_id }
+    })
+    closeModal()
+  }
+}
+
+// 导航到环境配置页面（Simulation）
+const goToSimulation = () => {
+  if (selectedProject.value?.simulation_id) {
+    router.push({
+      name: 'Simulation',
+      params: { simulationId: selectedProject.value.simulation_id }
+    })
+    closeModal()
+  }
+}
+
+// 导航到分析报告页面（Report）
+const goToReport = () => {
+  if (selectedProject.value?.report_id) {
+    router.push({
+      name: 'Report',
+      params: { reportId: selectedProject.value.report_id }
+    })
+    closeModal()
+  }
 }
 
 // 加载历史项目
@@ -799,5 +909,229 @@ onUnmounted(() => {
   .project-card {
     width: 200px;
   }
+}
+
+/* ===== 历史回放详情弹窗样式 ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #FFFFFF;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* 弹窗头部 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #F3F4F6;
+  background: #FAFAFA;
+}
+
+.modal-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: 0.5px;
+}
+
+.modal-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.modal-progress.completed { color: #10B981; }
+.modal-progress.in-progress { color: #F59E0B; }
+.modal-progress.not-started { color: #9CA3AF; }
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  font-size: 1.2rem;
+  color: #6B7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+  color: #111827;
+}
+
+/* 弹窗内容 */
+.modal-body {
+  padding: 24px;
+}
+
+.modal-section {
+  margin-bottom: 20px;
+}
+
+.modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.modal-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.modal-requirement {
+  font-size: 0.9rem;
+  color: #374151;
+  line-height: 1.6;
+  padding: 12px;
+  background: #F9FAFB;
+  border: 1px solid #F3F4F6;
+}
+
+.modal-files {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #F9FAFB;
+  border: 1px solid #F3F4F6;
+}
+
+.modal-file-name {
+  font-size: 0.8rem;
+  color: #4B5563;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-empty {
+  font-size: 0.85rem;
+  color: #9CA3AF;
+  padding: 12px;
+  background: #F9FAFB;
+  border: 1px solid #F3F4F6;
+  text-align: center;
+}
+
+.modal-time-section {
+  display: flex;
+  gap: 24px;
+}
+
+.modal-time-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-time-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-time-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+/* 导航按钮 */
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #F3F4F6;
+  background: #FAFAFA;
+}
+
+.modal-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 12px;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-btn:hover:not(:disabled) {
+  border-color: #000000;
+  background: #000000;
+  color: #FFFFFF;
+}
+
+.modal-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.btn-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.modal-btn.btn-project .btn-icon { color: #3B82F6; }
+.modal-btn.btn-simulation .btn-icon { color: #F59E0B; }
+.modal-btn.btn-report .btn-icon { color: #10B981; }
+
+.modal-btn:hover:not(:disabled) .btn-icon {
+  color: #FFFFFF;
 }
 </style>

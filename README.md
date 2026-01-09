@@ -66,7 +66,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 | 工具 | 版本要求 | 说明 | 安装检查 |
 |------|---------|------|---------|
 | **Node.js** | 18+ | 前端运行环境，包含 npm | `node -v` |
-| **Python** | 3.11+ | 后端运行环境 | `python --version` |
+| **Python** | ≥3.11, ≤3.12 | 后端运行环境 | `python --version` |
 | **uv** | 最新版 | Python 包管理器 | `uv --version` |
 
 ### 1. 配置环境变量
@@ -128,9 +128,11 @@ npm run backend   # 仅启动后端
 npm run frontend  # 仅启动前端
 ```
 
-## 📬 联系我们
+## 📬 更多交流
 
-MiroFish 团队长期招募 **Agent 算法工程师**（全职/实习），如果你对多智能体仿真、大语言模型应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
+MiroFish 团队长期招募 **Agent 算法工程师**（全职/实习），如果你对多Agent仿真、LLM应用感兴趣，欢迎投递简历至：**mirofish@shanda.com**
+
+
 
 ## 📄 致谢
 
