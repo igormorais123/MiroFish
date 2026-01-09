@@ -412,7 +412,8 @@ onUnmounted(() => {
     linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
-  background-position: center center;
+  /* 从左上角开始定位，高度变化时只在底部扩展，不影响已有网格位置 */
+  background-position: top left;
 }
 
 .gradient-overlay {
