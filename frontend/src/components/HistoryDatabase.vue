@@ -1,10 +1,11 @@
 <template>
   <div 
     class="history-database"
+    :class="{ 'no-projects': projects.length === 0 && !loading }"
     ref="historyContainer"
   >
-    <!-- 背景装饰：技术网格线（使用CSS背景，固定间距正方形网格） -->
-    <div class="tech-grid-bg">
+    <!-- 背景装饰：技术网格线（只在有项目时显示） -->
+    <div v-if="projects.length > 0 || loading" class="tech-grid-bg">
       <div class="grid-pattern"></div>
       <div class="gradient-overlay"></div>
     </div>
@@ -16,8 +17,8 @@
       <div class="section-line"></div>
     </div>
 
-    <!-- 卡片容器 -->
-    <div class="cards-container" :class="{ expanded: isExpanded }" :style="containerStyle">
+    <!-- 卡片容器（只在有项目时显示） -->
+    <div v-if="projects.length > 0" class="cards-container" :class="{ expanded: isExpanded }" :style="containerStyle">
       <div 
         v-for="(project, index) in projects" 
         :key="project.simulation_id"
@@ -74,12 +75,6 @@
         <!-- 底部装饰线 (hover时展开) -->
         <div class="card-bottom-line"></div>
       </div>
-    </div>
-
-    <!-- 空状态 -->
-    <div v-if="projects.length === 0 && !loading" class="empty-state">
-      <span class="empty-icon">◇</span>
-      <span class="empty-text">暂无历史项目</span>
     </div>
 
     <!-- 加载状态 -->
@@ -418,6 +413,12 @@ onUnmounted(() => {
   margin-top: 80px;
   padding: 60px 0 40px;
   overflow: visible;
+}
+
+/* 无项目时简化显示 */
+.history-database.no-projects {
+  min-height: auto;
+  padding: 40px 0 20px;
 }
 
 /* 技术网格背景 */
