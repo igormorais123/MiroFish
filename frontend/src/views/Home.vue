@@ -16,7 +16,7 @@
         <div class="hero-left">
           <div class="tag-row">
             <span class="orange-tag">简洁通用的群体智能引擎</span>
-            <span class="version-text">/ V1.0-预览版</span>
+            <span class="version-text">/ v0.1-预览版</span>
           </div>
           
           <h1 class="main-title">
