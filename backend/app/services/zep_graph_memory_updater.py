@@ -215,6 +215,12 @@ class ZepGraphMemoryUpdater:
     # 批量发送大小（每个平台累积多少条后发送）
     BATCH_SIZE = 5
     
+    # 平台名称映射（用于控制台显示）
+    PLATFORM_DISPLAY_NAMES = {
+        'twitter': '世界1',
+        'reddit': '世界2',
+    }
+    
     # 发送间隔（秒），避免请求过快
     SEND_INTERVAL = 0.5
     
@@ -260,6 +266,10 @@ class ZepGraphMemoryUpdater:
         self._skipped_count = 0     # 被过滤跳过的活动数（DO_NOTHING）
         
         logger.info(f"ZepGraphMemoryUpdater 初始化完成: graph_id={graph_id}, batch_size={self.BATCH_SIZE}")
+    
+    def _get_platform_display_name(self, platform: str) -> str:
+        """获取平台的显示名称"""
+        return self.PLATFORM_DISPLAY_NAMES.get(platform.lower(), platform)
     
     def start(self):
         """启动后台工作线程"""
@@ -403,7 +413,8 @@ class ZepGraphMemoryUpdater:
                 
                 self._total_sent += 1
                 self._total_items_sent += len(activities)
-                logger.info(f"成功批量发送 {len(activities)} 条{platform}活动到图谱 {self.graph_id}")
+                display_name = self._get_platform_display_name(platform)
+                logger.info(f"成功批量发送 {len(activities)} 条{display_name}活动到图谱 {self.graph_id}")
                 logger.debug(f"批量内容预览: {combined_text[:200]}...")
                 return
                 
@@ -433,7 +444,8 @@ class ZepGraphMemoryUpdater:
         with self._buffer_lock:
             for platform, buffer in self._platform_buffers.items():
                 if buffer:
-                    logger.info(f"发送{platform}平台剩余的 {len(buffer)} 条活动")
+                    display_name = self._get_platform_display_name(platform)
+                    logger.info(f"发送{display_name}平台剩余的 {len(buffer)} 条活动")
                     self._send_batch_activities(buffer, platform)
             # 清空所有缓冲区
             for platform in self._platform_buffers:
