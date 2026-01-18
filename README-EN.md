@@ -79,8 +79,6 @@ Click the image to watch the complete demo video for prediction using BettaFish-
 
 ### Prerequisites
 
-> Note: MiroFish was developed and tested on Mac. Windows compatibility is unknown and currently under testing.
-
 | Tool | Version | Description | Check Installation |
 |------|---------|-------------|-------------------|
 | **Node.js** | 18+ | Frontend runtime, includes npm | `node -v` |
