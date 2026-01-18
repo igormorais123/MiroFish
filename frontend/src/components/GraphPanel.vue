@@ -661,18 +661,38 @@ const renderGraph = () => {
     .style('cursor', 'pointer')
     .call(d3.drag()
       .on('start', (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.3).restart()
+        // 只记录位置，不重启仿真（区分点击和拖拽）
         d.fx = d.x
         d.fy = d.y
+        d._dragStartX = event.x
+        d._dragStartY = event.y
+        d._isDragging = false
       })
       .on('drag', (event, d) => {
-        d.fx = event.x
-        d.fy = event.y
+        // 检测是否真正开始拖拽（移动超过阈值）
+        const dx = event.x - d._dragStartX
+        const dy = event.y - d._dragStartY
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        
+        if (!d._isDragging && distance > 3) {
+          // 首次检测到真正拖拽，才重启仿真
+          d._isDragging = true
+          simulation.alphaTarget(0.3).restart()
+        }
+        
+        if (d._isDragging) {
+          d.fx = event.x
+          d.fy = event.y
+        }
       })
       .on('end', (event, d) => {
-        if (!event.active) simulation.alphaTarget(0)
+        // 只有真正拖拽过才让仿真逐渐停止
+        if (d._isDragging) {
+          simulation.alphaTarget(0)
+        }
         d.fx = null
         d.fy = null
+        d._isDragging = false
       })
     )
     .on('click', (event, d) => {
