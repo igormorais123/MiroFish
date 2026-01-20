@@ -70,7 +70,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 ### 红楼梦未完结局推演预测
 
 <div align="center">
-<a href="https://www.bilibili.com/video/BV1cPk3BBExq" target="_blank"><img src="./static/image/红楼梦模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
+<a href="https://www.bilibili.com/video/BV1cPk3BBExq" target="_blank"><img src="./static/image/红楼梦模拟推演封面.jpg" alt="MiroFish Demo Video" width="75%"/></a>
 
 点击图片查看基于红楼梦前80回数十万字，MiroFish深度预测失传结局
 </div>
