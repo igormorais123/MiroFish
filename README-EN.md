@@ -75,7 +75,7 @@ Click the image to watch the complete demo video for prediction using BettaFish-
 Click the image to watch MiroFish's deep prediction of the lost ending based on hundreds of thousands of words from the first 80 chapters of "Dream of the Red Chamber"
 </div>
 
-> More demo videos coming soon: "Dream of the Red Chamber" ending simulation, financial prediction examples...
+> **Financial Prediction**, **Political News Prediction** and more examples coming soon...
 
 ## 🔄 Workflow
 

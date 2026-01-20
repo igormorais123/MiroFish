@@ -67,15 +67,15 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 点击图片查看使用微舆BettaFish生成的《武大舆情报告》进行预测的完整演示视频
 </div>
 
-### 2. 红楼梦失传结局推演预测
+### 2. 《红楼梦》失传结局推演预测
 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1cPk3BBExq" target="_blank"><img src="./static/image/红楼梦模拟推演封面.jpg" alt="MiroFish Demo Video" width="75%"/></a>
 
-点击图片查看基于红楼梦前80回数十万字，MiroFish深度预测失传结局
+点击图片查看基于《红楼梦》前80回数十万字，MiroFish深度预测失传结局
 </div>
 
-> 红楼梦结局模拟推演演示视频、金融方向预测示例演示视频等陆续更新中...
+> **金融方向推演预测**、**时政要闻推演预测**等示例陆续更新中...
 
 ## 🔄 工作流程
 
