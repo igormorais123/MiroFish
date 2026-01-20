@@ -59,10 +59,20 @@ From serious predictions to playful simulations, we let every "what if" see its 
 
 ## 🎬 Demo Videos
 
+### Wuhan University Public Opinion Simulation
+
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
 
 Click the image to watch the complete demo video for prediction using BettaFish-generated "Wuhan University Public Opinion Report"
+</div>
+
+### Dream of the Red Chamber Ending Simulation
+
+<div align="center">
+<a href="https://www.bilibili.com/video/BV1cPk3BBExq" target="_blank"><img src="./static/image/红楼梦模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
+
+Click the image to watch MiroFish's deep prediction of the lost ending based on hundreds of thousands of words from the first 80 chapters of "Dream of the Red Chamber"
 </div>
 
 > More demo videos coming soon: "Dream of the Red Chamber" ending simulation, financial prediction examples...
