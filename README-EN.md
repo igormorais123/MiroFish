@@ -59,7 +59,7 @@ From serious predictions to playful simulations, we let every "what if" see its 
 
 ## 🎬 Demo Videos
 
-### 1. Wuhan University Public Opinion Simulation
+### 1. Wuhan University Public Opinion Simulation + MiroFish Project Introduction
 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
@@ -107,7 +107,7 @@ cp .env.example .env
 **Required Environment Variables:**
 
 ```env
-# LLM API Configuration (supports any LLM with OpenAI SDK format)
+# LLM API Configuration (supports any LLM API with OpenAI SDK format)
 # Recommended: Alibaba Qwen-plus model via Bailian Platform: https://bailian.console.aliyun.com/
 # High consumption, try simulations with fewer than 40 rounds first
 LLM_API_KEY=your_api_key
@@ -132,7 +132,7 @@ Or install step by step:
 # Install Node dependencies (root + frontend)
 npm run setup
 
-# Install Python dependencies (auto-creates virtual environment)
+# Install Python dependencies (backend, auto-creates virtual environment)
 npm run setup:backend
 ```
 

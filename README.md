@@ -59,7 +59,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 
 ## 🎬 演示视频
 
-### 1. 武汉大学舆情推演预测
+### 1. 武汉大学舆情推演预测 + MiroFish项目讲解
 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
@@ -107,7 +107,7 @@ cp .env.example .env
 **必需的环境变量：**
 
 ```env
-# LLM API配置（支持 OpenAI SDK 格式的任意 LLM）
+# LLM API配置（支持 OpenAI SDK 格式的任意 LLM API）
 # 推荐使用阿里百炼平台qwen-plus模型：https://bailian.console.aliyun.com/
 # 注意消耗较大，可先进行小于40轮的模拟尝试
 LLM_API_KEY=your_api_key
@@ -132,7 +132,7 @@ npm run setup:all
 # 安装 Node 依赖（根目录 + 前端）
 npm run setup
 
-# 安装 Python 依赖（自动创建虚拟环境）
+# 安装 Python 依赖（后端，自动创建虚拟环境）
 npm run setup:backend
 ```
 
