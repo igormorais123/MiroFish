@@ -59,7 +59,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 
 ## 🎬 演示视频
 
-### 武汉大学舆情推演预测
+### 1. 武汉大学舆情推演预测
 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="MiroFish Demo Video" width="75%"/></a>
@@ -67,7 +67,7 @@ MiroFish 致力于打造映射现实的群体智能镜像，通过捕捉个体�
 点击图片查看使用微舆BettaFish生成的《武大舆情报告》进行预测的完整演示视频
 </div>
 
-### 红楼梦未完结局推演预测
+### 2. 红楼梦失传结局推演预测
 
 <div align="center">
 <a href="https://www.bilibili.com/video/BV1cPk3BBExq" target="_blank"><img src="./static/image/红楼梦模拟推演封面.jpg" alt="MiroFish Demo Video" width="75%"/></a>
