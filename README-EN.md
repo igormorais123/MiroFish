@@ -87,7 +87,9 @@ Click the image to watch MiroFish's deep prediction of the lost ending based on 
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Source Code Deployment (Recommended)
+
+#### Prerequisites
 
 | Tool | Version | Description | Check Installation |
 |------|---------|-------------|-------------------|
@@ -95,7 +97,7 @@ Click the image to watch MiroFish's deep prediction of the lost ending based on 
 | **Python** | ≥3.11, ≤3.12 | Backend runtime | `python --version` |
 | **uv** | Latest | Python package manager | `uv --version` |
 
-### 1. Configure Environment Variables
+#### 1. Configure Environment Variables
 
 ```bash
 # Copy the example configuration file
@@ -119,7 +121,7 @@ LLM_MODEL_NAME=qwen-plus
 ZEP_API_KEY=your_zep_api_key
 ```
 
-### 2. Install Dependencies
+#### 2. Install Dependencies
 
 ```bash
 # One-click installation of all dependencies (root + frontend + backend)
@@ -136,7 +138,7 @@ npm run setup
 npm run setup:backend
 ```
 
-### 3. Start Services
+#### 3. Start Services
 
 ```bash
 # Start both frontend and backend (run from project root)
@@ -153,6 +155,20 @@ npm run dev
 npm run backend   # Start backend only
 npm run frontend  # Start frontend only
 ```
+
+### Option 2: Docker Deployment
+
+```bash
+# 1. Configure environment variables (same as source deployment)
+cp .env.example .env
+
+# 2. Pull image and start
+docker compose up -d
+```
+
+Reads `.env` from root directory by default, maps ports `3000 (frontend) / 5001 (backend)`
+
+> Mirror address for faster pulling is provided as comments in `docker-compose.yml`, replace if needed.
 
 ## 📬 Join the Conversation
 
