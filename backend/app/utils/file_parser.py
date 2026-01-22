@@ -8,6 +8,56 @@ from pathlib import Path
 from typing import List, Optional
 
 
+def _read_text_with_fallback(file_path: str) -> str:
+    """
+    读取文本文件，UTF-8失败时自动探测编码。
+    
+    采用多级回退策略：
+    1. 首先尝试 UTF-8 解码
+    2. 使用 charset_normalizer 检测编码
+    3. 回退到 chardet 检测编码
+    4. 最终使用 UTF-8 + errors='replace' 兜底
+    
+    Args:
+        file_path: 文件路径
+        
+    Returns:
+        解码后的文本内容
+    """
+    data = Path(file_path).read_bytes()
+    
+    # 首先尝试 UTF-8
+    try:
+        return data.decode('utf-8')
+    except UnicodeDecodeError:
+        pass
+    
+    # 尝试使用 charset_normalizer 检测编码
+    encoding = None
+    try:
+        from charset_normalizer import from_bytes
+        best = from_bytes(data).best()
+        if best and best.encoding:
+            encoding = best.encoding
+    except Exception:
+        pass
+    
+    # 回退到 chardet
+    if not encoding:
+        try:
+            import chardet
+            result = chardet.detect(data)
+            encoding = result.get('encoding') if result else None
+        except Exception:
+            pass
+    
+    # 最终兜底：使用 UTF-8 + replace
+    if not encoding:
+        encoding = 'utf-8'
+    
+    return data.decode(encoding, errors='replace')
+
+
 class FileParser:
     """文件解析器"""
     
@@ -62,15 +112,13 @@ class FileParser:
     
     @staticmethod
     def _extract_from_md(file_path: str) -> str:
-        """从Markdown提取文本"""
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
+        """从Markdown提取文本，支持自动编码检测"""
+        return _read_text_with_fallback(file_path)
     
     @staticmethod
     def _extract_from_txt(file_path: str) -> str:
-        """从TXT提取文本"""
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
+        """从TXT提取文本，支持自动编码检测"""
+        return _read_text_with_fallback(file_path)
     
     @classmethod
     def extract_from_multiple(cls, file_paths: List[str]) -> str:
