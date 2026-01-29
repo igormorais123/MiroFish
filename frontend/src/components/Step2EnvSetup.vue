@@ -914,7 +914,10 @@ const fetchProfilesRealtime = async () => {
     if (res.success && res.data) {
       const prevCount = profiles.value.length
       profiles.value = res.data.profiles || []
-      expectedTotal.value = res.data.total_expected
+      // 只有当 API 返回有效值时才更新，避免覆盖已有的有效值
+      if (res.data.total_expected) {
+        expectedTotal.value = res.data.total_expected
+      }
       
       // 提取实体类型
       const types = new Set()
