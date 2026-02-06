@@ -1001,7 +1001,7 @@ class ReportAgent:
    - 你正在以「上帝视角」观察未来的预演
    - 所有内容必须来自模拟世界中发生的事件和Agent言行
    - 禁止使用你自己的知识来编写报告内容
-   - 每个章节至少调用2次工具（最多4次）来观察模拟的世界，它代表了未来
+   - 每个章节至少调用2次工具（最多5次）来观察模拟的世界，它代表了未来
 
 2. 【必须引用Agent的原始言行】
    - Agent的发言和行为是对未来人群行为的预测
@@ -1053,7 +1053,7 @@ class ReportAgent:
 ```
 
 ═══════════════════════════════════════════════════════════════
-【可用检索工具】（每章节调用2-4次）
+【可用检索工具】（每章节调用2-5次）
 ═══════════════════════════════════════════════════════════════
 
 {self._get_tools_description()}
@@ -1069,13 +1069,17 @@ class ReportAgent:
 ═══════════════════════════════════════════════════════════════
 
 1. Thought: [分析需要什么信息，规划检索策略]
-2. Action: [调用工具获取信息]
+2. Action: [调用一个工具获取信息]（每轮只能调用一个工具！）
    <tool_call>
    {{"name": "工具名称", "parameters": {{"参数名": "参数值"}}}}
    </tool_call>
-3. Observation: [分析工具返回的结果]
-4. 重复步骤1-3，直到收集到足够信息（最多5轮）
+3. Observation: [系统返回工具结果]
+4. 重复步骤1-3，直到收集到足够信息
 5. Final Answer: [基于检索结果撰写章节内容]
+
+⚠️ 重要规则：
+- 每轮只能调用一个工具，不要在一次回复中放多个 <tool_call>
+- 当你认为信息足够时，必须以 "Final Answer:" 开头输出最终内容
 
 ═══════════════════════════════════════════════════════════════
 【章节内容要求】
@@ -1184,10 +1188,11 @@ class ReportAgent:
 
             logger.debug(f"LLM响应: {response[:200]}...")
 
-            # 检查是否有工具调用和最终答案
-            has_tool_calls = bool(self._parse_tool_calls(response))
+            # 解析一次，复用结果
+            tool_calls = self._parse_tool_calls(response)
+            has_tool_calls = bool(tool_calls)
             has_final_answer = "Final Answer:" in response
-            
+
             # 记录 LLM 响应日志
             if self.report_logger:
                 self.report_logger.log_llm_response(
@@ -1198,30 +1203,22 @@ class ReportAgent:
                     has_tool_calls=has_tool_calls,
                     has_final_answer=has_final_answer
                 )
-            
-            # 检查是否有最终答案
+
+            # ── 情况1：LLM 输出了 Final Answer ──
             if has_final_answer:
-                # 如果工具调用次数不足，提醒需要更多检索
+                # 工具调用次数不足，拒绝并要求继续调工具
                 if tool_calls_count < min_tool_calls:
                     messages.append({"role": "assistant", "content": response})
                     messages.append({
-                        "role": "user", 
-                        "content": f"""【注意】你只调用了{tool_calls_count}次工具，信息可能不够充分。
-
-请再调用1-2次工具来获取更多模拟数据，然后再输出 Final Answer。
-建议：
-- 使用 insight_forge 深度检索更多细节
-- 使用 panorama_search 了解事件全貌
-
-记住：报告内容必须来自模拟结果，而不是你的知识！"""
+                        "role": "user",
+                        "content": f"【注意】你只调用了{tool_calls_count}次工具，信息可能不够充分。请再调用工具获取更多模拟数据，然后再输出 Final Answer。"
                     })
                     continue
-                
-                # 提取最终答案
+
+                # 正常结束
                 final_answer = response.split("Final Answer:")[-1].strip()
                 logger.info(f"章节 {section.title} 生成完成（工具调用: {tool_calls_count}次）")
-                
-                # 记录章节内容生成完成日志
+
                 if self.report_logger:
                     self.report_logger.log_section_content(
                         section_title=section.title,
@@ -1229,46 +1226,24 @@ class ReportAgent:
                         content=final_answer,
                         tool_calls_count=tool_calls_count
                     )
-
                 return final_answer
 
-            # 解析工具调用
-            tool_calls = self._parse_tool_calls(response)
-            
-            if not tool_calls:
-                # 没有工具调用也没有最终答案
-                messages.append({"role": "assistant", "content": response})
-                
-                if tool_calls_count < min_tool_calls:
-                    # 还没有足够的工具调用，强烈提示需要调用工具
-                    messages.append({
-                        "role": "user", 
-                        "content": f"""【重要】你还没有调用足够的工具来获取模拟数据！
-
-当前只调用了 {tool_calls_count} 次工具，至少需要 {min_tool_calls} 次。
-
-请立即调用工具获取信息：
-<tool_call>
-{{"name": "insight_forge", "parameters": {{"query": "{section.title}相关的模拟结果和分析"}}}}
-</tool_call>
-
-【记住】报告内容必须100%来自模拟结果，不能使用你自己的知识！"""
-                    })
-                else:
-                    # 已有足够调用，可以生成最终答案
-                    messages.append({
-                        "role": "user", 
-                        "content": "你已经获取了足够的模拟数据。请基于检索到的信息，输出 Final Answer: 并撰写章节内容。\n\n【重要】内容必须大量引用检索到的原文，使用 > 格式引用。"
-                    })
-                continue
-            
-            # 执行工具调用
-            tool_results = []
-            for call in tool_calls:
+            # ── 情况2：LLM 尝试调用工具 ──
+            if has_tool_calls:
+                # 工具额度已耗尽 → 明确告知，要求输出 Final Answer
                 if tool_calls_count >= self.MAX_TOOL_CALLS_PER_SECTION:
-                    break
-                
-                # 记录工具调用日志
+                    messages.append({"role": "assistant", "content": response})
+                    messages.append({
+                        "role": "user",
+                        "content": f"工具调用次数已达上限（{tool_calls_count}/{self.MAX_TOOL_CALLS_PER_SECTION}），不能再调用工具。请立即基于已获取的信息，以 \"Final Answer:\" 开头输出章节内容。"
+                    })
+                    continue
+
+                # 只执行第一个工具调用
+                call = tool_calls[0]
+                if len(tool_calls) > 1:
+                    logger.info(f"LLM 尝试调用 {len(tool_calls)} 个工具，只执行第一个: {call['name']}")
+
                 if self.report_logger:
                     self.report_logger.log_tool_call(
                         section_title=section.title,
@@ -1277,14 +1252,13 @@ class ReportAgent:
                         parameters=call.get("parameters", {}),
                         iteration=iteration + 1
                     )
-                
+
                 result = self._execute_tool(
-                    call["name"], 
+                    call["name"],
                     call.get("parameters", {}),
                     report_context=report_context
                 )
-                
-                # 记录工具结果日志
+
                 if self.report_logger:
                     self.report_logger.log_tool_result(
                         section_title=section.title,
@@ -1293,26 +1267,52 @@ class ReportAgent:
                         result=result,
                         iteration=iteration + 1
                     )
-                
-                tool_results.append(f"═══ 工具 {call['name']} 返回 ═══\n{result}")
-                tool_calls_count += 1
-            
-            # 将结果添加到消息
-            messages.append({"role": "assistant", "content": response})
-            messages.append({
-                "role": "user",
-                "content": f"""Observation（检索结果）:
 
-{"".join(tool_results)}
+                tool_calls_count += 1
+
+                messages.append({"role": "assistant", "content": response})
+                messages.append({
+                    "role": "user",
+                    "content": f"""Observation（检索结果）:
+
+═══ 工具 {call['name']} 返回 ═══
+{result}
 
 ═══════════════════════════════════════════════════════════════
-【下一步行动】
-- 如果信息充分：输出 Final Answer 并撰写章节内容（必须引用上述原文）
-- 如果需要更多信息：继续调用工具检索
-
 已调用工具 {tool_calls_count}/{self.MAX_TOOL_CALLS_PER_SECTION} 次
+- 如果信息充分：以 "Final Answer:" 开头输出章节内容（必须引用上述原文）
+- 如果需要更多信息：调用一个工具继续检索
 ═══════════════════════════════════════════════════════════════"""
-            })
+                })
+                continue
+
+            # ── 情况3：既没有工具调用，也没有 Final Answer ──
+            messages.append({"role": "assistant", "content": response})
+
+            if tool_calls_count < min_tool_calls:
+                # 工具调用次数不足，催促调工具
+                messages.append({
+                    "role": "user",
+                    "content": f"""当前只调用了 {tool_calls_count} 次工具，至少需要 {min_tool_calls} 次。请调用工具获取模拟数据：
+<tool_call>
+{{"name": "insight_forge", "parameters": {{"query": "{section.title}相关的模拟结果和分析"}}}}
+</tool_call>"""
+                })
+                continue
+
+            # 工具调用已足够，LLM 输出了内容但没带 "Final Answer:" 前缀
+            # 直接将这段内容作为最终答案，不再空转
+            logger.info(f"章节 {section.title} 未检测到 'Final Answer:' 前缀，直接采纳LLM输出作为最终内容（工具调用: {tool_calls_count}次）")
+            final_answer = response.strip()
+
+            if self.report_logger:
+                self.report_logger.log_section_content(
+                    section_title=section.title,
+                    section_index=section_index,
+                    content=final_answer,
+                    tool_calls_count=tool_calls_count
+                )
+            return final_answer
         
         # 达到最大迭代次数，强制生成内容
         logger.warning(f"章节 {section.title} 达到最大迭代次数，强制生成")
