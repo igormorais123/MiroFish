@@ -238,13 +238,11 @@ class ReportLogger:
         section_title: str,
         section_index: int,
         content: str,
-        tool_calls_count: int,
-        is_subsection: bool = False
+        tool_calls_count: int
     ):
-        """记录章节/子章节内容生成完成（仅记录内容，不代表整个章节完成）"""
-        action = "subsection_content" if is_subsection else "section_content"
+        """记录章节内容生成完成（仅记录内容，不代表整个章节完成）"""
         self.log(
-            action=action,
+            action="section_content",
             stage="generating",
             section_title=section_title,
             section_index=section_index,
@@ -252,8 +250,7 @@ class ReportLogger:
                 "content": content,  # 完整内容，不截断
                 "content_length": len(content),
                 "tool_calls_count": tool_calls_count,
-                "is_subsection": is_subsection,
-                "message": f"{'子章节' if is_subsection else '主章节'} {section_title} 内容生成完成"
+                "message": f"章节 {section_title} 内容生成完成"
             }
         )
     
@@ -261,12 +258,11 @@ class ReportLogger:
         self,
         section_title: str,
         section_index: int,
-        full_content: str,
-        subsection_count: int
+        full_content: str
     ):
         """
-        记录完整章节生成完成（包含所有子章节的合并内容）
-        
+        记录章节生成完成
+
         前端应监听此日志来判断一个章节是否真正完成，并获取完整内容
         """
         self.log(
@@ -275,10 +271,9 @@ class ReportLogger:
             section_title=section_title,
             section_index=section_index,
             details={
-                "content": full_content,  # 完整章节内容（含子章节），不截断
+                "content": full_content,
                 "content_length": len(full_content),
-                "subsection_count": subsection_count,
-                "message": f"章节 {section_title} 完整生成完成（含 {subsection_count} 个子章节）"
+                "message": f"章节 {section_title} 生成完成"
             }
         )
     
@@ -404,22 +399,18 @@ class ReportSection:
     """报告章节"""
     title: str
     content: str = ""
-    subsections: List['ReportSection'] = field(default_factory=list)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "title": self.title,
-            "content": self.content,
-            "subsections": [s.to_dict() for s in self.subsections]
+            "content": self.content
         }
-    
+
     def to_markdown(self, level: int = 2) -> str:
         """转换为Markdown格式"""
         md = f"{'#' * level} {self.title}\n\n"
         if self.content:
             md += f"{self.content}\n\n"
-        for sub in self.subsections:
-            md += sub.to_markdown(level + 1)
         return md
 
 
@@ -854,8 +845,8 @@ class ReportAgent:
 - ❌ 不是泛泛而谈的舆情综述
 
 【章节数量限制】
-- 最少2个主章节，最多5个主章节
-- 每个章节可以有0-2个子章节
+- 最少2个章节，最多5个章节
+- 不需要子章节，每个章节直接撰写完整内容
 - 内容要精炼，聚焦于核心预测发现
 - 章节结构由你根据预测结果自主设计
 
@@ -866,10 +857,7 @@ class ReportAgent:
     "sections": [
         {
             "title": "章节标题",
-            "description": "章节内容描述",
-            "subsections": [
-                {"title": "子章节标题", "description": "子章节描述"}
-            ]
+            "description": "章节内容描述"
         }
     ]
 }
@@ -912,17 +900,9 @@ class ReportAgent:
             # 解析大纲
             sections = []
             for section_data in response.get("sections", []):
-                subsections = []
-                for sub_data in section_data.get("subsections", []):
-                    subsections.append(ReportSection(
-                        title=sub_data.get("title", ""),
-                        content=""
-                    ))
-                
                 sections.append(ReportSection(
                     title=section_data.get("title", ""),
-                    content="",
-                    subsections=subsections
+                    content=""
                 ))
             
             outline = ReportOutline(
@@ -1241,20 +1221,17 @@ class ReportAgent:
                 final_answer = response.split("Final Answer:")[-1].strip()
                 logger.info(f"章节 {section.title} 生成完成（工具调用: {tool_calls_count}次）")
                 
-                # 记录章节内容生成完成日志（注意：这只是内容完成，不代表整个章节完成）
-                # 如果是子章节，section_index >= 100
-                is_subsection = section_index >= 100
+                # 记录章节内容生成完成日志
                 if self.report_logger:
                     self.report_logger.log_section_content(
                         section_title=section.title,
                         section_index=section_index,
                         content=final_answer,
-                        tool_calls_count=tool_calls_count,
-                        is_subsection=is_subsection
+                        tool_calls_count=tool_calls_count
                     )
-                
+
                 return final_answer
-            
+
             # 解析工具调用
             tool_calls = self._parse_tool_calls(response)
             
@@ -1359,15 +1336,13 @@ class ReportAgent:
         else:
             final_answer = response
         
-        # 记录章节内容生成完成日志（注意：这只是内容完成，不代表整个章节完成）
-        is_subsection = section_index >= 100
+        # 记录章节内容生成完成日志
         if self.report_logger:
             self.report_logger.log_section_content(
                 section_title=section.title,
                 section_index=section_index,
                 content=final_answer,
-                tool_calls_count=tool_calls_count,
-                is_subsection=is_subsection
+                tool_calls_count=tool_calls_count
             )
         
         return final_answer
@@ -1511,62 +1486,22 @@ class ReportAgent:
                 
                 section.content = section_content
                 generated_sections.append(f"## {section.title}\n\n{section_content}")
-                
-                # 如果有子章节，也一并生成并合并到主章节中
-                subsection_contents = []
-                for j, subsection in enumerate(section.subsections):
-                    subsection_num = j + 1
-                    
-                    if progress_callback:
-                        progress_callback(
-                            "generating",
-                            base_progress + int(((j + 1) / max(len(section.subsections), 1)) * 5),
-                            f"正在生成子章节: {subsection.title}"
-                        )
-                    
-                    ReportManager.update_progress(
-                        report_id, "generating",
-                        base_progress + int(((j + 1) / max(len(section.subsections), 1)) * 5),
-                        f"正在生成子章节: {subsection.title}",
-                        current_section=subsection.title,
-                        completed_sections=completed_section_titles
-                    )
-                    
-                    subsection_content = self._generate_section_react(
-                        section=subsection,
-                        outline=outline,
-                        previous_sections=generated_sections,
-                        progress_callback=None,
-                        section_index=section_num * 100 + subsection_num  # 子章节索引
-                    )
-                    subsection.content = subsection_content
-                    generated_sections.append(f"### {subsection.title}\n\n{subsection_content}")
-                    subsection_contents.append((subsection.title, subsection_content))
-                    completed_section_titles.append(f"  └─ {subsection.title}")
-                    
-                    logger.info(f"子章节已生成: {subsection.title}")
-                
-                # 【关键】将主章节和所有子章节合并保存到一个文件
-                ReportManager.save_section_with_subsections(
-                    report_id, section_num, section, subsection_contents
-                )
+
+                # 保存章节
+                ReportManager.save_section(report_id, section_num, section)
                 completed_section_titles.append(section.title)
-                
-                # 【重要】记录完整章节完成日志，包含合并后的完整内容
-                # 构建完整章节内容（主章节 + 所有子章节）
-                full_section_content = f"## {section.title}\n\n{section_content}\n\n"
-                for sub_title, sub_content in subsection_contents:
-                    full_section_content += f"### {sub_title}\n\n{sub_content}\n\n"
-                
+
+                # 记录章节完成日志
+                full_section_content = f"## {section.title}\n\n{section_content}"
+
                 if self.report_logger:
                     self.report_logger.log_section_full_complete(
                         section_title=section.title,
                         section_index=section_num,
-                        full_content=full_section_content.strip(),
-                        subsection_count=len(subsection_contents)
+                        full_content=full_section_content.strip()
                     )
-                
-                logger.info(f"章节已保存（包含{len(subsection_contents)}个子章节）: {report_id}/section_{section_num:02d}.md")
+
+                logger.info(f"章节已保存: {report_id}/section_{section_num:02d}.md")
                 
                 # 更新进度
                 ReportManager.update_progress(
@@ -1997,94 +1932,39 @@ class ReportManager:
     
     @classmethod
     def save_section(
-        cls, 
-        report_id: str, 
-        section_index: int, 
-        section: ReportSection,
-        is_subsection: bool = False,
-        parent_index: int = None
+        cls,
+        report_id: str,
+        section_index: int,
+        section: ReportSection
     ) -> str:
         """
-        保存单个章节（不推荐使用，建议使用 save_section_with_subsections）
-        
+        保存单个章节
+
         在每个章节生成完成后立即调用，实现分章节输出
-        
+
         Args:
             report_id: 报告ID
             section_index: 章节索引（从1开始）
             section: 章节对象
-            is_subsection: 是否是子章节
-            parent_index: 父章节索引（子章节时使用）
-            
+
         Returns:
             保存的文件路径
         """
         cls._ensure_report_folder(report_id)
-        
-        # 确定章节级别和标题格式
-        if is_subsection and parent_index is not None:
-            level = "###"
-            file_suffix = f"section_{parent_index:02d}_{section_index:02d}.md"
-        else:
-            level = "##"
-            file_suffix = f"section_{section_index:02d}.md"
-        
+
         # 构建章节Markdown内容 - 清理可能存在的重复标题
         cleaned_content = cls._clean_section_content(section.content, section.title)
-        md_content = f"{level} {section.title}\n\n"
+        md_content = f"## {section.title}\n\n"
         if cleaned_content:
             md_content += f"{cleaned_content}\n\n"
-        
-        # 保存文件
-        file_path = os.path.join(cls._get_report_folder(report_id), file_suffix)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(md_content)
-        
-        logger.info(f"章节已保存: {report_id}/{file_suffix}")
-        return file_path
-    
-    @classmethod
-    def save_section_with_subsections(
-        cls,
-        report_id: str,
-        section_index: int,
-        section: ReportSection,
-        subsection_contents: List[tuple]
-    ) -> str:
-        """
-        保存章节及其所有子章节到一个文件
-        
-        Args:
-            report_id: 报告ID
-            section_index: 章节索引（从1开始）
-            section: 主章节对象
-            subsection_contents: 子章节列表 [(title, content), ...]
-            
-        Returns:
-            保存的文件路径
-        """
-        cls._ensure_report_folder(report_id)
-        
-        # 构建主章节Markdown内容
-        cleaned_main_content = cls._clean_section_content(section.content, section.title)
-        md_content = f"## {section.title}\n\n"
-        if cleaned_main_content:
-            md_content += f"{cleaned_main_content}\n\n"
-        
-        # 添加所有子章节内容
-        for sub_title, sub_content in subsection_contents:
-            cleaned_sub_content = cls._clean_section_content(sub_content, sub_title)
-            md_content += f"### {sub_title}\n\n"
-            if cleaned_sub_content:
-                md_content += f"{cleaned_sub_content}\n\n"
-        
+
         # 保存文件
         file_suffix = f"section_{section_index:02d}.md"
         file_path = os.path.join(cls._get_report_folder(report_id), file_suffix)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(md_content)
-        
-        logger.info(f"章节已保存（含{len(subsection_contents)}个子章节）: {report_id}/{file_suffix}")
+
+        logger.info(f"章节已保存: {report_id}/{file_suffix}")
         return file_path
     
     @classmethod
@@ -2213,20 +2093,17 @@ class ReportManager:
                 file_path = os.path.join(folder, filename)
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                
+
                 # 从文件名解析章节索引
                 parts = filename.replace('.md', '').split('_')
                 section_index = int(parts[1])
-                subsection_index = int(parts[2]) if len(parts) > 2 else None
-                
+
                 sections.append({
                     "filename": filename,
                     "section_index": section_index,
-                    "subsection_index": subsection_index,
-                    "content": content,
-                    "is_subsection": subsection_index is not None
+                    "content": content
                 })
-        
+
         return sections
     
     @classmethod
@@ -2243,12 +2120,9 @@ class ReportManager:
         md_content += f"> {outline.summary}\n\n"
         md_content += f"---\n\n"
         
-        # 按顺序读取所有章节文件（只读取主章节文件，不读取子章节文件）
+        # 按顺序读取所有章节文件
         sections = cls.get_generated_sections(report_id)
         for section_info in sections:
-            # 跳过子章节文件（已合并到主章节中）
-            if section_info.get("is_subsection", False):
-                continue
             md_content += section_info["content"]
         
         # 后处理：清理整个报告的标题问题
@@ -2288,8 +2162,6 @@ class ReportManager:
         section_titles = set()
         for section in outline.sections:
             section_titles.add(section.title)
-            for sub in section.subsections:
-                section_titles.add(sub.title)
         
         i = 0
         while i < len(lines):
@@ -2432,14 +2304,9 @@ class ReportManager:
             outline_data = data['outline']
             sections = []
             for s in outline_data.get('sections', []):
-                subsections = [
-                    ReportSection(title=sub['title'], content=sub.get('content', ''))
-                    for sub in s.get('subsections', [])
-                ]
                 sections.append(ReportSection(
                     title=s['title'],
-                    content=s.get('content', ''),
-                    subsections=subsections
+                    content=s.get('content', '')
                 ))
             outline = ReportOutline(
                 title=outline_data['title'],

@@ -194,26 +194,24 @@
                     </div>
                   </template>
                   
-                  <!-- Section/Subsection Content Generated (内容生成完成，但整个章节可能还没完成) -->
-                  <template v-if="log.action === 'section_content' || log.action === 'subsection_content'">
-                    <div class="section-tag content-ready" :class="{ 'is-subsection': log.action === 'subsection_content' }">
+                  <!-- Section Content Generated (内容生成完成，但整个章节可能还没完成) -->
+                  <template v-if="log.action === 'section_content'">
+                    <div class="section-tag content-ready">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 20h9"></path>
                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                       </svg>
                       <span class="tag-title">{{ log.section_title }}</span>
-                      <span v-if="log.action === 'subsection_content'" class="tag-sub">(subsection)</span>
                     </div>
                   </template>
-                  
-                  <!-- Section Complete (完整章节生成完成，含所有子章节) -->
+
+                  <!-- Section Complete (章节生成完成) -->
                   <template v-if="log.action === 'section_complete'">
                     <div class="section-tag completed">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                       <span class="tag-title">{{ log.section_title }}</span>
-                      <span v-if="log.details?.subsection_count > 0" class="tag-sub">(+{{ log.details.subsection_count }} subsections)</span>
                     </div>
                   </template>
 
@@ -1800,20 +1798,6 @@ const isSectionCompleted = (sectionIndex) => {
   return !!generatedSections.value[sectionIndex]
 }
 
-// 从 section_index 获取主章节索引
-// 后端编号方案：主章节 1,2,3... 子章节 101,102（第1章子章节1,2）
-const getMainSectionIndex = (sectionIndex) => {
-  if (sectionIndex >= 100) {
-    return Math.floor(sectionIndex / 100)
-  }
-  return sectionIndex
-}
-
-// 判断是否是子章节
-const isSubsection = (sectionIndex) => {
-  return sectionIndex >= 100
-}
-
 const formatTime = (timestamp) => {
   if (!timestamp) return ''
   try {
@@ -1929,7 +1913,6 @@ const getActionLabel = (action) => {
     'planning_complete': 'Plan Complete',
     'section_start': 'Section Start',
     'section_content': 'Content Ready',
-    'subsection_content': 'Subsection Ready',
     'section_complete': 'Section Done',
     'tool_call': 'Tool Call',
     'tool_result': 'Tool Result',
@@ -1968,32 +1951,17 @@ const fetchAgentLog = async () => {
           }
           
           if (log.action === 'section_start') {
-            // 无论是主章节还是子章节开始，都映射到主章节索引
-            // 后端编号：主章节 1,2,3... 子章节 101,102（第1章子章节1,2）
-            const mainIndex = getMainSectionIndex(log.section_index)
-            currentSectionIndex.value = mainIndex
+            currentSectionIndex.value = log.section_index
           }
-          
-          // section_content / subsection_content - 表示内容生成完成（但整个章节可能还没完成）
-          // 这里不更新 generatedSections，只记录进度
-          if (log.action === 'section_content' || log.action === 'subsection_content') {
-            // 子章节内容生成时，保持主章节的 loading 状态
-            // 因为完整内容会在 section_complete 时一次性提供
-          }
-          
-          // section_complete - 表示完整章节（含所有子章节）生成完成
-          // details.content 包含合并后的完整内容
-          // 注意：只有主章节 complete 时才更新内容，子章节 complete 不处理
+
+          // section_complete - 章节生成完成
           if (log.action === 'section_complete') {
-            const mainIndex = getMainSectionIndex(log.section_index)
-            // 只有主章节完成时（section_index < 100）才更新内容和清除 loading
-            if (!isSubsection(log.section_index) && log.details?.content) {
-              generatedSections.value[mainIndex] = log.details.content
+            if (log.details?.content) {
+              generatedSections.value[log.section_index] = log.details.content
               // 自动展开刚生成的章节
-              expandedContent.value.add(mainIndex - 1)
+              expandedContent.value.add(log.section_index - 1)
               currentSectionIndex.value = null
             }
-            // 子章节完成时不清除 currentSectionIndex，继续显示 loading
           }
           
           if (log.action === 'report_complete') {
@@ -3055,10 +3023,6 @@ watch(() => props.reportId, (newId) => {
   color: var(--wf-active-dot);
 }
 
-.section-tag.content-ready.is-subsection {
-  background: var(--wf-active-bg);
-  border-color: var(--wf-active-border);
-}
 
 .section-tag.completed {
   background: #ECFDF5;
@@ -3083,12 +3047,6 @@ watch(() => props.reportId, (newId) => {
   font-size: 13px;
   font-weight: 500;
   color: #374151;
-}
-
-.tag-sub {
-  font-size: 11px;
-  color: #6B7280;
-  margin-left: 4px;
 }
 
 .tool-badge {
