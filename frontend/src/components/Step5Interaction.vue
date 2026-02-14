@@ -606,7 +606,33 @@ const renderMarkdown = (content) => {
   html = html.replace(/(<br>\s*){2,}/g, '<br>')
   // 清理列表后紧跟的段落开始标签前的 <br>
   html = html.replace(/(<\/ol>|<\/ul>)<br>(<p|<div)/g, '$1$2')
-  
+
+  // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
+  const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
+  let olCounter = 0
+  let inSequence = false
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].startsWith('<ol class="md-ol">')) {
+      const liCount = (tokens[i].match(/<li class="md-oli"/g) || []).length
+      if (liCount === 1) {
+        olCounter++
+        if (olCounter > 1) {
+          tokens[i] = tokens[i].replace('<ol class="md-ol">', `<ol class="md-ol" start="${olCounter}">`)
+        }
+        inSequence = true
+      } else {
+        olCounter = 0
+        inSequence = false
+      }
+    } else if (inSequence) {
+      if (/<h[2-5]/.test(tokens[i])) {
+        olCounter = 0
+        inSequence = false
+      }
+    }
+  }
+  html = tokens.join('')
+
   return html
 }
 

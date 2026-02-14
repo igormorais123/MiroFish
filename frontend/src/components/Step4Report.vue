@@ -1887,14 +1887,29 @@ const renderMarkdown = (content) => {
   // 处理引用块
   html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
   
-  // 处理无序列表
-  html = html.replace(/^- (.+)$/gm, '<li class="md-li">$1</li>')
-  html = html.replace(/(<li class="md-li">[\s\S]*?<\/li>)(\s*<li)/g, '$1$2')
-  html = html.replace(/(<li class="md-li">.*<\/li>)+/g, '<ul class="md-ul">$&</ul>')
-  
-  // 处理有序列表
-  html = html.replace(/^\d+\. (.+)$/gm, '<li class="md-oli">$1</li>')
-  html = html.replace(/(<li class="md-oli">.*<\/li>)+/g, '<ol class="md-ol">$&</ol>')
+  // 处理列表 - 支持子列表
+  html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {
+    const level = Math.floor(indent.length / 2)
+    return `<li class="md-li" data-level="${level}">${text}</li>`
+  })
+  html = html.replace(/^(\s*)(\d+)\. (.+)$/gm, (match, indent, num, text) => {
+    const level = Math.floor(indent.length / 2)
+    return `<li class="md-oli" data-level="${level}">${text}</li>`
+  })
+
+  // 包装无序列表
+  html = html.replace(/(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g, '<ul class="md-ul">$&</ul>')
+  // 包装有序列表
+  html = html.replace(/(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g, '<ol class="md-ol">$&</ol>')
+
+  // 清理列表项之间的所有空白
+  html = html.replace(/<\/li>\s+<li/g, '</li><li')
+  // 清理列表开始标签后的空白
+  html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">')
+  html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">')
+  // 清理列表结束标签前的空白
+  html = html.replace(/\s+<\/ul>/g, '</ul>')
+  html = html.replace(/\s+<\/ol>/g, '</ol>')
   
   // 处理粗体和斜体
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -1917,7 +1932,40 @@ const renderMarkdown = (content) => {
   html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
   html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
   html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
-  
+  // 清理列表前后的 <br> 标签
+  html = html.replace(/<br>\s*(<ul|<ol)/g, '$1')
+  html = html.replace(/(<\/ul>|<\/ol>)\s*<br>/g, '$1')
+  // 清理连续的 <br> 标签
+  html = html.replace(/(<br>\s*){2,}/g, '<br>')
+  // 清理列表后紧跟的段落开始标签前的 <br>
+  html = html.replace(/(<\/ol>|<\/ul>)<br>(<p|<div)/g, '$1$2')
+
+  // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
+  const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
+  let olCounter = 0
+  let inSequence = false
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].startsWith('<ol class="md-ol">')) {
+      const liCount = (tokens[i].match(/<li class="md-oli"/g) || []).length
+      if (liCount === 1) {
+        olCounter++
+        if (olCounter > 1) {
+          tokens[i] = tokens[i].replace('<ol class="md-ol">', `<ol class="md-ol" start="${olCounter}">`)
+        }
+        inSequence = true
+      } else {
+        olCounter = 0
+        inSequence = false
+      }
+    } else if (inSequence) {
+      if (/<h[2-5]/.test(tokens[i])) {
+        olCounter = 0
+        inSequence = false
+      }
+    }
+  }
+  html = tokens.join('')
+
   return html
 }
 
@@ -2462,12 +2510,13 @@ watch(() => props.reportId, (newId) => {
 
 .generated-content :deep(.md-ul),
 .generated-content :deep(.md-ol) {
-  padding-left: 20px;
-  margin-bottom: 1em;
+  padding-left: 24px;
+  margin: 12px 0;
 }
 
-.generated-content :deep(.md-li) {
-  margin-bottom: 0.5em;
+.generated-content :deep(.md-li),
+.generated-content :deep(.md-oli) {
+  margin: 6px 0;
 }
 
 .generated-content :deep(.md-quote) {
