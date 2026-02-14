@@ -476,7 +476,7 @@ class ReportAgent:
     3. 反思阶段：检查内容完整性和准确性
     
     【核心检索工具 - 优化后】
-    - insight_forge: 深度洞察检索（最强大，自动分解问题，多维度检索）
+    - insight_forge: 深度洞察检索（强大，自动分解问题，多维度检索）
     - panorama_search: 广度搜索（获取全貌，包括历史/过期内容）
     - quick_search: 简单搜索（快速检索）
     
@@ -537,8 +537,8 @@ class ReportAgent:
         return {
             "insight_forge": {
                 "name": "insight_forge",
-                "description": """【深度洞察检索 - 最强大的检索工具】
-这是我们最强大的检索函数，专为深度分析设计。它会：
+                "description": """【深度洞察检索 - 强大的检索工具】
+这是我们强大的检索函数，专为深度分析设计。它会：
 1. 自动将你的问题分解为多个子问题
 2. 从多个维度检索模拟图谱中的信息
 3. 整合语义搜索、实体分析、关系链追踪的结果
@@ -649,7 +649,7 @@ class ReportAgent:
             # ========== 核心检索工具（优化后） ==========
             
             if tool_name == "insight_forge":
-                # 深度洞察检索 - 最强大的工具
+                # 深度洞察检索 - 强大的工具
                 query = parameters.get("query", "")
                 ctx = parameters.get("report_context", "") or report_context
                 result = self.zep_tools.insight_forge(
