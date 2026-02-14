@@ -943,7 +943,7 @@ class ReportAgent:
                 "description": TOOL_DESC_INTERVIEW_AGENTS,
                 "parameters": {
                     "interview_topic": "采访主题或需求描述（如：'了解学生对宿舍甲醛事件的看法'）",
-                    "max_agents": "最多采访的Agent数量（可选，默认5）"
+                    "max_agents": "最多采访的Agent数量（可选，默认5，最大10）"
                 }
             }
         }
@@ -1003,9 +1003,10 @@ class ReportAgent:
             elif tool_name == "interview_agents":
                 # 深度采访 - 调用真实的OASIS采访API获取模拟Agent的回答（双平台）
                 interview_topic = parameters.get("interview_topic", parameters.get("query", ""))
-                max_agents = parameters.get("max_agents", 20)
+                max_agents = parameters.get("max_agents", 5)
                 if isinstance(max_agents, str):
                     max_agents = int(max_agents)
+                max_agents = min(max_agents, 10)
                 result = self.zep_tools.interview_agents(
                     simulation_id=self.simulation_id,
                     interview_requirement=interview_topic,
