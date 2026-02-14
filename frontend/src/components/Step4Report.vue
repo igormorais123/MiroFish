@@ -849,27 +849,36 @@ const parseInterview = (text) => {
           interview.redditAnswer = redditMatch[1].trim()
         }
         
-        // 如果只有一个平台的回答，将其作为主回答
-        // 这样无论显示哪个平台都能有内容
+        // 平台回退逻辑（兼容旧格式：只有一个平台标记的情况）
         if (!twitterMatch && redditMatch) {
-          // 只有 Reddit 回答，将其也设为 twitterAnswer 作为默认显示
-          interview.twitterAnswer = interview.redditAnswer
+          // 只有 Reddit 回答，仅在非占位文本时复制为默认显示
+          if (interview.redditAnswer && interview.redditAnswer !== '（该平台未获得回复）') {
+            interview.twitterAnswer = interview.redditAnswer
+          }
         } else if (twitterMatch && !redditMatch) {
-          // 只有 Twitter 回答，将其也设为 redditAnswer
-          interview.redditAnswer = interview.twitterAnswer
+          if (interview.twitterAnswer && interview.twitterAnswer !== '（该平台未获得回复）') {
+            interview.redditAnswer = interview.twitterAnswer
+          }
         } else if (!twitterMatch && !redditMatch) {
-          // 如果没有明确分平台，整体作为回答
+          // 没有分平台标记（极旧格式），整体作为回答
           interview.twitterAnswer = answerText
         }
       }
       
-      // 提取关键引言
+      // 提取关键引言（兼容多种引号格式）
       const quotesMatch = block.match(/\*\*关键引言:\*\*\n([\s\S]*?)(?=\n---|\n####|$)/)
       if (quotesMatch) {
         const quotesText = quotesMatch[1]
-        const quoteMatches = quotesText.match(/> "([^"]+)"/g)
+        // 优先匹配 > "text" 格式
+        let quoteMatches = quotesText.match(/> "([^"]+)"/g)
+        // 回退：匹配 > "text" 或 > \u201Ctext\u201D（中文引号）
+        if (!quoteMatches) {
+          quoteMatches = quotesText.match(/> [\u201C""]([^\u201D""]+)[\u201D""]/g)
+        }
         if (quoteMatches) {
-          interview.quotes = quoteMatches.map(q => q.replace(/^> "|"$/g, '').trim())
+          interview.quotes = quoteMatches
+            .map(q => q.replace(/^> [\u201C""]|[\u201D""]$/g, '').trim())
+            .filter(q => q)
         }
       }
       
@@ -1314,79 +1323,100 @@ const InterviewDisplay = {
       return text.substring(0, 400) + '...'
     }
     
+    // 检查是否为平台占位文本
+    const isPlaceholderText = (text) => {
+      if (!text) return true
+      const t = text.trim()
+      return t === '（该平台未获得回复）' || t === '(该平台未获得回复)' || t === '[无回复]'
+    }
+
     // 尝试按问题编号分割回答
     const splitAnswerByQuestions = (answerText, questionCount) => {
       if (!answerText || questionCount <= 0) return [answerText]
-      
-      // 更健壮的分割逻辑：查找所有 "数字." 格式的编号位置
-      // 支持格式：
-      // - "1.  \n内容" （数字+点+空格+换行+内容）
-      // - "\n\n2.  \n内容" （换行+数字+点+空格+换行+内容）
-      // 使用更宽松的匹配：开头或换行后的数字+点+空白
-      const numberPattern = /(?:^|[\r\n]+)(\d+)\.\s+/g
-      const matches = []
+      if (isPlaceholderText(answerText)) return ['']
+
+      // 支持两种编号格式：
+      // 1. "问题X：" 或 "问题X:" （中文格式，后端新格式）
+      // 2. "1. " 或 "\n1. " （数字+点，旧格式兼容）
+      let matches = []
       let match
-      
-      while ((match = numberPattern.exec(answerText)) !== null) {
+
+      // 优先尝试 "问题X：" 格式
+      const cnPattern = /(?:^|[\r\n]+)问题(\d+)[：:]\s*/g
+      while ((match = cnPattern.exec(answerText)) !== null) {
         matches.push({
           num: parseInt(match[1]),
           index: match.index,
           fullMatch: match[0]
         })
       }
-      
+
+      // 如果没匹配到，回退到 "数字." 格式
+      if (matches.length === 0) {
+        const numPattern = /(?:^|[\r\n]+)(\d+)\.\s+/g
+        while ((match = numPattern.exec(answerText)) !== null) {
+          matches.push({
+            num: parseInt(match[1]),
+            index: match.index,
+            fullMatch: match[0]
+          })
+        }
+      }
+
       // 如果没有找到编号或只找到一个，返回整体
       if (matches.length <= 1) {
-        // 尝试移除开头的编号（格式：1.  \n 或 1. ）
-        const cleaned = answerText.replace(/^\d+\.\s+/, '').trim()
+        const cleaned = answerText
+          .replace(/^问题\d+[：:]\s*/, '')
+          .replace(/^\d+\.\s+/, '')
+          .trim()
         return [cleaned || answerText]
       }
-      
+
       // 按编号提取各部分
       const parts = []
       for (let i = 0; i < matches.length; i++) {
         const current = matches[i]
         const next = matches[i + 1]
-        
+
         const startIdx = current.index + current.fullMatch.length
         const endIdx = next ? next.index : answerText.length
-        
+
         let part = answerText.substring(startIdx, endIdx).trim()
-        // 移除末尾可能的多余换行
         part = part.replace(/[\r\n]+$/, '').trim()
         parts.push(part)
       }
-      
-      // 如果分割成功且数量合理，返回分割结果
+
       if (parts.length > 0 && parts.some(p => p)) {
         return parts
       }
-      
+
       return [answerText]
     }
     
     // 获取某个问题对应的回答
     const getAnswerForQuestion = (interview, qIdx, platform) => {
       const answer = platform === 'twitter' ? interview.twitterAnswer : (interview.redditAnswer || interview.twitterAnswer)
-      if (!answer) return ''
-      
+      if (!answer || isPlaceholderText(answer)) return answer || ''
+
       const questionCount = interview.questions?.length || 1
       const answers = splitAnswerByQuestions(answer, questionCount)
-      
-      // 如果只有一个回答部分，或者索引超出，返回完整回答
-      if (answers.length === 1 || qIdx >= answers.length) {
-        return qIdx === 0 ? answer : ''
+
+      // 分割成功且索引有效
+      if (answers.length > 1 && qIdx < answers.length) {
+        return answers[qIdx] || ''
       }
-      
-      return answers[qIdx] || ''
+
+      // 分割失败：第一个问题返回完整回答，其余返回空
+      return qIdx === 0 ? answer : ''
     }
     
-    // 检查某个问题是否有双平台回答
+    // 检查某个问题是否有双平台回答（过滤占位文本）
     const hasMultiplePlatforms = (interview, qIdx) => {
       if (!interview.twitterAnswer || !interview.redditAnswer) return false
       const twitterAnswer = getAnswerForQuestion(interview, qIdx, 'twitter')
       const redditAnswer = getAnswerForQuestion(interview, qIdx, 'reddit')
-      return twitterAnswer && redditAnswer && twitterAnswer !== redditAnswer
+      // 两个平台都有真实回答（非占位文本）且内容不同
+      return !isPlaceholderText(twitterAnswer) && !isPlaceholderText(redditAnswer) && twitterAnswer !== redditAnswer
     }
     
     return () => h('div', { class: 'interview-display' }, [
@@ -1453,7 +1483,8 @@ const InterviewDisplay = {
             const hasDualPlatform = hasMultiplePlatforms(interview, qIdx)
             const expandKey = `${activeIndex.value}-${qIdx}`
             const isExpanded = expandedAnswers.value.has(expandKey)
-            
+            const isPlaceholder = isPlaceholderText(answerText)
+
             return h('div', { class: 'qa-pair', key: qIdx }, [
               // Question Block
               h('div', { class: 'qa-question' }, [
@@ -1463,14 +1494,14 @@ const InterviewDisplay = {
                   h('div', { class: 'qa-text' }, question)
                 ])
               ]),
-              
+
               // Answer Block
-              answerText && h('div', { class: 'qa-answer' }, [
+              answerText && h('div', { class: ['qa-answer', { 'answer-placeholder': isPlaceholder }] }, [
                 h('div', { class: 'qa-badge a-badge' }, `A${qIdx + 1}`),
                 h('div', { class: 'qa-content' }, [
                   h('div', { class: 'qa-answer-header' }, [
                     h('div', { class: 'qa-sender' }, interview?.name || 'Agent'),
-                    // 双平台切换按钮
+                    // 双平台切换按钮（仅在有真实双平台回答时显示）
                     hasDualPlatform && h('div', { class: 'platform-switch' }, [
                       h('button', {
                         class: ['platform-btn', { active: currentPlatform === 'twitter' }],
@@ -1494,14 +1525,16 @@ const InterviewDisplay = {
                       ])
                     ])
                   ]),
-                  h('div', { 
-                    class: 'qa-text answer-text',
-                    innerHTML: formatAnswer(answerText, isExpanded)
-                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/\n/g, '<br>')
+                  h('div', {
+                    class: ['qa-text', 'answer-text', { 'placeholder-text': isPlaceholder }],
+                    innerHTML: isPlaceholder
+                      ? answerText
+                      : formatAnswer(answerText, isExpanded)
+                          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\n/g, '<br>')
                   }),
-                  // Expand/Collapse Button
-                  answerText.length > 400 && h('button', {
+                  // Expand/Collapse Button（占位文本不显示）
+                  !isPlaceholder && answerText.length > 400 && h('button', {
                     class: 'expand-answer-btn',
                     onClick: () => toggleAnswer(expandKey)
                   }, isExpanded ? 'Show Less' : 'Show More')
@@ -3911,6 +3944,15 @@ watch(() => props.reportId, (newId) => {
   padding: 0;
   border: none;
   margin-top: 0;
+}
+
+:deep(.interview-display .answer-placeholder) {
+  opacity: 0.6;
+}
+
+:deep(.interview-display .placeholder-text) {
+  font-style: italic;
+  color: #9CA3AF;
 }
 
 :deep(.interview-display .qa-answer-header) {

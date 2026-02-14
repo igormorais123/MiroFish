@@ -308,7 +308,30 @@ class AgentInterview:
         if self.key_quotes:
             text += "\n**关键引言:**\n"
             for quote in self.key_quotes:
-                text += f"> \"{quote}\"\n"
+                # 清理各种引号
+                clean_quote = quote.replace('\u201c', '').replace('\u201d', '').replace('"', '')
+                clean_quote = clean_quote.replace('\u300c', '').replace('\u300d', '')
+                clean_quote = clean_quote.strip()
+                # 去掉开头的标点
+                while clean_quote and clean_quote[0] in '，,；;：:、。！？\n\r\t ':
+                    clean_quote = clean_quote[1:]
+                # 过滤包含问题编号的垃圾内容（问题1-9）
+                skip = False
+                for d in '123456789':
+                    if f'\u95ee\u9898{d}' in clean_quote:
+                        skip = True
+                        break
+                if skip:
+                    continue
+                # 截断过长内容（按句号截断，而非硬截断）
+                if len(clean_quote) > 150:
+                    dot_pos = clean_quote.find('\u3002', 80)
+                    if dot_pos > 0:
+                        clean_quote = clean_quote[:dot_pos + 1]
+                    else:
+                        clean_quote = clean_quote[:147] + "..."
+                if clean_quote and len(clean_quote) >= 10:
+                    text += f'> "{clean_quote}"\n'
         return text
 
 
@@ -350,27 +373,26 @@ class InterviewResult:
     def to_text(self) -> str:
         """转换为详细的文本格式，供LLM理解和报告引用"""
         text_parts = [
-            f"## 🎤 深度采访报告",
+            "## 深度采访报告",
             f"**采访主题:** {self.interview_topic}",
             f"**采访人数:** {self.interviewed_count} / {self.total_agents} 位模拟Agent",
-            f"\n### 采访对象选择理由",
-            f"{self.selection_reasoning}",
-            f"\n---"
+            "\n### 采访对象选择理由",
+            self.selection_reasoning or "（自动选择）",
+            "\n---",
+            "\n### 采访实录",
         ]
-        
-        # 各Agent的采访内容
+
         if self.interviews:
-            text_parts.append(f"\n### 采访实录")
             for i, interview in enumerate(self.interviews, 1):
                 text_parts.append(f"\n#### 采访 #{i}: {interview.agent_name}")
                 text_parts.append(interview.to_text())
                 text_parts.append("\n---")
-        
-        # 采访摘要
-        if self.summary:
-            text_parts.append(f"\n### 采访摘要与核心观点")
-            text_parts.append(self.summary)
-        
+        else:
+            text_parts.append("（无采访记录）\n\n---")
+
+        text_parts.append("\n### 采访摘要与核心观点")
+        text_parts.append(self.summary or "（无摘要）")
+
         return "\n".join(text_parts)
 
 
@@ -1329,8 +1351,18 @@ class ZepToolsService:
         # 将问题合并为一个采访prompt
         combined_prompt = "\n".join([f"{i+1}. {q}" for i, q in enumerate(result.interview_questions)])
         
-        # 添加优化前缀，避免Agent调用工具而直接回复文本
-        INTERVIEW_PROMPT_PREFIX = "结合你的人设、所有的过往记忆与行动，不调用任何工具直接用文本回复我："
+        # 添加优化前缀，约束Agent回复格式
+        INTERVIEW_PROMPT_PREFIX = (
+            "你正在接受一次采访。请结合你的人设、所有的过往记忆与行动，"
+            "以纯文本方式直接回答以下问题。\n"
+            "回复要求：\n"
+            "1. 直接用自然语言回答，不要调用任何工具\n"
+            "2. 不要返回JSON格式或工具调用格式\n"
+            "3. 不要使用Markdown标题（如#、##、###）\n"
+            "4. 按问题编号逐一回答，每个回答以「问题X：」开头（X为问题编号）\n"
+            "5. 每个问题的回答之间用空行分隔\n"
+            "6. 回答要有实质内容，每个问题至少回答2-3句话\n\n"
+        )
         optimized_prompt = f"{INTERVIEW_PROMPT_PREFIX}{combined_prompt}"
         
         # Step 4: 调用真实的采访API（不指定platform，默认双平台同时采访）
@@ -1380,26 +1412,43 @@ class ZepToolsService:
                 
                 twitter_response = twitter_result.get("response", "")
                 reddit_response = reddit_result.get("response", "")
-                
-                # 合并两个平台的回答
-                response_parts = []
-                if twitter_response:
-                    response_parts.append(f"【Twitter平台回答】\n{twitter_response}")
-                if reddit_response:
-                    response_parts.append(f"【Reddit平台回答】\n{reddit_response}")
-                
-                if response_parts:
-                    response_text = "\n\n".join(response_parts)
-                else:
-                    response_text = "[无回复]"
-                
+
+                # 清理可能的工具调用 JSON 包裹
+                twitter_response = self._clean_tool_call_response(twitter_response)
+                reddit_response = self._clean_tool_call_response(reddit_response)
+
+                # 始终输出双平台标记
+                twitter_text = twitter_response if twitter_response else "（该平台未获得回复）"
+                reddit_text = reddit_response if reddit_response else "（该平台未获得回复）"
+                response_text = f"【Twitter平台回答】\n{twitter_text}\n\n【Reddit平台回答】\n{reddit_text}"
+
                 # 提取关键引言（从两个平台的回答中）
                 import re
                 combined_responses = f"{twitter_response} {reddit_response}"
-                key_quotes = re.findall(r'[""「」『』]([^""「」『』]{10,100})[""「」『』]', combined_responses)
+
+                # 清理响应文本：去掉标记、编号、Markdown 等干扰
+                clean_text = re.sub(r'#{1,6}\s+', '', combined_responses)
+                clean_text = re.sub(r'\{[^}]*tool_name[^}]*\}', '', clean_text)
+                clean_text = re.sub(r'[*_`|>~\-]{2,}', '', clean_text)
+                clean_text = re.sub(r'问题\d+[：:]\s*', '', clean_text)
+                clean_text = re.sub(r'【[^】]+】', '', clean_text)
+
+                # 策略1（主）: 提取完整的有实质内容的句子
+                sentences = re.split(r'[。！？]', clean_text)
+                meaningful = [
+                    s.strip() for s in sentences
+                    if 20 <= len(s.strip()) <= 150
+                    and not re.match(r'^[\s\W，,；;：:、]+', s.strip())
+                    and not s.strip().startswith(('{', '问题'))
+                ]
+                meaningful.sort(key=len, reverse=True)
+                key_quotes = [s + "。" for s in meaningful[:3]]
+
+                # 策略2（补充）: 正确配对的中文引号「」内长文本
                 if not key_quotes:
-                    sentences = combined_responses.split('。')
-                    key_quotes = [s.strip() + '。' for s in sentences if len(s.strip()) > 20][:3]
+                    paired = re.findall(r'\u201c([^\u201c\u201d]{15,100})\u201d', clean_text)
+                    paired += re.findall(r'\u300c([^\u300c\u300d]{15,100})\u300d', clean_text)
+                    key_quotes = [q for q in paired if not re.match(r'^[，,；;：:、]', q)][:3]
                 
                 interview = AgentInterview(
                     agent_name=agent_name,
@@ -1435,6 +1484,27 @@ class ZepToolsService:
         logger.info(f"InterviewAgents完成: 采访了 {result.interviewed_count} 个Agent（双平台）")
         return result
     
+    @staticmethod
+    def _clean_tool_call_response(response: str) -> str:
+        """清理 Agent 回复中的 JSON 工具调用包裹，提取实际内容"""
+        if not response or not response.strip().startswith('{'):
+            return response
+        text = response.strip()
+        if 'tool_name' not in text[:80]:
+            return response
+        import re as _re
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict) and 'arguments' in data:
+                for key in ('content', 'text', 'body', 'message', 'reply'):
+                    if key in data['arguments']:
+                        return str(data['arguments'][key])
+        except (json.JSONDecodeError, KeyError, TypeError):
+            match = _re.search(r'"content"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+            if match:
+                return match.group(1).replace('\\n', '\n').replace('\\"', '"')
+        return response
+
     def _load_agent_profiles(self, simulation_id: str) -> List[Dict[str, Any]]:
         """加载模拟的Agent人设文件"""
         import os
@@ -1581,6 +1651,8 @@ class ZepToolsService:
 2. 针对不同角色可能有不同答案
 3. 涵盖事实、观点、感受等多个维度
 4. 语言自然，像真实采访一样
+5. 每个问题控制在50字以内，简洁明了
+6. 直接提问，不要包含背景说明或前缀
 
 返回JSON格式：{"questions": ["问题1", "问题2", ...]}"""
 
@@ -1633,7 +1705,14 @@ class ZepToolsService:
 2. 指出观点的共识和分歧
 3. 突出有价值的引言
 4. 客观中立，不偏袒任何一方
-5. 控制在1000字内"""
+5. 控制在1000字内
+
+格式约束（必须遵守）：
+- 使用纯文本段落，用空行分隔不同部分
+- 不要使用Markdown标题（如#、##、###）
+- 不要使用分割线（如---、***）
+- 引用受访者原话时使用中文引号「」
+- 可以使用**加粗**标记关键词，但不要使用其他Markdown语法"""
 
         user_prompt = f"""采访主题：{interview_requirement}
 
