@@ -1932,13 +1932,15 @@ const renderMarkdown = (content) => {
   html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
   html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
   html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
-  // 清理列表前后的 <br> 标签
-  html = html.replace(/<br>\s*(<ul|<ol)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>)\s*<br>/g, '$1')
+  // 清理块级元素前后的 <br> 标签
+  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
+  // 清理 <p><br> 紧跟块级元素的情况（多余空行导致）
+  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
   // 清理连续的 <br> 标签
   html = html.replace(/(<br>\s*){2,}/g, '<br>')
-  // 清理列表后紧跟的段落开始标签前的 <br>
-  html = html.replace(/(<\/ol>|<\/ul>)<br>(<p|<div)/g, '$1$2')
+  // 清理块级元素后紧跟的段落开始标签前的 <br>
+  html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, '$1$2')
 
   // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
   const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
