@@ -690,12 +690,17 @@ const startSimulation = () => {
 .upload-zone {
   border: 1px dashed #CCC;
   height: 200px;
+  overflow-y: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s;
   background: #FAFAFA;
+}
+
+.upload-zone.has-files {
+  align-items: flex-start;
 }
 
 .upload-zone:hover {
