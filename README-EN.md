@@ -40,6 +40,10 @@ MiroFish is dedicated to creating a swarm intelligence mirror that maps reality.
 
 From serious predictions to playful simulations, we let every "what if" see its outcome, making it possible to predict anything.
 
+## 🌐 Live Demo
+
+Welcome to visit our online demo environment and experience a prediction simulation on trending public opinion events we've prepared for you: https://666ghj.github.io/mirofish-demo/
+
 ## 📸 Screenshots
 
 <div align="center">
