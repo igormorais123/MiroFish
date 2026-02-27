@@ -15,6 +15,7 @@ from zep_cloud import EpisodeData, EntityEdgeSourceTarget
 
 from ..config import Config
 from ..models.task import TaskManager, TaskStatus
+from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
 from .text_processor import TextProcessor
 
 
@@ -395,12 +396,12 @@ class GraphBuilderService:
     
     def _get_graph_info(self, graph_id: str) -> GraphInfo:
         """获取图谱信息"""
-        # 获取节点
-        nodes = self.client.graph.node.get_by_graph_id(graph_id=graph_id)
-        
-        # 获取边
-        edges = self.client.graph.edge.get_by_graph_id(graph_id=graph_id)
-        
+        # 获取节点（分页）
+        nodes = fetch_all_nodes(self.client, graph_id)
+
+        # 获取边（分页）
+        edges = fetch_all_edges(self.client, graph_id)
+
         # 统计实体类型
         entity_types = set()
         for node in nodes:
@@ -408,7 +409,7 @@ class GraphBuilderService:
                 for label in node.labels:
                     if label not in ["Entity", "Node"]:
                         entity_types.add(label)
-        
+
         return GraphInfo(
             graph_id=graph_id,
             node_count=len(nodes),
@@ -426,9 +427,9 @@ class GraphBuilderService:
         Returns:
             包含nodes和edges的字典，包括时间信息、属性等详细数据
         """
-        nodes = self.client.graph.node.get_by_graph_id(graph_id=graph_id)
-        edges = self.client.graph.edge.get_by_graph_id(graph_id=graph_id)
-        
+        nodes = fetch_all_nodes(self.client, graph_id)
+        edges = fetch_all_edges(self.client, graph_id)
+
         # 创建节点映射用于获取节点名称
         node_map = {}
         for node in nodes:

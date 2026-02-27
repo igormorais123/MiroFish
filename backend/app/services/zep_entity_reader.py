@@ -11,6 +11,7 @@ from zep_cloud.client import Zep
 
 from ..config import Config
 from ..utils.logger import get_logger
+from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
 
 logger = get_logger('mirofish.zep_entity_reader')
 
@@ -125,22 +126,18 @@ class ZepEntityReader:
     
     def get_all_nodes(self, graph_id: str) -> List[Dict[str, Any]]:
         """
-        获取图谱的所有节点（带重试机制）
-        
+        获取图谱的所有节点（分页获取）
+
         Args:
             graph_id: 图谱ID
-            
+
         Returns:
             节点列表
         """
         logger.info(f"获取图谱 {graph_id} 的所有节点...")
-        
-        # 使用重试机制调用Zep API
-        nodes = self._call_with_retry(
-            func=lambda: self.client.graph.node.get_by_graph_id(graph_id=graph_id),
-            operation_name=f"获取节点(graph={graph_id})"
-        )
-        
+
+        nodes = fetch_all_nodes(self.client, graph_id)
+
         nodes_data = []
         for node in nodes:
             nodes_data.append({
@@ -150,28 +147,24 @@ class ZepEntityReader:
                 "summary": node.summary or "",
                 "attributes": node.attributes or {},
             })
-        
+
         logger.info(f"共获取 {len(nodes_data)} 个节点")
         return nodes_data
-    
+
     def get_all_edges(self, graph_id: str) -> List[Dict[str, Any]]:
         """
-        获取图谱的所有边（带重试机制）
-        
+        获取图谱的所有边（分页获取）
+
         Args:
             graph_id: 图谱ID
-            
+
         Returns:
             边列表
         """
         logger.info(f"获取图谱 {graph_id} 的所有边...")
-        
-        # 使用重试机制调用Zep API
-        edges = self._call_with_retry(
-            func=lambda: self.client.graph.edge.get_by_graph_id(graph_id=graph_id),
-            operation_name=f"获取边(graph={graph_id})"
-        )
-        
+
+        edges = fetch_all_edges(self.client, graph_id)
+
         edges_data = []
         for edge in edges:
             edges_data.append({
@@ -182,7 +175,7 @@ class ZepEntityReader:
                 "target_node_uuid": edge.target_node_uuid,
                 "attributes": edge.attributes or {},
             })
-        
+
         logger.info(f"共获取 {len(edges_data)} 条边")
         return edges_data
     
