@@ -1414,10 +1414,13 @@ class ZepToolsService:
                 twitter_response = self._clean_tool_call_response(twitter_response)
                 reddit_response = self._clean_tool_call_response(reddit_response)
 
-                # 始终输出双平台标记
-                twitter_text = twitter_response if twitter_response else "（该平台未获得回复）"
-                reddit_text = reddit_response if reddit_response else "（该平台未获得回复）"
-                response_text = f"【Twitter平台回答】\n{twitter_text}\n\n【Reddit平台回答】\n{reddit_text}"
+                # Sempre emitir os dois blocos para manter o parser estável
+                twitter_text = twitter_response if twitter_response else "[Sem resposta nesta plataforma]"
+                reddit_text = reddit_response if reddit_response else "[Sem resposta nesta plataforma]"
+                response_text = (
+                    f"【Resposta do Feed aberto】\n{twitter_text}\n\n"
+                    f"【Resposta da Comunidade】\n{reddit_text}"
+                )
 
                 # 提取关键引言（从两个平台的回答中）
                 import re

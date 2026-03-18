@@ -24,25 +24,25 @@ from .zep_entity_reader import EntityNode, ZepEntityReader
 
 logger = get_logger('mirofish.simulation_config')
 
-# 中国作息时间配置（北京时间）
-CHINA_TIMEZONE_CONFIG = {
-    # 深夜时段（几乎无人活动）
+# Configuração-base de rotina social em horário de Brasília
+BRAZIL_TIMEZONE_CONFIG = {
+    # Madrugada: atividade muito baixa
     "dead_hours": [0, 1, 2, 3, 4, 5],
-    # 早间时段（逐渐醒来）
+    # Manhã: retomada gradual
     "morning_hours": [6, 7, 8],
-    # 工作时段
+    # Faixa de expediente
     "work_hours": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    # 晚间高峰（最活跃）
+    # Noite: pico de uso
     "peak_hours": [19, 20, 21, 22],
-    # 夜间时段（活跃度下降）
+    # Fim da noite: desaceleração
     "night_hours": [23],
-    # 活跃度系数
+    # Multiplicadores de atividade
     "activity_multipliers": {
-        "dead": 0.05,      # 凌晨几乎无人
-        "morning": 0.4,    # 早间逐渐活跃
-        "work": 0.7,       # 工作时段中等
-        "peak": 1.5,       # 晚间高峰
-        "night": 0.5       # 深夜下降
+        "dead": 0.05,
+        "morning": 0.4,
+        "work": 0.7,
+        "peak": 1.5,
+        "night": 0.5
     }
 }
 
@@ -81,7 +81,7 @@ class AgentActivityConfig:
 
 @dataclass  
 class TimeSimulationConfig:
-    """时间模拟配置（基于中国人作息习惯）"""
+    """Configuração temporal da simulação com base em rotina social brasileira."""
     # 模拟总时长（模拟小时数）
     total_simulation_hours: int = 72  # 默认模拟72小时（3天）
     
@@ -92,11 +92,11 @@ class TimeSimulationConfig:
     agents_per_hour_min: int = 5
     agents_per_hour_max: int = 20
     
-    # 高峰时段（晚间19-22点，中国人最活跃的时间）
+    # Pico típico de atividade no início da noite
     peak_hours: List[int] = field(default_factory=lambda: [19, 20, 21, 22])
     peak_activity_multiplier: float = 1.5
     
-    # 低谷时段（凌晨0-5点，几乎无人活动）
+    # Faixa de baixa atividade na madrugada
     off_peak_hours: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4, 5])
     off_peak_activity_multiplier: float = 0.05  # 凌晨活跃度极低
     
@@ -121,7 +121,7 @@ class EventConfig:
     # 热点话题关键词
     hot_topics: List[str] = field(default_factory=list)
     
-    # 舆论引导方向
+    # Direção narrativa predominante
     narrative_direction: str = ""
 
 
@@ -546,17 +546,17 @@ class SimulationConfigGenerator:
 ## 任务
 请生成时间配置JSON。
 
-### 基本原则（仅供参考，需根据具体事件和参与群体灵活调整）：
-- 用户群体为中国人，需符合北京时间作息习惯
-- 凌晨0-5点几乎无人活动（活跃度系数0.05）
-- 早上6-8点逐渐活跃（活跃度系数0.4）
-- 工作时间9-18点中等活跃（活跃度系数0.7）
-- 晚间19-22点是高峰期（活跃度系数1.5）
-- 23点后活跃度下降（活跃度系数0.5）
-- 一般规律：凌晨低活跃、早间渐增、工作时段中等、晚间高峰
+### 基本原则（apenas como referência; ajuste conforme o evento e os grupos envolvidos）：
+- Use como padrão uma rotina social compatível com Brasil, preferencialmente horário de Brasília
+- Madrugada 0-5h quase sem atividade (multiplicador 0.05)
+- Manhã 6-8h em retomada gradual (multiplicador 0.4)
+- Expediente 9-18h com atividade moderada (multiplicador 0.7)
+- Noite 19-22h como pico principal (multiplicador 1.5)
+- Após 23h a atividade cai (multiplicador 0.5)
+- Regra geral: madrugada baixa, manhã crescente, expediente moderado e noite em pico
 - **重要**：以下示例值仅供参考，你需要根据事件性质、参与群体特点来调整具体时段
-  - 例如：学生群体高峰可能是21-23点；媒体全天活跃；官方机构只在工作时间
-  - 例如：突发热点可能导致深夜也有讨论，off_peak_hours 可适当缩短
+  - 例如：estudantes podem ter pico entre 21h e 23h; mídia pode operar quase o dia todo; órgãos públicos tendem ao horário comercial
+  - 例如：eventos urgentes podem manter discussão também de madrugada, então `off_peak_hours` pode ser reduzido
 
 ### 返回JSON格式（不要markdown）
 
@@ -584,7 +584,7 @@ class SimulationConfigGenerator:
 - work_hours (int数组): 工作时段
 - reasoning (string): 简要说明为什么这样配置"""
 
-        system_prompt = "你是社交媒体模拟专家。返回纯JSON格式，时间配置需符合中国人作息习惯。"
+        system_prompt = "Você é especialista em simulação social. Retorne JSON puro e use, por padrão, uma rotina compatível com Brasil e horário de Brasília."
         
         try:
             return self._call_llm_with_retry(prompt, system_prompt)
@@ -593,7 +593,7 @@ class SimulationConfigGenerator:
             return self._get_default_time_config(num_entities)
     
     def _get_default_time_config(self, num_entities: int) -> Dict[str, Any]:
-        """获取默认时间配置（中国人作息）"""
+        """Retorna a configuração temporal padrão em ritmo social brasileiro."""
         return {
             "total_simulation_hours": 72,
             "minutes_per_round": 60,  # 每轮1小时，加快时间流速
@@ -603,7 +603,7 @@ class SimulationConfigGenerator:
             "off_peak_hours": [0, 1, 2, 3, 4, 5],
             "morning_hours": [6, 7, 8],
             "work_hours": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-            "reasoning": "使用默认中国人作息配置（每轮1小时）"
+            "reasoning": "Uso do padrão brasileiro de atividade social, com 1 hora por rodada"
         }
     
     def _parse_time_config(self, result: Dict[str, Any], num_entities: int) -> TimeSimulationConfig:
@@ -633,7 +633,7 @@ class SimulationConfigGenerator:
             agents_per_hour_max=agents_per_hour_max,
             peak_hours=result.get("peak_hours", [19, 20, 21, 22]),
             off_peak_hours=result.get("off_peak_hours", [0, 1, 2, 3, 4, 5]),
-            off_peak_activity_multiplier=0.05,  # 凌晨几乎无人
+            off_peak_activity_multiplier=0.05,
             morning_hours=result.get("morning_hours", [6, 7, 8]),
             morning_activity_multiplier=0.4,
             work_hours=result.get("work_hours", list(range(9, 19))),
@@ -683,7 +683,7 @@ class SimulationConfigGenerator:
 ## 任务
 请生成事件配置JSON：
 - 提取热点话题关键词
-- 描述舆论发展方向
+- Descrever a direção narrativa predominante
 - 设计初始帖子内容，**每个帖子必须指定 poster_type（发布者类型）**
 
 **重要**: poster_type 必须从上面的"可用实体类型"中选择，这样初始帖子才能分配给合适的 Agent 发布。
@@ -692,7 +692,7 @@ class SimulationConfigGenerator:
 返回JSON格式（不要markdown）：
 {{
     "hot_topics": ["关键词1", "关键词2", ...],
-    "narrative_direction": "<舆论发展方向描述>",
+    "narrative_direction": "<descrição da direção narrativa predominante>",
     "initial_posts": [
         {{"content": "帖子内容", "poster_type": "实体类型（必须从可用类型中选择）"}},
         ...
@@ -700,7 +700,7 @@ class SimulationConfigGenerator:
     "reasoning": "<简要说明>"
 }}"""
 
-        system_prompt = "你是舆论分析专家。返回纯JSON格式。注意 poster_type 必须精确匹配可用实体类型。"
+        system_prompt = "Você é especialista em análise de debate público. Retorne JSON puro. `poster_type` deve corresponder exatamente a um tipo de entidade disponível."
         
         try:
             return self._call_llm_with_retry(prompt, system_prompt)
@@ -838,11 +838,11 @@ class SimulationConfigGenerator:
 
 ## 任务
 为每个实体生成活动配置，注意：
-- **时间符合中国人作息**：凌晨0-5点几乎不活动，晚间19-22点最活跃
-- **官方机构**（University/GovernmentAgency）：活跃度低(0.1-0.3)，工作时间(9-17)活动，响应慢(60-240分钟)，影响力高(2.5-3.0)
-- **媒体**（MediaOutlet）：活跃度中(0.4-0.6)，全天活动(8-23)，响应快(5-30分钟)，影响力高(2.0-2.5)
-- **个人**（Student/Person/Alumni）：活跃度高(0.6-0.9)，主要晚间活动(18-23)，响应快(1-15分钟)，影响力低(0.8-1.2)
-- **公众人物/专家**：活跃度中(0.4-0.6)，影响力中高(1.5-2.0)
+- **Use rotina compatível com Brasil/DF**: madrugada 0-5h quase sem atividade e noite 19-22h como pico principal
+- **Instituições oficiais** (University/GovernmentAgency): baixa atividade (0.1-0.3), atuação em horário comercial (9-17), resposta lenta (60-240 min), alta influência (2.5-3.0)
+- **Mídia** (MediaOutlet): atividade média (0.4-0.6), cobertura ampla (8-23), resposta rápida (5-30 min), alta influência (2.0-2.5)
+- **Perfis pessoais** (Student/Person/Alumni): atividade alta (0.6-0.9), maior presença à noite (18-23), resposta rápida (1-15 min), influência menor (0.8-1.2)
+- **Especialistas e figuras públicas**: atividade média (0.4-0.6), influência média-alta (1.5-2.0)
 
 返回JSON格式（不要markdown）：
 {{
@@ -852,7 +852,7 @@ class SimulationConfigGenerator:
             "activity_level": <0.0-1.0>,
             "posts_per_hour": <发帖频率>,
             "comments_per_hour": <评论频率>,
-            "active_hours": [<活跃小时列表，考虑中国人作息>],
+            "active_hours": [<lista de horas ativas, considerando rotina social brasileira>],
             "response_delay_min": <最小响应延迟分钟>,
             "response_delay_max": <最大响应延迟分钟>,
             "sentiment_bias": <-1.0到1.0>,
@@ -863,7 +863,7 @@ class SimulationConfigGenerator:
     ]
 }}"""
 
-        system_prompt = "你是社交媒体行为分析专家。返回纯JSON，配置需符合中国人作息习惯。"
+        system_prompt = "Você é especialista em comportamento em redes sociais. Retorne JSON puro com perfis compatíveis com rotina social brasileira."
         
         try:
             result = self._call_llm_with_retry(prompt, system_prompt)
@@ -902,7 +902,7 @@ class SimulationConfigGenerator:
         return configs
     
     def _generate_agent_config_by_rule(self, entity: EntityNode) -> Dict[str, Any]:
-        """基于规则生成单个Agent配置（中国人作息）"""
+        """Gera a configuração de um agente com regras baseadas em rotina social brasileira."""
         entity_type = (entity.get_entity_type() or "Unknown").lower()
         
         if entity_type in ["university", "governmentagency", "ngo"]:

@@ -217,8 +217,8 @@ class ZepGraphMemoryUpdater:
     
     # 平台名称映射（用于控制台显示）
     PLATFORM_DISPLAY_NAMES = {
-        'twitter': '世界1',
-        'reddit': '世界2',
+        'twitter': 'Feed aberto',
+        'reddit': 'Comunidade',
     }
     
     # 发送间隔（秒），避免请求过快

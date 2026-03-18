@@ -15,7 +15,7 @@
             :class="{ active: viewMode === mode }"
             @click="viewMode = mode"
           >
-            {{ { graph: '图谱', split: '双栏', workbench: '工作台' }[mode] }}
+            {{ { graph: 'Grafo', split: 'Dividido', workbench: 'Painel' }[mode] }}
           </button>
         </div>
       </div>
@@ -90,8 +90,8 @@ const router = useRouter()
 const viewMode = ref('split') // graph | split | workbench
 
 // Step State
-const currentStep = ref(1) // 1: 图谱构建, 2: 环境搭建, 3: 开始模拟, 4: 报告生成, 5: 深度互动
-const stepNames = ['图谱构建', '环境搭建', '开始模拟', '报告生成', '深度互动']
+const currentStep = ref(1)
+const stepNames = ['Construção do grafo', 'Configuração do ambiente', 'Início da simulação', 'Geração de relatório', 'Interação profunda']
 
 // Data State
 const currentProjectId = ref(route.params.projectId)
@@ -130,11 +130,11 @@ const statusClass = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (error.value) return 'Error'
-  if (currentPhase.value >= 2) return 'Ready'
-  if (currentPhase.value === 1) return 'Building Graph'
-  if (currentPhase.value === 0) return 'Generating Ontology'
-  return 'Initializing'
+  if (error.value) return 'Erro'
+  if (currentPhase.value >= 2) return 'Pronto'
+  if (currentPhase.value === 1) return 'Construindo grafo'
+  if (currentPhase.value === 0) return 'Gerando ontologia'
+  return 'Inicializando'
 })
 
 // --- Helpers ---
@@ -159,11 +159,11 @@ const toggleMaximize = (target) => {
 const handleNextStep = (params = {}) => {
   if (currentStep.value < 5) {
     currentStep.value++
-    addLog(`进入 Step ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
+    addLog(`Entrando na etapa ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
     
     // 如果是从 Step 2 进入 Step 3，记录模拟轮数配置
     if (currentStep.value === 3 && params.maxRounds) {
-      addLog(`自定义模拟轮数: ${params.maxRounds} 轮`)
+      addLog(`Total de rodadas personalizado: ${params.maxRounds}`)
     }
   }
 }
@@ -171,7 +171,7 @@ const handleNextStep = (params = {}) => {
 const handleGoBack = () => {
   if (currentStep.value > 1) {
     currentStep.value--
-    addLog(`返回 Step ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
+    addLog(`Retornando para a etapa ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
   }
 }
 

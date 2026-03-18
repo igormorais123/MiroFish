@@ -495,11 +495,11 @@ TOOL_DESC_PANORAMA_SEARCH = """\
 这个工具用于获取模拟结果的完整全貌，特别适合了解事件演变过程。它会：
 1. 获取所有相关节点和关系
 2. 区分当前有效的事实和历史/过期的事实
-3. 帮助你了解舆情是如何演变的
+3. 帮助你了解公共讨论与社会反应是如何演变的
 
 【使用场景】
 - 需要了解事件的完整发展脉络
-- 需要对比不同阶段的舆情变化
+- 需要对比不同阶段的公共讨论变化
 - 需要获取全面的实体和关系信息
 
 【返回内容】
@@ -652,10 +652,10 @@ SECTION_SYSTEM_PROMPT_TEMPLATE = """\
    - 这些引用是模拟预测的核心证据
 
 3. 【语言一致性 - 引用内容必须翻译为报告语言】
-   - 工具返回的内容可能包含英文或中英文混杂的表述
-   - 如果模拟需求和材料原文是中文的，报告必须全部使用中文撰写
-   - 当你引用工具返回的英文或中英混杂内容时，必须将其翻译为流畅的中文后再写入报告
-   - 翻译时保持原意不变，确保表述自然通顺
+   - 工具返回的内容可能包含英文、葡萄牙语或混合表达
+   - 报告必须跟随用户请求和原始材料的主要语言
+   - 如果没有明确指示，默认使用葡萄牙语 do Brasil
+   - 当引用其他语言内容时，先翻译成报告语言并保持原意
    - 这一规则同时适用于正文和引用块（> 格式）中的内容
 
 4. 【忠实呈现预测结果】
@@ -676,17 +676,17 @@ SECTION_SYSTEM_PROMPT_TEMPLATE = """\
 
 【正确示例】
 ```
-本章节分析了事件的舆论传播态势。通过对模拟数据的深入分析，我们发现...
+本章节分析了事件的传播态势与社会反应。通过对模拟数据的深入分析，我们发现...
 
 **首发引爆阶段**
 
-微博作为舆情的第一现场，承担了信息首发的核心功能：
+X/Twitter 作为公开讨论的前线，承担了信息首发的重要功能：
 
-> "微博贡献了68%的首发声量..."
+> "X/Twitter 贡献了 68% 的首发声量..."
 
 **情绪放大阶段**
 
-抖音平台进一步放大了事件影响力：
+Reddit 与短视频平台进一步放大了事件影响力：
 
 - 视觉冲击力强
 - 情绪共鸣度高
@@ -1208,12 +1208,12 @@ class ReportAgent:
             logger.error(f"大纲规划失败: {str(e)}")
             # 返回默认大纲（3个章节，作为fallback）
             return ReportOutline(
-                title="未来预测报告",
-                summary="基于模拟预测的未来趋势与风险分析",
+                title="Relatório de previsão",
+                summary="Análise de tendências futuras e riscos com base na simulação",
                 sections=[
-                    ReportSection(title="预测场景与核心发现"),
-                    ReportSection(title="人群行为预测分析"),
-                    ReportSection(title="趋势展望与风险提示")
+                    ReportSection(title="Cenário previsto e descobertas centrais"),
+                    ReportSection(title="Análise prevista do comportamento dos grupos"),
+                    ReportSection(title="Tendências futuras e alertas de risco")
                 ]
             )
     
