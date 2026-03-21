@@ -1,0 +1,28 @@
+name: mirofish-inteia
+services:
+  mirofish:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: mirofish-inteia
+    restart: always
+    ports:
+      - "4000:80"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
+      - LLM_TIMEOUT_SECONDS=120
+      - LLM_MAX_RETRIES=3
+      - GRAPHITI_BASE_URL=http://172.17.0.1:8003
+      - GRAPHITI_TIMEOUT=120
+      - ZEP_REQUIRED=false
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-inteia-mirofish-token}
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/simulation/history?limit=1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
