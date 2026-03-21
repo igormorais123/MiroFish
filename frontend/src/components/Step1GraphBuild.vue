@@ -75,7 +75,7 @@
 
           <!-- Generated Entity Tags -->
           <div v-if="projectData?.ontology?.entity_types" class="tags-container" :class="{ 'dimmed': selectedOntologyItem }">
-            <span class="tag-label">TIPOS DE ENTIDADE GERADOS</span>
+            <span class="tag-label">TIPOS DE ENTIDADES GERADOS</span>
             <div class="tags-list">
               <span 
                 v-for="entity in projectData.ontology.entity_types" 
@@ -208,7 +208,7 @@ const selectedOntologyItem = ref(null)
 const logContent = ref(null)
 const creatingSimulation = ref(false)
 
-// 进入环境搭建 - 创建 simulation 并跳转
+// Entrar na configuração do ambiente - criar simulation e navegar
 const handleEnterEnvSetup = async () => {
   if (!props.projectData?.project_id || !props.projectData?.graph_id) {
     console.error('Faltam informações do projeto ou do grafo')
@@ -226,7 +226,7 @@ const handleEnterEnvSetup = async () => {
     })
     
     if (res.success && res.data?.simulation_id) {
-      // 跳转到 simulation 页面
+      // Navegar para a página de simulation
       router.push({
         name: 'Simulation',
         params: { simulationId: res.data.simulation_id }
@@ -273,7 +273,9 @@ watch(() => props.systemLogs.length, () => {
 <style scoped>
 .workbench-panel {
   height: 100%;
-  background-color: #FAFAFA;
+  background:
+    radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 22%),
+    linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -290,18 +292,18 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .step-card {
-  background: #FFF;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 14px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  border: 1px solid #EAEAEA;
+  box-shadow: 0 18px 34px rgba(15, 39, 71, 0.08);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   transition: all 0.3s ease;
   position: relative; /* For absolute overlay */
 }
 
 .step-card.active {
-  border-color: #FF5722;
-  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.08);
+  border-color: rgba(212, 160, 23, 0.72);
+  box-shadow: 0 20px 40px rgba(212, 160, 23, 0.14);
 }
 
 .card-header {
@@ -321,12 +323,12 @@ watch(() => props.systemLogs.length, () => {
   font-family: 'JetBrains Mono', monospace;
   font-size: 20px;
   font-weight: 700;
-  color: #E0E0E0;
+  color: rgba(15, 39, 71, 0.16);
 }
 
 .step-card.active .step-num,
 .step-card.completed .step-num {
-  color: #000;
+  color: #0f2747;
 }
 
 .step-title {
@@ -343,21 +345,21 @@ watch(() => props.systemLogs.length, () => {
   text-transform: uppercase;
 }
 
-.badge.success { background: #E8F5E9; color: #2E7D32; }
-.badge.processing { background: #FF5722; color: #FFF; }
-.badge.accent { background: #FF5722; color: #FFF; }
-.badge.pending { background: #F5F5F5; color: #999; }
+.badge.success { background: rgba(94, 122, 52, 0.12); color: #4d6b2d; }
+.badge.processing { background: linear-gradient(135deg, #d4a017 0%, #f2c14a 100%); color: #0f2747; }
+.badge.accent { background: #0f2747; color: #fff; }
+.badge.pending { background: rgba(15, 39, 71, 0.06); color: #6b7280; }
 
 .api-note {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: #999;
+  color: #7b8190;
   margin-bottom: 8px;
 }
 
 .description {
   font-size: 12px;
-  color: #666;
+  color: #4b5563;
   line-height: 1.5;
   margin-bottom: 16px;
 }
@@ -376,7 +378,7 @@ watch(() => props.systemLogs.length, () => {
 .tag-label {
   display: block;
   font-size: 10px;
-  color: #AAA;
+  color: #7b8190;
   margin-bottom: 8px;
   font-weight: 600;
 }
@@ -388,12 +390,12 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .entity-tag {
-  background: #F5F5F5;
-  border: 1px solid #EEE;
-  padding: 4px 10px;
-  border-radius: 4px;
+  background: rgba(212, 160, 23, 0.08);
+  border: 1px solid rgba(212, 160, 23, 0.18);
+  padding: 5px 10px;
+  border-radius: 999px;
   font-size: 11px;
-  color: #333;
+  color: #0f2747;
   font-family: 'JetBrains Mono', monospace;
   transition: all 0.2s;
 }
@@ -403,8 +405,8 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .entity-tag.clickable:hover {
-    background: #E0E0E0;
-    border-color: #CCC;
+    background: rgba(212, 160, 23, 0.14);
+    border-color: rgba(212, 160, 23, 0.34);
 }
 
 /* Ontology Detail Overlay */
@@ -414,12 +416,12 @@ watch(() => props.systemLogs.length, () => {
     left: 20px;
     right: 20px;
     bottom: 20px;
-    background: rgba(255, 255, 255, 0.98);
+    background: rgba(255, 250, 240, 0.98);
     backdrop-filter: blur(4px);
     z-index: 10;
-    border: 1px solid #EAEAEA;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    border-radius: 6px;
+    border: 1px solid rgba(15, 39, 71, 0.1);
+    box-shadow: 0 22px 40px rgba(15, 39, 71, 0.12);
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -433,8 +435,8 @@ watch(() => props.systemLogs.length, () => {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid #EAEAEA;
-    background: #FAFAFA;
+    border-bottom: 1px solid rgba(15, 39, 71, 0.08);
+    background: linear-gradient(180deg, rgba(15, 39, 71, 0.05), rgba(255, 255, 255, 0.88));
 }
 
 .detail-title-group {
@@ -447,7 +449,7 @@ watch(() => props.systemLogs.length, () => {
     font-size: 9px;
     font-weight: 700;
     color: #FFF;
-    background: #000;
+    background: #0f2747;
     padding: 2px 6px;
     border-radius: 2px;
     text-transform: uppercase;
@@ -480,11 +482,11 @@ watch(() => props.systemLogs.length, () => {
 
 .detail-desc {
     font-size: 12px;
-    color: #444;
+    color: #374151;
     line-height: 1.5;
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px dashed #EAEAEA;
+    border-bottom: 1px dashed rgba(15, 39, 71, 0.14);
 }
 
 .detail-section {
@@ -495,7 +497,7 @@ watch(() => props.systemLogs.length, () => {
     display: block;
     font-size: 10px;
     font-weight: 600;
-    color: #AAA;
+    color: #7b8190;
     margin-bottom: 8px;
 }
 
@@ -512,14 +514,14 @@ watch(() => props.systemLogs.length, () => {
     gap: 6px;
     align-items: baseline;
     padding: 4px;
-    background: #F9F9F9;
+    background: rgba(15, 39, 71, 0.04);
     border-radius: 4px;
 }
 
 .attr-name {
     font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
-    color: #000;
+    color: #0f2747;
 }
 
 .attr-type {
@@ -528,7 +530,7 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .attr-desc {
-    color: #555;
+    color: #4b5563;
     flex: 1;
     min-width: 150px;
 }
@@ -541,11 +543,11 @@ watch(() => props.systemLogs.length, () => {
 
 .example-tag {
     font-size: 11px;
-    background: #FFF;
-    border: 1px solid #E0E0E0;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(15, 39, 71, 0.12);
     padding: 3px 8px;
     border-radius: 12px;
-    color: #555;
+    color: #4b5563;
 }
 
 .conn-item {
@@ -554,14 +556,14 @@ watch(() => props.systemLogs.length, () => {
     gap: 8px;
     font-size: 11px;
     padding: 6px;
-    background: #F5F5F5;
+    background: rgba(15, 39, 71, 0.05);
     border-radius: 4px;
     font-family: 'JetBrains Mono', monospace;
 }
 
 .conn-node {
     font-weight: 600;
-    color: #333;
+    color: #0f2747;
 }
 
 .conn-arrow {
@@ -573,9 +575,9 @@ watch(() => props.systemLogs.length, () => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
-  background: #F9F9F9;
+  background: rgba(15, 39, 71, 0.05);
   padding: 16px;
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .stat-card {
@@ -586,13 +588,13 @@ watch(() => props.systemLogs.length, () => {
   display: block;
   font-size: 20px;
   font-weight: 700;
-  color: #000;
+  color: #0f2747;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .stat-label {
   font-size: 9px;
-  color: #999;
+  color: #7b8190;
   text-transform: uppercase;
   margin-top: 4px;
   display: block;
@@ -601,23 +603,24 @@ watch(() => props.systemLogs.length, () => {
 /* Step 03 Button */
 .action-btn {
   width: 100%;
-  background: #000;
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
   color: #FFF;
   border: none;
   padding: 14px;
-  border-radius: 4px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .action-btn:hover:not(:disabled) {
-  opacity: 0.8;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 39, 71, 0.18);
 }
 
 .action-btn:disabled {
-  background: #CCC;
+  background: rgba(15, 39, 71, 0.24);
   cursor: not-allowed;
 }
 
@@ -626,15 +629,15 @@ watch(() => props.systemLogs.length, () => {
   align-items: center;
   gap: 10px;
   font-size: 12px;
-  color: #FF5722;
+  color: #b8860b;
   margin-bottom: 12px;
 }
 
 .spinner-sm {
   width: 14px;
   height: 14px;
-  border: 2px solid #FFCCBC;
-  border-top-color: #FF5722;
+  border: 2px solid rgba(212, 160, 23, 0.22);
+  border-top-color: #d4a017;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -643,22 +646,22 @@ watch(() => props.systemLogs.length, () => {
 
 /* System Logs */
 .system-logs {
-  background: #000;
-  color: #DDD;
+  background: linear-gradient(135deg, #0b1b31 0%, #102949 100%);
+  color: #e5dcc7;
   padding: 16px;
   font-family: 'JetBrains Mono', monospace;
-  border-top: 1px solid #222;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
   margin-bottom: 8px;
   font-size: 10px;
-  color: #888;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .log-content {
@@ -675,7 +678,7 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .log-content::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
 }
 
@@ -687,12 +690,12 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .log-time {
-  color: #666;
+  color: rgba(255, 255, 255, 0.45);
   min-width: 75px;
 }
 
 .log-msg {
-  color: #CCC;
+  color: #f4ead3;
   word-break: break-all;
 }
 </style>

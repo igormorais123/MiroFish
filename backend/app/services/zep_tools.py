@@ -1,10 +1,12 @@
 """
-Servicos de busca e leitura do grafo Zep usados pelo Report Agent.
+Servicos de busca e leitura do grafo usados pelo Report Agent.
 
 Ferramentas centrais:
 1. InsightForge: busca profunda com decomposicao em subperguntas
 2. PanoramaSearch: visao ampla, incluindo historico e itens expirados
 3. QuickSearch: busca leve e direta
+
+Agora usa a API REST do Graphiti Server em vez do SDK Zep Cloud.
 """
 
 import time
@@ -12,12 +14,10 @@ import json
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 
-from zep_cloud.client import Zep
-
 from ..config import Config
 from ..utils.logger import get_logger
 from ..utils.llm_client import LLMClient
-from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
+from ..utils.graphiti_client import GraphitiClient
 
 logger = get_logger('mirofish.zep_tools')
 
@@ -30,7 +30,7 @@ class SearchResult:
     nodes: List[Dict[str, Any]]
     query: str
     total_count: int
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "facts": self.facts,
@@ -39,16 +39,16 @@ class SearchResult:
             "query": self.query,
             "total_count": self.total_count
         }
-    
+
     def to_text(self) -> str:
         """Converte para texto estruturado para consumo do LLM."""
         text_parts = [f"Busca: {self.query}", f"Foram encontradas {self.total_count} informacoes relevantes"]
-        
+
         if self.facts:
             text_parts.append("\n### Fatos relacionados:")
             for i, fact in enumerate(self.facts, 1):
                 text_parts.append(f"{i}. {fact}")
-        
+
         return "\n".join(text_parts)
 
 
@@ -60,7 +60,7 @@ class NodeInfo:
     labels: List[str]
     summary: str
     attributes: Dict[str, Any]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "uuid": self.uuid,
@@ -69,7 +69,7 @@ class NodeInfo:
             "summary": self.summary,
             "attributes": self.attributes
         }
-    
+
     def to_text(self) -> str:
         """Converte para texto."""
         entity_type = next((l for l in self.labels if l not in ["Entity", "Node"]), "Tipo nao informado")
@@ -91,7 +91,7 @@ class EdgeInfo:
     valid_at: Optional[str] = None
     invalid_at: Optional[str] = None
     expired_at: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "uuid": self.uuid,
@@ -106,27 +106,27 @@ class EdgeInfo:
             "invalid_at": self.invalid_at,
             "expired_at": self.expired_at
         }
-    
+
     def to_text(self, include_temporal: bool = False) -> str:
         """Converte para texto."""
         source = self.source_node_name or self.source_node_uuid[:8]
         target = self.target_node_name or self.target_node_uuid[:8]
         base_text = f"Relacao: {source} --[{self.name}]--> {target}\nFato: {self.fact}"
-        
+
         if include_temporal:
             valid_at = self.valid_at or "desconhecido"
             invalid_at = self.invalid_at or "atual"
             base_text += f"\nVigencia: {valid_at} - {invalid_at}"
             if self.expired_at:
                 base_text += f" (expirado em: {self.expired_at})"
-        
+
         return base_text
-    
+
     @property
     def is_expired(self) -> bool:
         """Indica se a relacao expirou."""
         return self.expired_at is not None
-    
+
     @property
     def is_invalid(self) -> bool:
         """Indica se a relacao foi invalidada."""
@@ -139,17 +139,17 @@ class InsightForgeResult:
     query: str
     simulation_requirement: str
     sub_queries: List[str]
-    
+
     # Resultados por dimensao
     semantic_facts: List[str] = field(default_factory=list)
     entity_insights: List[Dict[str, Any]] = field(default_factory=list)
     relationship_chains: List[str] = field(default_factory=list)
-    
+
     # Estatisticas
     total_facts: int = 0
     total_entities: int = 0
     total_relationships: int = 0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "query": self.query,
@@ -162,7 +162,7 @@ class InsightForgeResult:
             "total_entities": self.total_entities,
             "total_relationships": self.total_relationships
         }
-    
+
     def to_text(self) -> str:
         """Converte para texto estruturado e detalhado."""
         text_parts = [
@@ -174,20 +174,17 @@ class InsightForgeResult:
             f"- Entidades envolvidas: {self.total_entities}",
             f"- Cadeias relacionais: {self.total_relationships}"
         ]
-        
-        # Subperguntas
+
         if self.sub_queries:
             text_parts.append(f"\n### Subperguntas analisadas")
             for i, sq in enumerate(self.sub_queries, 1):
                 text_parts.append(f"{i}. {sq}")
-        
-        # Fatos semanticos
+
         if self.semantic_facts:
             text_parts.append(f"\n### Fatos-chave")
             for i, fact in enumerate(self.semantic_facts, 1):
                 text_parts.append(f"{i}. \"{fact}\"")
-        
-        # Insights de entidades
+
         if self.entity_insights:
             text_parts.append(f"\n### Entidades centrais")
             for entity in self.entity_insights:
@@ -196,13 +193,12 @@ class InsightForgeResult:
                     text_parts.append(f"  Resumo: \"{entity.get('summary')}\"")
                 if entity.get('related_facts'):
                     text_parts.append(f"  Fatos relacionados: {len(entity.get('related_facts', []))}")
-        
-        # Cadeias relacionais
+
         if self.relationship_chains:
             text_parts.append(f"\n### Cadeias relacionais")
             for chain in self.relationship_chains:
                 text_parts.append(f"- {chain}")
-        
+
         return "\n".join(text_parts)
 
 
@@ -210,7 +206,7 @@ class InsightForgeResult:
 class PanoramaResult:
     """Resultado de busca panoramica, incluindo historico e itens expirados."""
     query: str
-    
+
     # Todos os nos
     all_nodes: List[NodeInfo] = field(default_factory=list)
     # Todas as relacoes, inclusive expiradas
@@ -219,13 +215,13 @@ class PanoramaResult:
     active_facts: List[str] = field(default_factory=list)
     # Fatos expirados ou invalidados
     historical_facts: List[str] = field(default_factory=list)
-    
+
     # Estatisticas
     total_nodes: int = 0
     total_edges: int = 0
     active_count: int = 0
     historical_count: int = 0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "query": self.query,
@@ -238,7 +234,7 @@ class PanoramaResult:
             "active_count": self.active_count,
             "historical_count": self.historical_count
         }
-    
+
     def to_text(self) -> str:
         """Converte para texto sem truncamento."""
         text_parts = [
@@ -250,26 +246,23 @@ class PanoramaResult:
             f"- Fatos atuais: {self.active_count}",
             f"- Fatos historicos/expirados: {self.historical_count}"
         ]
-        
-        # Fatos atuais
+
         if self.active_facts:
             text_parts.append(f"\n### Fatos atuais")
             for i, fact in enumerate(self.active_facts, 1):
                 text_parts.append(f"{i}. \"{fact}\"")
-        
-        # Fatos historicos
+
         if self.historical_facts:
             text_parts.append(f"\n### Fatos historicos ou expirados")
             for i, fact in enumerate(self.historical_facts, 1):
                 text_parts.append(f"{i}. \"{fact}\"")
-        
-        # Entidades envolvidas
+
         if self.all_nodes:
             text_parts.append(f"\n### Entidades envolvidas")
             for node in self.all_nodes:
                 entity_type = next((l for l in node.labels if l not in ["Entity", "Node"]), "Entidade")
                 text_parts.append(f"- **{node.name}** ({entity_type})")
-        
+
         return "\n".join(text_parts)
 
 
@@ -282,7 +275,7 @@ class AgentInterview:
     question: str
     response: str
     key_quotes: List[str] = field(default_factory=list)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "agent_name": self.agent_name,
@@ -292,7 +285,7 @@ class AgentInterview:
             "response": self.response,
             "key_quotes": self.key_quotes
         }
-    
+
     def to_text(self) -> str:
         text = f"**{self.agent_name}** ({self.agent_role})\n"
         text += f"_Bio: {self.agent_bio}_\n\n"
@@ -301,14 +294,11 @@ class AgentInterview:
         if self.key_quotes:
             text += "\n**Citacoes-chave:**\n"
             for quote in self.key_quotes:
-                # Limpa aspas variadas.
                 clean_quote = quote.replace('\u201c', '').replace('\u201d', '').replace('"', '')
                 clean_quote = clean_quote.replace('\u300c', '').replace('\u300d', '')
                 clean_quote = clean_quote.strip()
-                # Remove pontuacao residual no inicio.
                 while clean_quote and clean_quote[0] in '，,；;：:、。！？\n\r\t ':
                     clean_quote = clean_quote[1:]
-                # Filtra restos de numeracao de perguntas.
                 skip = False
                 for d in '123456789':
                     if f'\u95ee\u9898{d}' in clean_quote:
@@ -316,7 +306,6 @@ class AgentInterview:
                         break
                 if skip:
                     continue
-                # Trunca trechos excessivamente longos.
                 if len(clean_quote) > 150:
                     dot_pos = clean_quote.find('\u3002', 80)
                     if dot_pos > 0:
@@ -333,21 +322,16 @@ class InterviewResult:
     """Resultado consolidado das entrevistas."""
     interview_topic: str
     interview_questions: List[str]
-    
-    # Agentes escolhidos
+
     selected_agents: List[Dict[str, Any]] = field(default_factory=list)
-    # Respostas individuais
     interviews: List[AgentInterview] = field(default_factory=list)
-    
-    # Justificativa da selecao
+
     selection_reasoning: str = ""
-    # Resumo consolidado
     summary: str = ""
-    
-    # Estatisticas
+
     total_agents: int = 0
     interviewed_count: int = 0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "interview_topic": self.interview_topic,
@@ -359,7 +343,7 @@ class InterviewResult:
             "total_agents": self.total_agents,
             "interviewed_count": self.interviewed_count
         }
-    
+
     def to_text(self) -> str:
         """Converte o resultado em texto detalhado para o LLM e o relatorio."""
         text_parts = [
@@ -388,7 +372,7 @@ class InterviewResult:
 
 class ZepToolsService:
     """
-    Servico de leitura, consulta e analise sobre o grafo Zep.
+    Servico de leitura, consulta e analise sobre o grafo via Graphiti Server.
 
     Ferramentas principais:
     - `insight_forge`: busca profunda com subperguntas
@@ -396,34 +380,34 @@ class ZepToolsService:
     - `quick_search`: busca leve e direta
     - `interview_agents`: entrevistas com agentes simulados
     """
-    
-    # Politica de retry
+
     MAX_RETRIES = 3
     RETRY_DELAY = 2.0
-    
+
     def __init__(self, api_key: Optional[str] = None, llm_client: Optional[LLMClient] = None):
-        self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY nao configurada")
-        
-        self.client = Zep(api_key=self.api_key)
-        # Cliente LLM usado, entre outras coisas, para gerar subperguntas.
+        """Inicializa o servico.
+
+        Args:
+            api_key: Mantido na assinatura para compatibilidade.
+            llm_client: Cliente LLM opcional.
+        """
+        self.client = GraphitiClient()
         self._llm_client = llm_client
-        logger.info("ZepToolsService inicializado")
-    
+        logger.info("ZepToolsService inicializado (backend: Graphiti Server)")
+
     @property
     def llm(self) -> LLMClient:
         """Inicializa o cliente LLM apenas quando necessario."""
         if self._llm_client is None:
             self._llm_client = LLMClient()
         return self._llm_client
-    
+
     def _call_with_retry(self, func, operation_name: str, max_retries: int = None):
         """Executa uma chamada com retry exponencial simples."""
         max_retries = max_retries or self.MAX_RETRIES
         last_exception = None
         delay = self.RETRY_DELAY
-        
+
         for attempt in range(max_retries):
             try:
                 return func()
@@ -431,76 +415,84 @@ class ZepToolsService:
                 last_exception = e
                 if attempt < max_retries - 1:
                     logger.warning(
-                        f"Zep {operation_name} falhou na tentativa {attempt + 1}: {str(e)[:100]}. "
+                        f"Graphiti {operation_name} falhou na tentativa {attempt + 1}: {str(e)[:100]}. "
                         f"Novo retry em {delay:.1f}s..."
                     )
                     time.sleep(delay)
                     delay *= 2
                 else:
-                    logger.error(f"Zep {operation_name} falhou apos {max_retries} tentativas: {str(e)}")
-        
+                    logger.error(f"Graphiti {operation_name} falhou apos {max_retries} tentativas: {str(e)}")
+
         raise last_exception
-    
+
+    def _parse_facts(self, raw_facts: list) -> tuple:
+        """Extrai fatos, arestas e nos a partir da resposta do Graphiti.
+
+        Returns:
+            (facts_text, edges_list, nodes_list)
+        """
+        facts = []
+        edges = []
+        seen_entities = set()
+        nodes = []
+
+        for fact in raw_facts:
+            if isinstance(fact, dict):
+                fact_text = fact.get("fact", "")
+                fact_name = fact.get("name", "")
+                if fact_text:
+                    facts.append(fact_text)
+                edges.append({
+                    "uuid": fact.get("uuid", ""),
+                    "name": fact_name,
+                    "fact": fact_text,
+                    "source_node_uuid": "",
+                    "target_node_uuid": "",
+                    "valid_at": fact.get("valid_at"),
+                    "invalid_at": fact.get("invalid_at"),
+                    "created_at": fact.get("created_at"),
+                    "expired_at": fact.get("expired_at"),
+                })
+                if fact_name and fact_name not in seen_entities:
+                    seen_entities.add(fact_name)
+                    nodes.append({
+                        "uuid": fact.get("uuid", ""),
+                        "name": fact_name,
+                        "labels": ["Entity"],
+                        "summary": fact_text,
+                    })
+            elif isinstance(fact, str):
+                facts.append(fact)
+
+        return facts, edges, nodes
+
     def search_graph(
-        self, 
-        graph_id: str, 
-        query: str, 
+        self,
+        graph_id: str,
+        query: str,
         limit: int = 10,
         scope: str = "edges"
     ) -> SearchResult:
         """
-        Faz busca semantica no grafo.
-
-        Tenta usar a busca do Zep Cloud; se falhar, recorre a busca local por
-        palavras-chave.
+        Faz busca semantica no grafo via Graphiti POST /search.
         """
         logger.info(f"Busca no grafo: graph_id={graph_id}, query={query[:50]}...")
-        
-        # Primeiro tenta a API oficial de busca do Zep.
+
         try:
-            search_results = self._call_with_retry(
-                func=lambda: self.client.graph.search(
-                    graph_id=graph_id,
+            search_result = self._call_with_retry(
+                func=lambda: self.client.search(
+                    group_ids=[graph_id],
                     query=query,
-                    limit=limit,
-                    scope=scope,
-                    reranker="cross_encoder"
+                    max_facts=limit,
                 ),
                 operation_name=f"busca no grafo {graph_id}"
             )
-            
-            facts = []
-            edges = []
-            nodes = []
-            
-            # Parse das relacoes retornadas.
-            if hasattr(search_results, 'edges') and search_results.edges:
-                for edge in search_results.edges:
-                    if hasattr(edge, 'fact') and edge.fact:
-                        facts.append(edge.fact)
-                    edges.append({
-                        "uuid": getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', ''),
-                        "name": getattr(edge, 'name', ''),
-                        "fact": getattr(edge, 'fact', ''),
-                        "source_node_uuid": getattr(edge, 'source_node_uuid', ''),
-                        "target_node_uuid": getattr(edge, 'target_node_uuid', ''),
-                    })
-            
-            # Parse dos nos retornados.
-            if hasattr(search_results, 'nodes') and search_results.nodes:
-                for node in search_results.nodes:
-                    nodes.append({
-                        "uuid": getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
-                        "name": getattr(node, 'name', ''),
-                        "labels": getattr(node, 'labels', []),
-                        "summary": getattr(node, 'summary', ''),
-                    })
-                    # O resumo do no tambem entra como fato auxiliar.
-                    if hasattr(node, 'summary') and node.summary:
-                        facts.append(f"[{node.name}]: {node.summary}")
-            
+
+            raw_facts = search_result.get("facts", [])
+            facts, edges, nodes = self._parse_facts(raw_facts)
+
             logger.info(f"Busca concluida: {len(facts)} fatos relacionados encontrados")
-            
+
             return SearchResult(
                 facts=facts,
                 edges=edges,
@@ -508,270 +500,182 @@ class ZepToolsService:
                 query=query,
                 total_count=len(facts)
             )
-            
+
         except Exception as e:
-            logger.warning(f"Falha na Search API do Zep; usando busca local: {str(e)}")
-            return self._local_search(graph_id, query, limit, scope)
-    
-    def _local_search(
-        self, 
-        graph_id: str, 
-        query: str, 
-        limit: int = 10,
-        scope: str = "edges"
-    ) -> SearchResult:
-        """Busca local por palavras-chave como plano de contingencia."""
-        logger.info(f"Usando busca local: query={query[:30]}...")
-        
-        facts = []
-        edges_result = []
-        nodes_result = []
-        
-        # Extrai palavras-chave simples da consulta.
-        query_lower = query.lower()
-        keywords = [w.strip() for w in query_lower.replace(',', ' ').replace('，', ' ').split() if len(w.strip()) > 1]
-        
-        def match_score(text: str) -> int:
-            """Calcula uma pontuacao simples de aderencia."""
-            if not text:
-                return 0
-            text_lower = text.lower()
-            # Match exato da consulta.
-            if query_lower in text_lower:
-                return 100
-            # Match por palavras-chave.
-            score = 0
-            for keyword in keywords:
-                if keyword in text_lower:
-                    score += 10
-            return score
-        
-        try:
-            if scope in ["edges", "both"]:
-                # Busca local sobre as relacoes.
-                all_edges = self.get_all_edges(graph_id)
-                scored_edges = []
-                for edge in all_edges:
-                    score = match_score(edge.fact) + match_score(edge.name)
-                    if score > 0:
-                        scored_edges.append((score, edge))
-                
-                # Ordena pela pontuacao.
-                scored_edges.sort(key=lambda x: x[0], reverse=True)
-                
-                for score, edge in scored_edges[:limit]:
-                    if edge.fact:
-                        facts.append(edge.fact)
-                    edges_result.append({
-                        "uuid": edge.uuid,
-                        "name": edge.name,
-                        "fact": edge.fact,
-                        "source_node_uuid": edge.source_node_uuid,
-                        "target_node_uuid": edge.target_node_uuid,
-                    })
-            
-            if scope in ["nodes", "both"]:
-                # Busca local sobre os nos.
-                all_nodes = self.get_all_nodes(graph_id)
-                scored_nodes = []
-                for node in all_nodes:
-                    score = match_score(node.name) + match_score(node.summary)
-                    if score > 0:
-                        scored_nodes.append((score, node))
-                
-                scored_nodes.sort(key=lambda x: x[0], reverse=True)
-                
-                for score, node in scored_nodes[:limit]:
-                    nodes_result.append({
-                        "uuid": node.uuid,
-                        "name": node.name,
-                        "labels": node.labels,
-                        "summary": node.summary,
-                    })
-                    if node.summary:
-                        facts.append(f"[{node.name}]: {node.summary}")
-            
-            logger.info(f"Busca local concluida: {len(facts)} fatos encontrados")
-            
-        except Exception as e:
-            logger.error(f"Falha na busca local: {str(e)}")
-        
-        return SearchResult(
-            facts=facts,
-            edges=edges_result,
-            nodes=nodes_result,
-            query=query,
-            total_count=len(facts)
-        )
-    
+            logger.warning(f"Falha na busca Graphiti; retornando resultado vazio: {str(e)}")
+            return SearchResult(
+                facts=[],
+                edges=[],
+                nodes=[],
+                query=query,
+                total_count=0
+            )
+
     def get_all_nodes(self, graph_id: str) -> List[NodeInfo]:
-        """Retorna todos os nos do grafo, usando paginacao."""
+        """Retorna todos os nos do grafo via busca ampla."""
         logger.info(f"Carregando todos os nos do grafo {graph_id}...")
 
-        nodes = fetch_all_nodes(self.client, graph_id)
+        search_result = self.client.search(
+            group_ids=[graph_id],
+            query="*",
+            max_facts=500,
+        )
 
+        raw_facts = search_result.get("facts", [])
         result = []
-        for node in nodes:
-            node_uuid = getattr(node, 'uuid_', None) or getattr(node, 'uuid', None) or ""
-            result.append(NodeInfo(
-                uuid=str(node_uuid) if node_uuid else "",
-                name=node.name or "",
-                labels=node.labels or [],
-                summary=node.summary or "",
-                attributes=node.attributes or {}
-            ))
+        seen_names = set()
+
+        for fact in raw_facts:
+            if isinstance(fact, dict):
+                name = fact.get("name", "")
+                if name and name not in seen_names:
+                    seen_names.add(name)
+                    result.append(NodeInfo(
+                        uuid=fact.get("uuid", ""),
+                        name=name,
+                        labels=["Entity"],
+                        summary=fact.get("fact", ""),
+                        attributes={}
+                    ))
 
         logger.info(f"{len(result)} nos carregados")
         return result
 
     def get_all_edges(self, graph_id: str, include_temporal: bool = True) -> List[EdgeInfo]:
-        """Retorna todas as relacoes do grafo, com metadados temporais quando pedido."""
+        """Retorna todas as relacoes do grafo via busca ampla."""
         logger.info(f"Carregando todas as relacoes do grafo {graph_id}...")
 
-        edges = fetch_all_edges(self.client, graph_id)
+        search_result = self.client.search(
+            group_ids=[graph_id],
+            query="*",
+            max_facts=500,
+        )
 
+        raw_facts = search_result.get("facts", [])
         result = []
-        for edge in edges:
-            edge_uuid = getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', None) or ""
-            edge_info = EdgeInfo(
-                uuid=str(edge_uuid) if edge_uuid else "",
-                name=edge.name or "",
-                fact=edge.fact or "",
-                source_node_uuid=edge.source_node_uuid or "",
-                target_node_uuid=edge.target_node_uuid or ""
-            )
 
-            # Inclui metadados temporais.
-            if include_temporal:
-                edge_info.created_at = getattr(edge, 'created_at', None)
-                edge_info.valid_at = getattr(edge, 'valid_at', None)
-                edge_info.invalid_at = getattr(edge, 'invalid_at', None)
-                edge_info.expired_at = getattr(edge, 'expired_at', None)
-
-            result.append(edge_info)
+        for fact in raw_facts:
+            if isinstance(fact, dict):
+                edge_info = EdgeInfo(
+                    uuid=fact.get("uuid", ""),
+                    name=fact.get("name", ""),
+                    fact=fact.get("fact", ""),
+                    source_node_uuid="",
+                    target_node_uuid=""
+                )
+                if include_temporal:
+                    edge_info.created_at = fact.get("created_at")
+                    edge_info.valid_at = fact.get("valid_at")
+                    edge_info.invalid_at = fact.get("invalid_at")
+                    edge_info.expired_at = fact.get("expired_at")
+                result.append(edge_info)
+            elif isinstance(fact, str):
+                result.append(EdgeInfo(
+                    uuid="",
+                    name="",
+                    fact=fact,
+                    source_node_uuid="",
+                    target_node_uuid=""
+                ))
 
         logger.info(f"{len(result)} relacoes carregadas")
         return result
-    
+
     def get_node_detail(self, node_uuid: str) -> Optional[NodeInfo]:
-        """Busca o detalhe de um no especifico."""
+        """Busca o detalhe de um no especifico via busca."""
         logger.info(f"Buscando detalhes do no {node_uuid[:8]}...")
-        
-        try:
-            node = self._call_with_retry(
-                func=lambda: self.client.graph.node.get(uuid_=node_uuid),
-                operation_name=f"detalhe do no {node_uuid[:8]}"
-            )
-            
-            if not node:
-                return None
-            
-            return NodeInfo(
-                uuid=getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
-                name=node.name or "",
-                labels=node.labels or [],
-                summary=node.summary or "",
-                attributes=node.attributes or {}
-            )
-        except Exception as e:
-            logger.error(f"Falha ao buscar detalhe do no: {str(e)}")
-            return None
-    
+        # Graphiti nao tem endpoint de busca por UUID de no.
+        # Retorna None - os chamadores devem usar busca por nome.
+        return None
+
     def get_node_edges(self, graph_id: str, node_uuid: str) -> List[EdgeInfo]:
         """Retorna todas as relacoes ligadas a um no."""
         logger.info(f"Buscando relacoes ligadas ao no {node_uuid[:8]}...")
-        
-        try:
-            # Carrega todas as relacoes e filtra localmente.
-            all_edges = self.get_all_edges(graph_id)
-            
-            result = []
-            for edge in all_edges:
-                # Mantem as relacoes em que o no aparece na origem ou no destino.
-                if edge.source_node_uuid == node_uuid or edge.target_node_uuid == node_uuid:
-                    result.append(edge)
-            
-            logger.info(f"{len(result)} relacoes ligadas ao no foram encontradas")
-            return result
-            
-        except Exception as e:
-            logger.warning(f"Falha ao buscar relacoes do no: {str(e)}")
-            return []
-    
+        # Sem endpoint direto no Graphiti. Retorna lista vazia.
+        return []
+
     def get_entities_by_type(
-        self, 
-        graph_id: str, 
+        self,
+        graph_id: str,
         entity_type: str
     ) -> List[NodeInfo]:
-        """Retorna entidades filtradas por tipo."""
+        """Retorna entidades filtradas por tipo via busca semantica."""
         logger.info(f"Buscando entidades do tipo {entity_type}...")
-        
-        all_nodes = self.get_all_nodes(graph_id)
-        
+
+        search_result = self.client.search(
+            group_ids=[graph_id],
+            query=entity_type,
+            max_facts=100,
+        )
+
+        raw_facts = search_result.get("facts", [])
         filtered = []
-        for node in all_nodes:
-            # Verifica se o label desejado esta presente.
-            if entity_type in node.labels:
-                filtered.append(node)
-        
+        seen_names = set()
+
+        for fact in raw_facts:
+            if isinstance(fact, dict):
+                name = fact.get("name", "")
+                if name and name not in seen_names:
+                    seen_names.add(name)
+                    filtered.append(NodeInfo(
+                        uuid=fact.get("uuid", ""),
+                        name=name,
+                        labels=["Entity", entity_type],
+                        summary=fact.get("fact", ""),
+                        attributes={}
+                    ))
+
         logger.info(f"{len(filtered)} entidades do tipo {entity_type} encontradas")
         return filtered
-    
+
     def get_entity_summary(
-        self, 
-        graph_id: str, 
+        self,
+        graph_id: str,
         entity_name: str
     ) -> Dict[str, Any]:
         """Gera um resumo relacional para a entidade informada."""
         logger.info(f"Montando resumo relacional da entidade {entity_name}...")
-        
-        # Busca fatos relacionados ao nome da entidade.
+
         search_result = self.search_graph(
             graph_id=graph_id,
             query=entity_name,
             limit=20
         )
-        
-        # Tenta localizar o no exato da entidade.
+
+        # Tenta localizar o no exato da entidade
         all_nodes = self.get_all_nodes(graph_id)
         entity_node = None
         for node in all_nodes:
             if node.name.lower() == entity_name.lower():
                 entity_node = node
                 break
-        
-        related_edges = []
-        if entity_node:
-            # Usa o graph_id para buscar as relacoes do no localizado.
-            related_edges = self.get_node_edges(graph_id, entity_node.uuid)
-        
+
         return {
             "entity_name": entity_name,
             "entity_info": entity_node.to_dict() if entity_node else None,
             "related_facts": search_result.facts,
-            "related_edges": [e.to_dict() for e in related_edges],
-            "total_relations": len(related_edges)
+            "related_edges": [e for e in search_result.edges],
+            "total_relations": len(search_result.edges)
         }
-    
+
     def get_graph_statistics(self, graph_id: str) -> Dict[str, Any]:
         """Retorna estatisticas gerais do grafo."""
         logger.info(f"Calculando estatisticas do grafo {graph_id}...")
-        
+
         nodes = self.get_all_nodes(graph_id)
         edges = self.get_all_edges(graph_id)
-        
-        # Conta a distribuicao de tipos de entidade.
+
         entity_types = {}
         for node in nodes:
             for label in node.labels:
                 if label not in ["Entity", "Node"]:
                     entity_types[label] = entity_types.get(label, 0) + 1
-        
-        # Conta a distribuicao de tipos de relacao.
+
         relation_types = {}
         for edge in edges:
-            relation_types[edge.name] = relation_types.get(edge.name, 0) + 1
-        
+            if edge.name:
+                relation_types[edge.name] = relation_types.get(edge.name, 0) + 1
+
         return {
             "graph_id": graph_id,
             "total_nodes": len(nodes),
@@ -779,30 +683,26 @@ class ZepToolsService:
             "entity_types": entity_types,
             "relation_types": relation_types
         }
-    
+
     def get_simulation_context(
-        self, 
+        self,
         graph_id: str,
         simulation_requirement: str,
         limit: int = 30
     ) -> Dict[str, Any]:
         """Monta um contexto consolidado a partir do objetivo da simulacao."""
         logger.info(f"Montando contexto da simulacao: {simulation_requirement[:50]}...")
-        
-        # Busca fatos relacionados ao objetivo da simulacao.
+
         search_result = self.search_graph(
             graph_id=graph_id,
             query=simulation_requirement,
             limit=limit
         )
-        
-        # Estatisticas gerais do grafo.
+
         stats = self.get_graph_statistics(graph_id)
-        
-        # Carrega todos os nos com cara de entidade.
+
         all_nodes = self.get_all_nodes(graph_id)
-        
-        # Filtra apenas entidades com tipo mais especifico.
+
         entities = []
         for node in all_nodes:
             custom_labels = [l for l in node.labels if l not in ["Entity", "Node"]]
@@ -812,7 +712,7 @@ class ZepToolsService:
                     "type": custom_labels[0],
                     "summary": node.summary
                 })
-        
+
         return {
             "simulation_requirement": simulation_requirement,
             "related_facts": search_result.facts,
@@ -820,9 +720,9 @@ class ZepToolsService:
             "entities": entities[:limit],
             "total_entities": len(entities)
         }
-    
+
     # Ferramentas analiticas principais.
-    
+
     def insight_forge(
         self,
         graph_id: str,
@@ -833,14 +733,14 @@ class ZepToolsService:
     ) -> InsightForgeResult:
         """Executa busca profunda com decomposicao em subperguntas."""
         logger.info(f"InsightForge: busca profunda para '{query[:50]}'")
-        
+
         result = InsightForgeResult(
             query=query,
             simulation_requirement=simulation_requirement,
             sub_queries=[]
         )
-        
-        # Etapa 1: gerar subperguntas com apoio do LLM.
+
+        # Etapa 1: gerar subperguntas com apoio do LLM
         sub_queries = self._generate_sub_queries(
             query=query,
             simulation_requirement=simulation_requirement,
@@ -849,12 +749,12 @@ class ZepToolsService:
         )
         result.sub_queries = sub_queries
         logger.info(f"{len(sub_queries)} subperguntas geradas")
-        
-        # Etapa 2: rodar busca semantica em cada subpergunta.
+
+        # Etapa 2: rodar busca semantica em cada subpergunta
         all_facts = []
         all_edges = []
         seen_facts = set()
-        
+
         for sub_query in sub_queries:
             search_result = self.search_graph(
                 graph_id=graph_id,
@@ -862,15 +762,15 @@ class ZepToolsService:
                 limit=15,
                 scope="edges"
             )
-            
+
             for fact in search_result.facts:
                 if fact not in seen_facts:
                     all_facts.append(fact)
                     seen_facts.add(fact)
-            
+
             all_edges.extend(search_result.edges)
-        
-        # Tambem consulta a pergunta original.
+
+        # Tambem consulta a pergunta original
         main_search = self.search_graph(
             graph_id=graph_id,
             query=query,
@@ -881,76 +781,51 @@ class ZepToolsService:
             if fact not in seen_facts:
                 all_facts.append(fact)
                 seen_facts.add(fact)
-        
+
         result.semantic_facts = all_facts
         result.total_facts = len(all_facts)
-        
-        # Etapa 3: descobrir entidades relacionadas a partir das relacoes.
-        entity_uuids = set()
+
+        # Etapa 3: extrair entidades dos fatos
+        entity_insights = []
+        seen_entity_names = set()
+
         for edge_data in all_edges:
             if isinstance(edge_data, dict):
-                source_uuid = edge_data.get('source_node_uuid', '')
-                target_uuid = edge_data.get('target_node_uuid', '')
-                if source_uuid:
-                    entity_uuids.add(source_uuid)
-                if target_uuid:
-                    entity_uuids.add(target_uuid)
-        
-        # Carrega o detalhe das entidades envolvidas.
-        entity_insights = []
-        node_map = {}
-        
-        for uuid in list(entity_uuids):
-            if not uuid:
-                continue
-            try:
-                # Busca o no individualmente.
-                node = self.get_node_detail(uuid)
-                if node:
-                    node_map[uuid] = node
-                    entity_type = next((l for l in node.labels if l not in ["Entity", "Node"]), "Entidade")
-                    
-                    # Seleciona fatos em que a entidade aparece.
+                name = edge_data.get('name', '')
+                if name and name not in seen_entity_names:
+                    seen_entity_names.add(name)
                     related_facts = [
-                        f for f in all_facts 
-                        if node.name.lower() in f.lower()
+                        f for f in all_facts
+                        if name.lower() in f.lower()
                     ]
-                    
                     entity_insights.append({
-                        "uuid": node.uuid,
-                        "name": node.name,
-                        "type": entity_type,
-                        "summary": node.summary,
+                        "uuid": edge_data.get("uuid", ""),
+                        "name": name,
+                        "type": "Entidade",
+                        "summary": edge_data.get("fact", ""),
                         "related_facts": related_facts
                     })
-            except Exception as e:
-                logger.debug(f"Falha ao buscar no {uuid}: {e}")
-                continue
-        
+
         result.entity_insights = entity_insights
         result.total_entities = len(entity_insights)
-        
-        # Etapa 4: montar cadeias relacionais.
+
+        # Etapa 4: montar cadeias relacionais a partir dos fatos
         relationship_chains = []
         for edge_data in all_edges:
             if isinstance(edge_data, dict):
-                source_uuid = edge_data.get('source_node_uuid', '')
-                target_uuid = edge_data.get('target_node_uuid', '')
-                relation_name = edge_data.get('name', '')
-                
-                source_name = node_map.get(source_uuid, NodeInfo('', '', [], '', {})).name or source_uuid[:8]
-                target_name = node_map.get(target_uuid, NodeInfo('', '', [], '', {})).name or target_uuid[:8]
-                
-                chain = f"{source_name} --[{relation_name}]--> {target_name}"
-                if chain not in relationship_chains:
-                    relationship_chains.append(chain)
-        
+                fact = edge_data.get('fact', '')
+                name = edge_data.get('name', '')
+                if fact:
+                    chain = f"[{name}]: {fact}" if name else fact
+                    if chain not in relationship_chains:
+                        relationship_chains.append(chain)
+
         result.relationship_chains = relationship_chains
         result.total_relationships = len(relationship_chains)
-        
+
         logger.info(f"InsightForge concluido: {result.total_facts} fatos, {result.total_entities} entidades, {result.total_relationships} relacoes")
         return result
-    
+
     def _generate_sub_queries(
         self,
         query: str,
@@ -986,11 +861,10 @@ Retorne somente o JSON."""
                 ],
                 temperature=0.3
             )
-            
+
             sub_queries = response.get("sub_queries", [])
-            # Garante uma lista simples de strings.
             return [str(sq) for sq in sub_queries[:max_queries]]
-            
+
         except Exception as e:
             logger.warning(f"Falha ao gerar subperguntas; usando fallback: {str(e)}")
             return [
@@ -999,7 +873,7 @@ Retorne somente o JSON."""
                 f"Causas e impactos de {query}",
                 f"Evolucao de {query}"
             ][:max_queries]
-    
+
     def panorama_search(
         self,
         graph_id: str,
@@ -1009,49 +883,41 @@ Retorne somente o JSON."""
     ) -> PanoramaResult:
         """Executa uma busca panoramica, incluindo historico quando pedido."""
         logger.info(f"PanoramaSearch: busca panoramica para '{query[:50]}'")
-        
+
         result = PanoramaResult(query=query)
-        
-        # Carrega todos os nos.
+
+        # Carrega todos os nos
         all_nodes = self.get_all_nodes(graph_id)
-        node_map = {n.uuid: n for n in all_nodes}
         result.all_nodes = all_nodes
         result.total_nodes = len(all_nodes)
-        
-        # Carrega todas as relacoes com metadata temporal.
+
+        # Carrega todas as relacoes com metadata temporal
         all_edges = self.get_all_edges(graph_id, include_temporal=True)
         result.all_edges = all_edges
         result.total_edges = len(all_edges)
-        
-        # Classifica fatos atuais e historicos.
+
+        # Classifica fatos atuais e historicos
         active_facts = []
         historical_facts = []
-        
+
         for edge in all_edges:
             if not edge.fact:
                 continue
-            
-            # Resolve nomes de origem e destino para referencia.
-            source_name = node_map.get(edge.source_node_uuid, NodeInfo('', '', [], '', {})).name or edge.source_node_uuid[:8]
-            target_name = node_map.get(edge.target_node_uuid, NodeInfo('', '', [], '', {})).name or edge.target_node_uuid[:8]
-            
-            # Verifica se a relacao e historica.
+
             is_historical = edge.is_expired or edge.is_invalid
-            
+
             if is_historical:
-                # Fato historico com faixa temporal.
                 valid_at = edge.valid_at or "desconhecido"
                 invalid_at = edge.invalid_at or edge.expired_at or "desconhecido"
                 fact_with_time = f"[{valid_at} - {invalid_at}] {edge.fact}"
                 historical_facts.append(fact_with_time)
             else:
-                # Fato atualmente valido.
                 active_facts.append(edge.fact)
-        
-        # Ordena por aderencia a consulta.
+
+        # Ordena por aderencia a consulta
         query_lower = query.lower()
-        keywords = [w.strip() for w in query_lower.replace(',', ' ').replace('，', ' ').split() if len(w.strip()) > 1]
-        
+        keywords = [w.strip() for w in query_lower.replace(',', ' ').replace('\uff0c', ' ').split() if len(w.strip()) > 1]
+
         def relevance_score(fact: str) -> int:
             fact_lower = fact.lower()
             score = 0
@@ -1061,19 +927,18 @@ Retorne somente o JSON."""
                 if kw in fact_lower:
                     score += 10
             return score
-        
-        # Ordena e limita a quantidade retornada.
+
         active_facts.sort(key=relevance_score, reverse=True)
         historical_facts.sort(key=relevance_score, reverse=True)
-        
+
         result.active_facts = active_facts[:limit]
         result.historical_facts = historical_facts[:limit] if include_expired else []
         result.active_count = len(active_facts)
         result.historical_count = len(historical_facts)
-        
+
         logger.info(f"PanoramaSearch concluido: {result.active_count} fatos atuais, {result.historical_count} historicos")
         return result
-    
+
     def quick_search(
         self,
         graph_id: str,
@@ -1082,18 +947,17 @@ Retorne somente o JSON."""
     ) -> SearchResult:
         """Executa uma busca simples e leve."""
         logger.info(f"QuickSearch: busca simples para '{query[:50]}'")
-        
-        # Reaproveita a busca padrao do grafo.
+
         result = self.search_graph(
             graph_id=graph_id,
             query=query,
             limit=limit,
             scope="edges"
         )
-        
+
         logger.info(f"QuickSearch concluido: {result.total_count} resultados")
         return result
-    
+
     def interview_agents(
         self,
         simulation_id: str,
@@ -1106,45 +970,45 @@ Retorne somente o JSON."""
         Entrevista agentes simulados via API real do OASIS.
 
         O fluxo:
-        1. Carrega os perfis disponíveis
-        2. Seleciona os perfis mais úteis para a pauta
-        3. Gera perguntas, se necessário
+        1. Carrega os perfis disponiveis
+        2. Seleciona os perfis mais uteis para a pauta
+        3. Gera perguntas, se necessario
         4. Chama a API de entrevista em lote
         5. Consolida as respostas em um resultado estruturado
         """
         from .simulation_runner import SimulationRunner
-        
+
         logger.info(f"InterviewAgents: entrevista aprofundada via API real: {interview_requirement[:50]}...")
-        
+
         result = InterviewResult(
             interview_topic=interview_requirement,
             interview_questions=custom_questions or []
         )
-        
-        # Etapa 1: carregar os perfis dos agentes.
+
+        # Etapa 1: carregar os perfis dos agentes
         profiles = self._load_agent_profiles(simulation_id)
-        
+
         if not profiles:
             logger.warning(f"Nenhum perfil de agente foi encontrado para a simulacao {simulation_id}")
             result.summary = "Nenhum perfil de agente disponivel para entrevista"
             return result
-        
+
         result.total_agents = len(profiles)
         logger.info(f"{len(profiles)} perfis de agente carregados")
-        
-        # Etapa 2: selecionar os agentes para entrevista.
+
+        # Etapa 2: selecionar os agentes para entrevista
         selected_agents, selected_indices, selection_reasoning = self._select_agents_for_interview(
             profiles=profiles,
             interview_requirement=interview_requirement,
             simulation_requirement=simulation_requirement,
             max_agents=max_agents
         )
-        
+
         result.selected_agents = selected_agents
         result.selection_reasoning = selection_reasoning
         logger.info(f"{len(selected_agents)} agentes selecionados para entrevista: {selected_indices}")
-        
-        # Etapa 3: gerar perguntas, se necessario.
+
+        # Etapa 3: gerar perguntas, se necessario
         if not result.interview_questions:
             result.interview_questions = self._generate_interview_questions(
                 interview_requirement=interview_requirement,
@@ -1152,11 +1016,9 @@ Retorne somente o JSON."""
                 selected_agents=selected_agents
             )
             logger.info(f"{len(result.interview_questions)} perguntas de entrevista geradas")
-        
-        # Consolida as perguntas em um unico prompt.
+
         combined_prompt = "\n".join([f"{i+1}. {q}" for i, q in enumerate(result.interview_questions)])
-        
-        # Prefixo para forcar resposta em texto simples e bem estruturada.
+
         INTERVIEW_PROMPT_PREFIX = (
             "Voce esta sendo entrevistado. Com base na sua persona, memoria e acoes anteriores, "
             "responda diretamente, em texto puro, as perguntas abaixo.\n"
@@ -1169,94 +1031,84 @@ Retorne somente o JSON."""
             "6. Cada resposta deve ter conteudo real, com pelo menos 2 ou 3 frases\n\n"
         )
         optimized_prompt = f"{INTERVIEW_PROMPT_PREFIX}{combined_prompt}"
-        
-        # Etapa 4: chamar a API real de entrevista em modo de duas plataformas.
+
+        # Etapa 4: chamar a API real de entrevista
         try:
-            # Monta a lista de entrevistas sem fixar plataforma.
             interviews_request = []
             for agent_idx in selected_indices:
                 interviews_request.append({
                     "agent_id": agent_idx,
                     "prompt": optimized_prompt
                 })
-            
+
             logger.info(f"Chamando API de entrevista em lote: {len(interviews_request)} agentes")
-            
-            # Usa o SimulationRunner sem fixar plataforma.
+
             api_result = SimulationRunner.interview_agents_batch(
                 simulation_id=simulation_id,
                 interviews=interviews_request,
                 platform=None,
                 timeout=180.0
             )
-            
+
             logger.info(f"API de entrevista retornou {api_result.get('interviews_count', 0)} resultados; success={api_result.get('success')}")
-            
-            # Valida a resposta da API.
+
             if not api_result.get("success", False):
                 error_msg = api_result.get("error", "Erro desconhecido")
                 logger.warning(f"Falha retornada pela API de entrevista: {error_msg}")
                 result.summary = f"Falha na API de entrevista: {error_msg}. Verifique o estado do ambiente OASIS."
                 return result
-            
-            # Etapa 5: interpretar o retorno da API e montar AgentInterview.
+
+            # Etapa 5: interpretar o retorno da API
             api_data = api_result.get("result", {})
             results_dict = api_data.get("results", {}) if isinstance(api_data, dict) else {}
-            
+
             for i, agent_idx in enumerate(selected_indices):
                 agent = selected_agents[i]
                 agent_name = agent.get("realname", agent.get("username", f"Agent_{agent_idx}"))
                 agent_role = agent.get("profession", "Nao informado")
                 agent_bio = agent.get("bio", "")
-                
-                # Recupera a resposta desse agente nas duas plataformas.
+
                 twitter_result = results_dict.get(f"twitter_{agent_idx}", {})
                 reddit_result = results_dict.get(f"reddit_{agent_idx}", {})
-                
+
                 twitter_response = twitter_result.get("response", "")
                 reddit_response = reddit_result.get("response", "")
 
-                # Remove possiveis wrappers de tool call em JSON.
                 twitter_response = self._clean_tool_call_response(twitter_response)
                 reddit_response = self._clean_tool_call_response(reddit_response)
 
-                # Sempre emitir os dois blocos para manter o parser estável
                 twitter_text = twitter_response if twitter_response else "[Sem resposta nesta plataforma]"
                 reddit_text = reddit_response if reddit_response else "[Sem resposta nesta plataforma]"
                 response_text = (
-                    f"【Resposta do Feed aberto】\n{twitter_text}\n\n"
-                    f"【Resposta da Comunidade】\n{reddit_text}"
+                    f"\u3010Resposta do Feed aberto\u3011\n{twitter_text}\n\n"
+                    f"\u3010Resposta da Comunidade\u3011\n{reddit_text}"
                 )
 
-                # Extrai citacoes-chave a partir das respostas das duas plataformas.
                 import re
                 combined_responses = f"{twitter_response} {reddit_response}"
 
-                # Limpa marcacoes, numeracao e outros ruidos.
                 clean_text = re.sub(r'#{1,6}\s+', '', combined_responses)
                 clean_text = re.sub(r'\{[^}]*tool_name[^}]*\}', '', clean_text)
                 clean_text = re.sub(r'[*_`|>~\-]{2,}', '', clean_text)
-                clean_text = re.sub(r'(?:问题|Pergunta)\d+[：:]\s*', '', clean_text)
-                clean_text = re.sub(r'【[^】]+】', '', clean_text)
+                clean_text = re.sub(r'(?:Pergunta)\d+[\uff1a:]\s*', '', clean_text)
+                clean_text = re.sub(r'\u3010[^\u3011]+\u3011', '', clean_text)
 
-                # Estrategia principal: extrair frases completas e relevantes.
-                sentences = re.split(r'[。！？.!?]', clean_text)
+                sentences = re.split(r'[\u3002\uff01\uff1f.!?]', clean_text)
                 meaningful = [
                     s.strip() for s in sentences
                     if 20 <= len(s.strip()) <= 150
-                    and not re.match(r'^[\s\W，,；;：:、]+', s.strip())
-                    and not s.strip().startswith(('{', '问题', 'Pergunta'))
+                    and not re.match(r'^[\s\W\uff0c,\uff1b;\uff1a:\u3001]+', s.strip())
+                    and not s.strip().startswith(('{', 'Pergunta'))
                 ]
                 meaningful.sort(key=len, reverse=True)
                 key_quotes = [s + "." for s in meaningful[:3]]
 
-                # Estrategia complementar: trechos longos entre aspas.
                 if not key_quotes:
                     paired = re.findall(r'\u201c([^\u201c\u201d]{15,100})\u201d', clean_text)
                     paired += re.findall(r'\u300c([^\u300c\u300d]{15,100})\u300d', clean_text)
                     paired += re.findall(r'"([^"\n]{15,100})"', clean_text)
-                    key_quotes = [q for q in paired if not re.match(r'^[，,；;：:、]', q)][:3]
-                
+                    key_quotes = [q for q in paired if not re.match(r'^[\uff0c,\uff1b;\uff1a:\u3001]', q)][:3]
+
                 interview = AgentInterview(
                     agent_name=agent_name,
                     agent_role=agent_role,
@@ -1266,9 +1118,9 @@ Retorne somente o JSON."""
                     key_quotes=key_quotes[:5]
                 )
                 result.interviews.append(interview)
-            
+
             result.interviewed_count = len(result.interviews)
-            
+
         except ValueError as e:
             logger.warning(f"Falha na API de entrevista; ambiente nao esta disponivel? {e}")
             result.summary = f"Falha na entrevista: {str(e)}. O ambiente de simulacao pode estar desligado; confirme que o OASIS esta ativo."
@@ -1279,17 +1131,17 @@ Retorne somente o JSON."""
             logger.error(traceback.format_exc())
             result.summary = f"Ocorreu um erro durante a entrevista: {str(e)}"
             return result
-        
-        # Etapa 6: gerar o resumo final.
+
+        # Etapa 6: gerar o resumo final
         if result.interviews:
             result.summary = self._generate_interview_summary(
                 interviews=result.interviews,
                 interview_requirement=interview_requirement
             )
-        
+
         logger.info(f"InterviewAgents concluido: {result.interviewed_count} agentes entrevistados no modo dual")
         return result
-    
+
     @staticmethod
     def _clean_tool_call_response(response: str) -> str:
         """Limpa wrappers JSON de tool call e extrai o conteudo real."""
@@ -1315,16 +1167,14 @@ Retorne somente o JSON."""
         """Carrega os perfis de agente da simulacao."""
         import os
         import csv
-        
-        # Monta o diretorio de perfis da simulacao.
+
         sim_dir = os.path.join(
-            os.path.dirname(__file__), 
+            os.path.dirname(__file__),
             f'../../uploads/simulations/{simulation_id}'
         )
-        
+
         profiles = []
-        
-        # Primeiro tenta o formato JSON da comunidade.
+
         reddit_profile_path = os.path.join(sim_dir, "reddit_profiles.json")
         if os.path.exists(reddit_profile_path):
             try:
@@ -1334,15 +1184,13 @@ Retorne somente o JSON."""
                 return profiles
             except Exception as e:
                 logger.warning(f"Falha ao ler reddit_profiles.json: {e}")
-        
-        # Depois tenta o CSV do feed aberto.
+
         twitter_profile_path = os.path.join(sim_dir, "twitter_profiles.csv")
         if os.path.exists(twitter_profile_path):
             try:
                 with open(twitter_profile_path, 'r', encoding='utf-8') as f:
                     reader = csv.DictReader(f)
                     for row in reader:
-                        # Converte o CSV para o formato interno comum.
                         profiles.append({
                             "realname": row.get("name", ""),
                             "username": row.get("username", ""),
@@ -1354,9 +1202,9 @@ Retorne somente o JSON."""
                 return profiles
             except Exception as e:
                 logger.warning(f"Falha ao ler twitter_profiles.csv: {e}")
-        
+
         return profiles
-    
+
     def _select_agents_for_interview(
         self,
         profiles: List[Dict[str, Any]],
@@ -1364,14 +1212,7 @@ Retorne somente o JSON."""
         simulation_requirement: str,
         max_agents: int
     ) -> tuple:
-        """
-        Usa o LLM para selecionar os agentes mais adequados para entrevista.
-
-        Returns:
-            tuple: (selected_agents, selected_indices, reasoning)
-        """
-        
-        # Monta o resumo dos agentes disponiveis.
+        """Usa o LLM para selecionar os agentes mais adequados para entrevista."""
         agent_summaries = []
         for i, profile in enumerate(profiles):
             summary = {
@@ -1382,7 +1223,7 @@ Retorne somente o JSON."""
                 "interested_topics": profile.get("interested_topics", [])
             }
             agent_summaries.append(summary)
-        
+
         system_prompt = """Voce e um especialista em planejamento de entrevistas.
 Sua tarefa e selecionar, a partir da lista de agentes simulados, os perfis mais adequados para a pauta.
 
@@ -1417,26 +1258,25 @@ Escolha no maximo {max_agents} agentes e explique a selecao."""
                 ],
                 temperature=0.3
             )
-            
+
             selected_indices = response.get("selected_indices", [])[:max_agents]
             reasoning = response.get("reasoning", "Selecao automatica por relevancia")
-            
-            # Recupera os agentes efetivamente selecionados.
+
             selected_agents = []
             valid_indices = []
             for idx in selected_indices:
                 if 0 <= idx < len(profiles):
                     selected_agents.append(profiles[idx])
                     valid_indices.append(idx)
-            
+
             return selected_agents, valid_indices, reasoning
-            
+
         except Exception as e:
             logger.warning(f"Falha ao selecionar agentes com LLM; usando fallback: {e}")
             selected = profiles[:max_agents]
             indices = list(range(min(max_agents, len(profiles))))
             return selected, indices, "Fallback padrao: primeiros perfis disponiveis"
-    
+
     def _generate_interview_questions(
         self,
         interview_requirement: str,
@@ -1444,9 +1284,8 @@ Escolha no maximo {max_agents} agentes e explique a selecao."""
         selected_agents: List[Dict[str, Any]]
     ) -> List[str]:
         """Usa o LLM para gerar perguntas de entrevista."""
-        
         agent_roles = [a.get("profession", "Nao informado") for a in selected_agents]
-        
+
         system_prompt = """Voce e um entrevistador profissional.
 Gere de 3 a 5 perguntas aprofundadas com base na pauta.
 
@@ -1476,9 +1315,9 @@ Gere de 3 a 5 perguntas."""
                 ],
                 temperature=0.5
             )
-            
+
             return response.get("questions", [f"Qual e a sua visao sobre {interview_requirement}?"])
-            
+
         except Exception as e:
             logger.warning(f"Falha ao gerar perguntas de entrevista: {e}")
             return [
@@ -1486,22 +1325,20 @@ Gere de 3 a 5 perguntas."""
                 "Que impacto isso tem para voce ou para o grupo que voce representa?",
                 "O que deveria ser feito para melhorar ou resolver a situacao?"
             ]
-    
+
     def _generate_interview_summary(
         self,
         interviews: List[AgentInterview],
         interview_requirement: str
     ) -> str:
         """Gera um resumo consolidado das entrevistas."""
-        
         if not interviews:
             return "Nenhuma entrevista foi concluida"
-        
-        # Reune o material bruto das entrevistas.
+
         interview_texts = []
         for interview in interviews:
             interview_texts.append(f"[{interview.agent_name} ({interview.agent_role})]\n{interview.response[:500]}")
-        
+
         system_prompt = """Voce e um editor experiente.
 Com base nas respostas dos entrevistados, gere um resumo jornalistico.
 
@@ -1535,7 +1372,7 @@ Gere o resumo final."""
                 max_tokens=800
             )
             return summary
-            
+
         except Exception as e:
             logger.warning(f"Falha ao gerar resumo das entrevistas: {e}")
             return f"Foram entrevistados {len(interviews)} perfis: " + ", ".join([i.agent_name for i in interviews])

@@ -3,7 +3,13 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand-lockup" @click="router.push('/')">
+          <div class="brand-mark">IA</div>
+          <div class="brand-copy">
+            <div class="brand">INTEIA</div>
+            <div class="brand-sub">MiroFish Lab</div>
+          </div>
+        </div>
       </div>
       
       <div class="header-center">
@@ -33,7 +39,7 @@
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Área -->
     <main class="content-area">
       <!-- Left Panel: Graph -->
       <div class="panel-wrapper left" :style="leftPanelStyle">
@@ -46,7 +52,7 @@
         />
       </div>
 
-      <!-- Right Panel: Step2 环境搭建 -->
+      <!-- Right Panel: Step2 Configuração do ambiente -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
         <Step2EnvSetup
           :simulationId="currentSimulationId"
@@ -137,7 +143,7 @@ const toggleMaximize = (target) => {
 }
 
 const handleGoBack = () => {
-  // 返回到 process 页面
+  // Voltar para a página process
   if (projectData.value?.project_id) {
     router.push({ name: 'Process', params: { projectId: projectData.value.project_id } })
   } else {
@@ -148,65 +154,65 @@ const handleGoBack = () => {
 const handleNextStep = (params = {}) => {
   addLog('Entrando na etapa 3: início da simulação')
   
-  // 记录模拟轮数配置
+  // Registrar configuração de rodadas da simulação
   if (params.maxRounds) {
     addLog(`Total de rodadas personalizado: ${params.maxRounds}`)
   } else {
     addLog('Usando o total de rodadas definido automaticamente')
   }
   
-  // 构建路由参数
+  // Construir parâmetros de rota
   const routeParams = {
     name: 'SimulationRun',
     params: { simulationId: currentSimulationId.value }
   }
   
-  // 如果有自定义轮数，通过 query 参数传递
+  // Se há rodadas personalizadas, passar via parâmetros de query
   if (params.maxRounds) {
     routeParams.query = { maxRounds: params.maxRounds }
   }
   
-  // 跳转到 Step 3 页面
+  // Navegar para a página Step 3
   router.push(routeParams)
 }
 
 // --- Data Logic ---
 
 /**
- * 检查并关闭正在运行的模拟
- * 当用户从 Step 3 返回到 Step 2 时，默认用户要退出模拟
+ * Verificar e encerrar simulação em execução
+ * Quando o usuário volta do Step 3 para o Step 2, presume-se que deseja sair da simulação
  */
 const checkAndStopRunningSimulation = async () => {
   if (!currentSimulationId.value) return
   
   try {
-    // 先检查模拟环境是否存活
+    // Verificar primeiro se o ambiente de simulação está ativo
     const envStatusRes = await getEnvStatus({ simulation_id: currentSimulationId.value })
     
     if (envStatusRes.success && envStatusRes.data?.env_alive) {
       addLog('Ambiente de simulação em execução detectado. Encerrando...')
       
-      // 尝试优雅关闭模拟环境
+      // Tentar encerrar o ambiente de simulação graciosamente
       try {
         const closeRes = await closeSimulationEnv({ 
           simulation_id: currentSimulationId.value,
-          timeout: 10  // 10秒超时
+          timeout: 10  // Timeout de 10 segundos
         })
         
         if (closeRes.success) {
           addLog('✓ Ambiente de simulação encerrado')
         } else {
           addLog(`Falha ao encerrar o ambiente de simulação: ${closeRes.error || 'erro desconhecido'}`)
-          // 如果优雅关闭失败，尝试强制停止
+          // Se o encerramento gracioso falhar, tentar parada forçada
           await forceStopSimulation()
         }
       } catch (closeErr) {
         addLog(`Erro ao encerrar o ambiente de simulação: ${closeErr.message}`)
-        // 如果优雅关闭异常，尝试强制停止
+        // Se o encerramento gracioso gerar exceção, tentar parada forçada
         await forceStopSimulation()
       }
     } else {
-      // 环境未运行，但可能进程还在，检查模拟状态
+      // Ambiente não está rodando, mas o processo pode existir, verificar status da simulação
       const simRes = await getSimulation(currentSimulationId.value)
       if (simRes.success && simRes.data?.status === 'running') {
         addLog('A simulação ainda está marcada como ativa. Interrompendo...')
@@ -214,13 +220,13 @@ const checkAndStopRunningSimulation = async () => {
       }
     }
   } catch (err) {
-    // 检查环境状态失败不影响后续流程
-    console.warn('检查模拟状态失败:', err)
+    // Falha na verificação do ambiente não afeta o fluxo subsequente
+    console.warn('Falha ao verificar status da simulação:', err)
   }
 }
 
 /**
- * 强制停止模拟
+ * Parar simulação forçadamente
  */
 const forceStopSimulation = async () => {
   try {
@@ -239,19 +245,19 @@ const loadSimulationData = async () => {
   try {
     addLog(`Carregando dados da simulação: ${currentSimulationId.value}`)
     
-    // 获取 simulation 信息
+    // Obter informações da simulação
     const simRes = await getSimulation(currentSimulationId.value)
     if (simRes.success && simRes.data) {
       const simData = simRes.data
       
-      // 获取 project 信息
+      // Obter informações do projeto
       if (simData.project_id) {
         const projRes = await getProject(simData.project_id)
         if (projRes.success && projRes.data) {
           projectData.value = projRes.data
           addLog(`Projeto carregado: ${projRes.data.project_id}`)
           
-          // 获取 graph 数据
+          // Obter dados do grafo
           if (projRes.data.graph_id) {
             await loadGraph(projRes.data.graph_id)
           }
@@ -289,10 +295,10 @@ const refreshGraph = () => {
 onMounted(async () => {
   addLog('Tela de configuração do ambiente inicializada')
   
-  // 检查并关闭正在运行的模拟（用户从 Step 3 返回时）
+  // Verificar e encerrar simulação em execução (quando o usuário volta do Step 3)
   await checkAndStopRunningSimulation()
   
-  // 加载模拟数据
+  // Carregar dados da simulação
   loadSimulationData()
 })
 </script>
@@ -302,30 +308,64 @@ onMounted(async () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: linear-gradient(180deg, #f7f3ea 0%, #f1ece3 100%);
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(11, 20, 38, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: linear-gradient(135deg, rgba(8, 17, 31, 0.98) 0%, rgba(19, 33, 58, 0.98) 100%);
   z-index: 100;
   position: relative;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .brand {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
-  cursor: pointer;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: #fff;
+}
+
+.brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(214, 158, 46, 0.92);
 }
 
 .header-center {
@@ -336,7 +376,7 @@ onMounted(async () => {
 
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: rgba(255,255,255,0.08);
   padding: 4px;
   border-radius: 6px;
   gap: 4px;
@@ -348,16 +388,16 @@ onMounted(async () => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: rgba(255,255,255,0.7);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(185, 125, 19, 0.22);
 }
 
 .header-right {
@@ -376,18 +416,18 @@ onMounted(async () => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: rgba(214, 158, 46, 0.86);
 }
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: #fff;
 }
 
 .step-divider {
   width: 1px;
   height: 14px;
-  background-color: #E0E0E0;
+  background-color: rgba(255,255,255,0.16);
 }
 
 .status-indicator {
@@ -395,7 +435,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #666;
+  color: rgba(255,255,255,0.72);
   font-weight: 500;
 }
 
@@ -406,7 +446,7 @@ onMounted(async () => {
   background: #CCC;
 }
 
-.status-indicator.processing .dot { background: #FF5722; animation: pulse 1s infinite; }
+.status-indicator.processing .dot { background: #d69e2e; animation: pulse 1s infinite; }
 .status-indicator.completed .dot { background: #4CAF50; }
 .status-indicator.error .dot { background: #F44336; }
 
@@ -428,7 +468,7 @@ onMounted(async () => {
 }
 
 .panel-wrapper.left {
-  border-right: 1px solid #EAEAEA;
+  border-right: 1px solid rgba(11, 20, 38, 0.08);
 }
 </style>
 

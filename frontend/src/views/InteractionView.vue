@@ -3,7 +3,13 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand-lockup" @click="router.push('/')">
+          <div class="brand-mark">IA</div>
+          <div class="brand-copy">
+            <div class="brand">INTEIA</div>
+            <div class="brand-sub">MiroFish Lab</div>
+          </div>
+        </div>
       </div>
       
       <div class="header-center">
@@ -33,7 +39,7 @@
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Área -->
     <main class="content-area">
       <!-- Left Panel: Graph -->
       <div class="panel-wrapper left" :style="leftPanelStyle">
@@ -47,7 +53,7 @@
         />
       </div>
 
-      <!-- Right Panel: Step5 深度互动 -->
+      <!-- Right Panel: Step5 Interação profunda -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
         <Step5Interaction
           :reportId="currentReportId"
@@ -78,7 +84,7 @@ const props = defineProps({
   reportId: String
 })
 
-// Layout State - 默认切换到工作台视角
+// Layout State - alternar para visão de área de trabalho por padrão
 const viewMode = ref('workbench')
 
 // Data State
@@ -142,26 +148,26 @@ const loadReportData = async () => {
   try {
     addLog(`Carregando dados do relatório: ${currentReportId.value}`)
     
-    // 获取 report 信息以获取 simulation_id
+    // Obter informações do relatório para obter simulation_id
     const reportRes = await getReport(currentReportId.value)
     if (reportRes.success && reportRes.data) {
       const reportData = reportRes.data
       simulationId.value = reportData.simulation_id
       
       if (simulationId.value) {
-        // 获取 simulation 信息
+        // Obter informações da simulação
         const simRes = await getSimulation(simulationId.value)
         if (simRes.success && simRes.data) {
           const simData = simRes.data
           
-          // 获取 project 信息
+          // Obter informações do projeto
           if (simData.project_id) {
             const projRes = await getProject(simData.project_id)
             if (projRes.success && projRes.data) {
               projectData.value = projRes.data
               addLog(`Projeto carregado: ${projRes.data.project_id}`)
               
-              // 获取 graph 数据
+              // Obter dados do grafo
               if (projRes.data.graph_id) {
                 await loadGraph(projRes.data.graph_id)
               }
@@ -218,20 +224,20 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: linear-gradient(180deg, #f7f3ea 0%, #f1ece3 100%);
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(11, 20, 38, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: linear-gradient(135deg, rgba(8, 17, 31, 0.98) 0%, rgba(19, 33, 58, 0.98) 100%);
   z-index: 100;
   position: relative;
 }
@@ -242,17 +248,51 @@ onMounted(() => {
   transform: translateX(-50%);
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .brand {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
-  cursor: pointer;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: #fff;
+}
+
+.brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(214, 158, 46, 0.92);
 }
 
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: rgba(255,255,255,0.08);
   padding: 4px;
   border-radius: 6px;
   gap: 4px;
@@ -264,16 +304,16 @@ onMounted(() => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: rgba(255,255,255,0.7);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(185, 125, 19, 0.22);
 }
 
 .header-right {
@@ -292,18 +332,18 @@ onMounted(() => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: rgba(214, 158, 46, 0.86);
 }
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: #fff;
 }
 
 .step-divider {
   width: 1px;
   height: 14px;
-  background-color: #E0E0E0;
+  background-color: rgba(255,255,255,0.16);
 }
 
 .status-indicator {
@@ -311,7 +351,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #666;
+  color: rgba(255,255,255,0.72);
   font-weight: 500;
 }
 
@@ -323,7 +363,7 @@ onMounted(() => {
 }
 
 .status-indicator.ready .dot { background: #4CAF50; }
-.status-indicator.processing .dot { background: #FF9800; animation: pulse 1s infinite; }
+.status-indicator.processing .dot { background: #d69e2e; animation: pulse 1s infinite; }
 .status-indicator.completed .dot { background: #4CAF50; }
 .status-indicator.error .dot { background: #F44336; }
 
@@ -345,6 +385,6 @@ onMounted(() => {
 }
 
 .panel-wrapper.left {
-  border-right: 1px solid #EAEAEA;
+  border-right: 1px solid rgba(11, 20, 38, 0.08);
 }
 </style>

@@ -1,54 +1,146 @@
 """
-配置管理
-统一从项目根目录的 .env 文件加载配置
+Gerenciamento central de configuracao.
+
+Carrega variaveis de ambiente a partir do `.env` na raiz do projeto e aplica
+defaults compativeis com a integracao da INTEIA.
 """
 
+import json
 import os
+
 from dotenv import load_dotenv
 
-# 加载项目根目录的 .env 文件
-# 路径: MiroFish/.env (相对于 backend/app/config.py)
+# Carrega o `.env` da raiz do projeto.
 project_root_env = os.path.join(os.path.dirname(__file__), '../../.env')
 
 if os.path.exists(project_root_env):
     load_dotenv(project_root_env, override=True)
 else:
-    # 如果根目录没有 .env，尝试加载环境变量（用于生产环境）
+    # Fallback para ambientes onde as variaveis ja foram injetadas externamente.
     load_dotenv(override=True)
 
 
+def _first_non_empty(*values):
+    """Retorna o primeiro valor nao vazio."""
+    for value in values:
+        if value and str(value).strip():
+            return str(value).strip()
+    return None
+
+
+def _default_llm_base_url() -> str:
+    """Escolhe o gateway padrao de LLM priorizando OmniRoute."""
+    return _first_non_empty(
+        os.environ.get('LLM_BASE_URL'),
+        os.environ.get('OMNIROUTE_URL') and f"{os.environ.get('OMNIROUTE_URL').rstrip('/')}/v1",
+        'https://api.openai.com/v1',
+    ) or 'https://api.openai.com/v1'
+
+
+def _default_llm_api_key():
+    """Escolhe a chave padrao de LLM priorizando o token operacional da INTEIA."""
+    return _first_non_empty(
+        os.environ.get('LLM_API_KEY'),
+        os.environ.get('OMNIROUTE_API_KEY'),
+    )
+
+
+def _default_llm_model_name() -> str:
+    """Escolhe o modelo padrao conforme o gateway configurado."""
+    explicit_model = _first_non_empty(os.environ.get('LLM_MODEL_NAME'))
+    if explicit_model:
+        return explicit_model
+
+    base_url = _default_llm_base_url().lower()
+    if 'omniroute' in base_url:
+        return 'haiku-tasks'
+    return 'gpt-4o-mini'
+
+
+def _parse_alias_map() -> dict:
+    """
+    Le um mapa opcional de aliases de modelos.
+
+    Formatos aceitos:
+    - JSON: {"helena-premium":"cc/claude-sonnet-4-6"}
+    - CSV simples: alias=modelo,alias2=modelo2
+    """
+    raw_value = os.environ.get('LLM_MODEL_ALIASES', '').strip()
+    if not raw_value:
+        return {}
+
+    try:
+        parsed = json.loads(raw_value)
+        if isinstance(parsed, dict):
+            return {str(k): str(v) for k, v in parsed.items()}
+    except json.JSONDecodeError:
+        pass
+
+    aliases = {}
+    for pair in raw_value.split(','):
+        if '=' not in pair:
+            continue
+        alias, model = pair.split('=', 1)
+        alias = alias.strip()
+        model = model.strip()
+        if alias and model:
+            aliases[alias] = model
+    return aliases
+
+
 class Config:
-    """Flask配置类"""
-    
-    # Flask配置
+    """Configuracao principal do backend Flask."""
+
+    # Identidade da aplicacao
+    APP_NAME = os.environ.get('APP_NAME', 'MiroFish-Inteia')
+    APP_CODE = os.environ.get('APP_CODE', 'mirofish-inteia')
+
+    # Flask
     SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
-    
-    # JSON配置 - 禁用ASCII转义，让中文直接显示（而不是 \uXXXX 格式）
+
+    # JSON
     JSON_AS_ASCII = False
-    
-    # LLM配置（统一使用OpenAI格式）
-    LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    
-    # Zep配置
+
+    # LLM
+    LLM_API_KEY = _default_llm_api_key()
+    LLM_BASE_URL = _default_llm_base_url()
+    LLM_MODEL_NAME = _default_llm_model_name()
+    LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '45'))
+    LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '3'))
+    LLM_MODEL_ALIASES = _parse_alias_map()
+
+    # Gateway interno INTEIA / OmniRoute
+    OMNIROUTE_URL = os.environ.get('OMNIROUTE_URL', '')
+    OMNIROUTE_API_KEY = os.environ.get('OMNIROUTE_API_KEY', '')
+
+    # Graphiti Server (substitui Zep como backend de grafo de memoria)
+    GRAPHITI_BASE_URL = os.environ.get('GRAPHITI_BASE_URL', 'http://72.62.108.24:8003')
+    GRAPHITI_TIMEOUT = int(os.environ.get('GRAPHITI_TIMEOUT', '60'))
+
+    # Zep (mantido para compatibilidade retroativa, nao mais utilizado ativamente)
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
-    
-    # 文件上传配置
+    ZEP_REQUIRED = os.environ.get('ZEP_REQUIRED', 'false').lower() == 'true'
+    ZEP_MODE = os.environ.get('ZEP_MODE', 'cloud').lower()          # 'cloud' ou 'self-hosted'
+    ZEP_BASE_URL = os.environ.get('ZEP_BASE_URL', '')               # Obrigatorio quando ZEP_MODE=self-hosted
+
+    # Auth entre servicos
+    INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN', '')
+
+    # Upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '../uploads')
     ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt', 'markdown'}
-    
-    # 文本处理配置
-    DEFAULT_CHUNK_SIZE = 500  # 默认切块大小
-    DEFAULT_CHUNK_OVERLAP = 50  # 默认重叠大小
-    
-    # OASIS模拟配置
+
+    # Texto
+    DEFAULT_CHUNK_SIZE = 500
+    DEFAULT_CHUNK_OVERLAP = 50
+
+    # OASIS
     OASIS_DEFAULT_MAX_ROUNDS = int(os.environ.get('OASIS_DEFAULT_MAX_ROUNDS', '10'))
     OASIS_SIMULATION_DATA_DIR = os.path.join(os.path.dirname(__file__), '../uploads/simulations')
-    
-    # OASIS平台可用动作配置
+
+    # Acoes por plataforma
     OASIS_TWITTER_ACTIONS = [
         'CREATE_POST', 'LIKE_POST', 'REPOST', 'FOLLOW', 'DO_NOTHING', 'QUOTE_POST'
     ]
@@ -57,19 +149,26 @@ class Config:
         'LIKE_COMMENT', 'DISLIKE_COMMENT', 'SEARCH_POSTS', 'SEARCH_USER',
         'TREND', 'REFRESH', 'DO_NOTHING', 'FOLLOW', 'MUTE'
     ]
-    
-    # Report Agent配置
+
+    # Report Agent
     REPORT_AGENT_MAX_TOOL_CALLS = int(os.environ.get('REPORT_AGENT_MAX_TOOL_CALLS', '5'))
     REPORT_AGENT_MAX_REFLECTION_ROUNDS = int(os.environ.get('REPORT_AGENT_MAX_REFLECTION_ROUNDS', '2'))
     REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
-    
+
+    @classmethod
+    def resolve_model_name(cls, model_name=None) -> str:
+        """Resolve aliases internos de modelo para o nome real a ser chamado."""
+        candidate = (model_name or cls.LLM_MODEL_NAME or '').strip()
+        if not candidate:
+            return cls.LLM_MODEL_NAME
+        return cls.LLM_MODEL_ALIASES.get(candidate, candidate)
+
     @classmethod
     def validate(cls):
-        """验证必要配置"""
+        """Valida configuracoes obrigatorias para o backend."""
         errors = []
         if not cls.LLM_API_KEY:
-            errors.append("LLM_API_KEY 未配置")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY 未配置")
+            errors.append("LLM_API_KEY ou OMNIROUTE_API_KEY nao configurada")
+        if not cls.GRAPHITI_BASE_URL:
+            errors.append("GRAPHITI_BASE_URL nao configurada")
         return errors
-

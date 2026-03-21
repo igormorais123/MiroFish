@@ -30,7 +30,7 @@
               <span class="stat-value mono">{{ runStatus.twitter_actions_count || 0 }}</span>
             </span>
           </div>
-          <!-- 可用动作提示 -->
+          <!-- Indicador de ações disponiveis -->
           <div class="actions-tooltip">
           <div class="tooltip-title">Ações disponíveis</div>
             <div class="tooltip-actions">
@@ -71,7 +71,7 @@
               <span class="stat-value mono">{{ runStatus.reddit_actions_count || 0 }}</span>
             </span>
           </div>
-          <!-- 可用动作提示 -->
+          <!-- Indicador de ações disponiveis -->
           <div class="actions-tooltip">
           <div class="tooltip-title">Ações disponíveis</div>
             <div class="tooltip-actions">
@@ -157,12 +157,12 @@
               </div>
               
               <div class="card-body">
-                <!-- CREATE_POST: 发布帖子 -->
+                <!-- CREATE_POST: Publicar postagem -->
                 <div v-if="action.action_type === 'CREATE_POST' && action.action_args?.content" class="content-text main-text">
                   {{ action.action_args.content }}
                 </div>
 
-                <!-- QUOTE_POST: 引用帖子 -->
+                <!-- QUOTE_POST: Citar postagem -->
                 <template v-if="action.action_type === 'QUOTE_POST'">
                   <div v-if="action.action_args?.quote_content" class="content-text">
                     {{ action.action_args.quote_content }}
@@ -178,7 +178,7 @@
                   </div>
                 </template>
 
-                <!-- REPOST: 转发帖子 -->
+                <!-- REPOST: Compartilhar postagem -->
                 <template v-if="action.action_type === 'REPOST'">
                   <div class="repost-info">
                     <svg class="icon-small" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
@@ -189,7 +189,7 @@
                   </div>
                 </template>
 
-                <!-- LIKE_POST: 点赞帖子 -->
+                <!-- LIKE_POST: Curtir postagem -->
                 <template v-if="action.action_type === 'LIKE_POST'">
                   <div class="like-info">
                     <svg class="icon-small filled" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
@@ -200,7 +200,7 @@
                   </div>
                 </template>
 
-                <!-- CREATE_COMMENT: 发表评论 -->
+                <!-- CREATE_COMMENT: Criar comentário -->
                 <template v-if="action.action_type === 'CREATE_COMMENT'">
                   <div v-if="action.action_args?.content" class="content-text">
                     {{ action.action_args.content }}
@@ -211,7 +211,7 @@
                   </div>
                 </template>
 
-                <!-- SEARCH_POSTS: 搜索帖子 -->
+                <!-- SEARCH_POSTS: Buscar postagens -->
                 <template v-if="action.action_type === 'SEARCH_POSTS'">
                   <div class="search-info">
                     <svg class="icon-small" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -220,7 +220,7 @@
                   </div>
                 </template>
 
-                <!-- FOLLOW: 关注用户 -->
+                <!-- FOLLOW: Seguir usuário -->
                 <template v-if="action.action_type === 'FOLLOW'">
                   <div class="follow-info">
                     <svg class="icon-small" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
@@ -240,7 +240,7 @@
                   </div>
                 </template>
 
-                <!-- DO_NOTHING: 无操作（静默） -->
+                <!-- DO_NOTHING: Nenhuma ação (silencioso) -->
                 <template v-if="action.action_type === 'DO_NOTHING'">
                   <div class="idle-info">
                     <svg class="icon-small" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -248,7 +248,7 @@
                   </div>
                 </template>
 
-                <!-- 通用回退：未知类型或有 content 但未被上述处理 -->
+                <!-- Fallback generico: tipo desconhecido ou content não tratado acima -->
                 <div v-if="!['CREATE_POST', 'QUOTE_POST', 'REPOST', 'LIKE_POST', 'CREATE_COMMENT', 'SEARCH_POSTS', 'FOLLOW', 'UPVOTE_POST', 'DOWNVOTE_POST', 'DO_NOTHING'].includes(action.action_type) && action.action_args?.content" class="content-text">
                   {{ action.action_args.content }}
                 </div>
@@ -314,22 +314,22 @@ const router = useRouter()
 
 // State
 const isGeneratingReport = ref(false)
-const phase = ref(0) // 0: nao iniciado, 1: em execucao, 2: concluido
+const phase = ref(0) // 0: não iniciado, 1: em execução, 2: concluído
 const isStarting = ref(false)
 const isStopping = ref(false)
 const startError = ref(null)
 const runStatus = ref({})
-const allActions = ref([]) // todas as acoes acumuladas incrementalmente
-const actionIds = ref(new Set()) // ids de acoes para deduplicacao
+const allActions = ref([]) // todas as ações acumuladas incrementalmente
+const actionIds = ref(new Set()) // ids de ações para deduplicação
 const scrollContainer = ref(null)
 
 // Computed
-// 按时间顺序显示动作（最新的在最后面，即底部）
+// Exibir ações em ordem cronologica (mais recentes no final, ou seja, no rodapé)
 const chronologicalActions = computed(() => {
   return allActions.value
 })
 
-// 各平台动作计数
+// Contagem de ações por plataforma
 const twitterActionsCount = computed(() => {
   return allActions.value.filter(a => a.platform === 'twitter').length
 })
@@ -338,7 +338,7 @@ const redditActionsCount = computed(() => {
   return allActions.value.filter(a => a.platform === 'reddit').length
 })
 
-// 格式化模拟流逝时间（根据轮次和每轮分钟数计算）
+// Formatar tempo decorrido na simulação (calculado por rodadas e minutos por rodada)
 const formatElapsedTime = (currentRound) => {
   if (!currentRound || currentRound <= 0) return '0h 0m'
   const totalMinutes = currentRound * props.minutesPerRound
@@ -347,12 +347,12 @@ const formatElapsedTime = (currentRound) => {
   return `${hours}h ${minutes}m`
 }
 
-// Twitter平台的模拟流逝时间
+// Tempo decorrido na simulação da plataforma Twitter
 const twitterElapsedTime = computed(() => {
   return formatElapsedTime(runStatus.value.twitter_current_round || 0)
 })
 
-// Reddit平台的模拟流逝时间
+// Tempo decorrido na simulação da plataforma Reddit
 const redditElapsedTime = computed(() => {
   return formatElapsedTime(runStatus.value.reddit_current_round || 0)
 })
@@ -362,7 +362,7 @@ const addLog = (msg) => {
   emit('add-log', msg)
 }
 
-// 重置所有状态（用于重新启动模拟）
+// Redefinir todo o estado (para reiniciar a simulação)
 const resetAllState = () => {
   phase.value = 0
   runStatus.value = {}
@@ -373,17 +373,17 @@ const resetAllState = () => {
   startError.value = null
   isStarting.value = false
   isStopping.value = false
-  stopPolling()  // 停止之前可能存在的轮询
+  stopPolling()  // Parar polling que possa existir anteriormente
 }
 
-// 启动模拟
+// Iniciar simulação
 const doStartSimulation = async () => {
   if (!props.simulationId) {
     addLog('Erro: simulationId ausente')
     return
   }
   
-  // 先重置所有状态，确保不会受到上一次模拟的影响
+  // Redefinir todo o estado primeiro, garantindo que não seja afetado pela simulação anterior
   resetAllState()
   
   isStarting.value = true
@@ -395,8 +395,8 @@ const doStartSimulation = async () => {
     const params = {
       simulation_id: props.simulationId,
       platform: 'parallel',
-      force: true,  // reinicia forcadamente
-      enable_graph_memory_update: true  // habilita atualizacao dinamica do grafo
+      force: true,  // reinicia forçadamente
+      enable_graph_memory_update: true  // habilita atualização dinâmica do grafo
     }
     
     if (props.maxRounds) {
@@ -434,7 +434,7 @@ const doStartSimulation = async () => {
   }
 }
 
-// 停止模拟
+// Parar simulação
 const handleStopSimulation = async () => {
   if (!props.simulationId) return
   
@@ -459,7 +459,7 @@ const handleStopSimulation = async () => {
   }
 }
 
-// 轮询状态
+// Polling de status
 let statusTimer = null
 let detailTimer = null
 
@@ -482,7 +482,7 @@ const stopPolling = () => {
   }
 }
 
-// 追踪各平台的上一次轮次，用于检测变化并输出日志
+// Rastrear a rodada anterior de cada plataforma para detectar mudanças e emitir logs
 const prevTwitterRound = ref(0)
 const prevRedditRound = ref(0)
 
@@ -497,7 +497,7 @@ const fetchRunStatus = async () => {
       
       runStatus.value = data
       
-      // 分别检测各平台的轮次变化并输出日志
+      // Detectar mudanças de rodada de cada plataforma e emitir logs separadamente
       if (data.twitter_current_round > prevTwitterRound.value) {
       addLog(`[Feed aberto] R${data.twitter_current_round}/${data.total_rounds} | T:${data.twitter_simulated_hours || 0}h | A:${data.twitter_actions_count}`)
         prevTwitterRound.value = data.twitter_current_round
@@ -508,11 +508,11 @@ const fetchRunStatus = async () => {
         prevRedditRound.value = data.reddit_current_round
       }
       
-      // 检测模拟是否已完成（通过 runner_status 或平台完成状态判断）
+      // Detectar se a simulação términou (via runner_status ou status de conclusão da plataforma)
       const isCompleted = data.runner_status === 'completed' || data.runner_status === 'stopped'
       
-      // 额外检查：如果后端还没来得及更新 runner_status，但平台已经报告完成
-      // 通过检测 twitter_completed 和 reddit_completed 状态判断
+      // Verificação extra: se o backend ainda não atualizou runner_status, mas a plataforma já reportou conclusão
+      // Determinado pela detecção de status twitter_completed e reddit_completed
       const platformsCompleted = checkPlatformsCompleted(data)
       
       if (isCompleted || platformsCompleted) {
@@ -526,28 +526,28 @@ const fetchRunStatus = async () => {
       }
     }
   } catch (err) {
-    console.warn('获取运行状态失败:', err)
+    console.warn('Falha ao obter status de execução:', err)
   }
 }
 
-// 检查所有启用的平台是否已完成
+// Verificar se todas as plataformas habilitadas foram concluidas
 const checkPlatformsCompleted = (data) => {
-  // 如果没有任何平台数据，返回 false
+  // Se não ha dados de nenhuma plataforma, retornar false
   if (!data) return false
   
-  // 检查各平台的完成状态
+  // Verificar status de conclusão de cada plataforma
   const twitterCompleted = data.twitter_completed === true
   const redditCompleted = data.reddit_completed === true
   
-  // 如果至少有一个平台完成了，检查是否所有启用的平台都完成了
-  // 通过 actions_count 判断平台是否被启用（如果 count > 0 或 running 曾为 true）
+  // Se ao menos uma plataforma términou, verificar se todas as habilitadas terminaram
+  // Determinar se a plataforma está habilitada por actions_count (se count > 0 ou running já foi true)
   const twitterEnabled = (data.twitter_actions_count > 0) || data.twitter_running || twitterCompleted
   const redditEnabled = (data.reddit_actions_count > 0) || data.reddit_running || redditCompleted
   
-  // 如果没有任何平台被启用，返回 false
+  // Se nenhuma plataforma está habilitada, retornar false
   if (!twitterEnabled && !redditEnabled) return false
   
-  // 检查所有启用的平台是否都已完成
+  // Verificar se todas as plataformas habilitadas foram concluidas
   if (twitterEnabled && !twitterCompleted) return false
   if (redditEnabled && !redditCompleted) return false
   
@@ -561,13 +561,13 @@ const fetchRunStatusDetail = async () => {
     const res = await getRunStatusDetail(props.simulationId)
     
     if (res.success && res.data) {
-      // 使用 all_actions 获取完整的动作列表
+      // Usar all_actions para obter a lista completa de ações
       const serverActions = res.data.all_actions || []
       
-      // 增量添加新动作（去重）
+      // Adicionar novas ações incrementalmente (deduplicando)
       let newActionsAdded = 0
       serverActions.forEach(action => {
-        // 生成唯一ID
+        // Gerar ID unico
         const actionId = action.id || `${action.timestamp}-${action.platform}-${action.agent_id}-${action.action_type}`
         
         if (!actionIds.value.has(actionId)) {
@@ -580,11 +580,11 @@ const fetchRunStatusDetail = async () => {
         }
       })
       
-      // 不自动滚动，让用户自由查看时间轴
-      // 新动作会在底部追加
+      // Nao rolar automaticamente, permitir que o usuário navegue livremente na timeline
+      // Novas ações sao adicionadas no final
     }
   } catch (err) {
-    console.warn('获取详细状态失败:', err)
+    console.warn('Falha ao obter status detalhado:', err)
   }
 }
 
@@ -662,7 +662,7 @@ const handleNextStep = async () => {
       const reportId = res.data.report_id
       addLog(`✓ Tarefa de geração do relatório iniciada: ${reportId}`)
       
-      // 跳转到报告页面
+      // Navegar para a página de relatório
       router.push({ name: 'Report', params: { reportId } })
     } else {
       addLog(`✗ Falha ao iniciar a geração do relatório: ${res.error || 'erro desconhecido'}`)
@@ -701,19 +701,21 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
+  background:
+    radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 24%),
+    linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
   font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
   overflow: hidden;
 }
 
 /* --- Control Bar --- */
 .control-bar {
-  background: #FFF;
+  background: rgba(255, 255, 255, 0.78);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(15, 39, 71, 0.1);
   z-index: 10;
   height: 64px;
 }
@@ -729,9 +731,9 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 4px;
   padding: 6px 12px;
-  border-radius: 4px;
-  background: #FAFAFA;
-  border: 1px solid #EAEAEA;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   opacity: 0.7;
   transition: all 0.3s;
   min-width: 140px;
@@ -741,14 +743,14 @@ onUnmounted(() => {
 
 .platform-status.active {
   opacity: 1;
-  border-color: #333;
-  background: #FFF;
+  border-color: rgba(212, 160, 23, 0.4);
+  background: rgba(255, 250, 240, 0.94);
 }
 
 .platform-status.completed {
   opacity: 1;
-  border-color: #1A936F;
-  background: #F2FAF6;
+  border-color: rgba(94, 122, 52, 0.38);
+  background: rgba(94, 122, 52, 0.08);
 }
 
 /* Actions Tooltip */
@@ -759,7 +761,7 @@ onUnmounted(() => {
   transform: translateX(-50%);
   margin-top: 8px;
   padding: 10px 14px;
-  background: #000;
+  background: rgba(15, 39, 71, 0.94);
   color: #FFF;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -779,7 +781,7 @@ onUnmounted(() => {
   transform: translateX(-50%);
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 6px solid #000;
+  border-bottom: 6px solid rgba(15, 39, 71, 0.94);
 }
 
 .platform-status:hover .actions-tooltip {
@@ -790,7 +792,7 @@ onUnmounted(() => {
 .tooltip-title {
   font-size: 10px;
   font-weight: 600;
-  color: #999;
+  color: rgba(255, 255, 255, 0.55);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -822,13 +824,13 @@ onUnmounted(() => {
 .platform-name {
   font-size: 11px;
   font-weight: 700;
-  color: #000;
+  color: #0f2747;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.platform-status.twitter .platform-icon { color: #000; }
-.platform-status.reddit .platform-icon { color: #000; }
+.platform-status.twitter .platform-icon { color: #0f2747; }
+.platform-status.reddit .platform-icon { color: #0f2747; }
 
 .platform-stats {
   display: flex;
@@ -843,7 +845,7 @@ onUnmounted(() => {
 
 .stat-label {
   font-size: 8px;
-  color: #999;
+  color: #8b95a7;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -852,18 +854,18 @@ onUnmounted(() => {
 .stat-value {
   font-size: 11px;
   font-weight: 600;
-  color: #333;
+  color: #0f2747;
 }
 
 .stat-total, .stat-unit {
   font-size: 9px;
-  color: #999;
+  color: #8b95a7;
   font-weight: 400;
 }
 
 .status-badge {
   margin-left: auto;
-  color: #1A936F;
+  color: #5e7a34;
   display: flex;
   align-items: center;
 }
@@ -885,12 +887,13 @@ onUnmounted(() => {
 }
 
 .action-btn.primary {
-  background: #000;
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
   color: #FFF;
 }
 
 .action-btn.primary:hover:not(:disabled) {
-  background: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 39, 71, 0.18);
 }
 
 .action-btn:disabled {
@@ -903,7 +906,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   position: relative;
-  background: #FFF;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 /* Timeline Header */
@@ -925,14 +928,14 @@ onUnmounted(() => {
   gap: 16px;
   font-size: 11px;
   color: #666;
-  background: #F5F5F5;
+  background: rgba(15, 39, 71, 0.06);
   padding: 4px 12px;
   border-radius: 20px;
 }
 
 .total-count {
   font-weight: 600;
-  color: #333;
+  color: #0f2747;
 }
 
 .platform-breakdown {
@@ -947,9 +950,9 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.breakdown-divider { color: #DDD; }
-.breakdown-item.twitter { color: #000; }
-.breakdown-item.reddit { color: #000; }
+.breakdown-divider { color: rgba(15, 39, 71, 0.2); }
+.breakdown-item.twitter { color: #0f2747; }
+.breakdown-item.reddit { color: #0f2747; }
 
 /* --- Timeline Feed --- */
 .timeline-feed {
@@ -984,8 +987,8 @@ onUnmounted(() => {
   top: 24px;
   width: 10px;
   height: 10px;
-  background: #FFF;
-  border: 1px solid #CCC;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 39, 71, 0.18);
   border-radius: 50%;
   transform: translateX(-50%);
   z-index: 2;
@@ -997,30 +1000,30 @@ onUnmounted(() => {
 .marker-dot {
   width: 4px;
   height: 4px;
-  background: #CCC;
+  background: rgba(15, 39, 71, 0.22);
   border-radius: 50%;
 }
 
-.timeline-item.twitter .marker-dot { background: #000; }
-.timeline-item.reddit .marker-dot { background: #000; }
-.timeline-item.twitter .timeline-marker { border-color: #000; }
-.timeline-item.reddit .timeline-marker { border-color: #000; }
+.timeline-item.twitter .marker-dot { background: #d4a017; }
+.timeline-item.reddit .marker-dot { background: #0f2747; }
+.timeline-item.twitter .timeline-marker { border-color: #d4a017; }
+.timeline-item.reddit .timeline-marker { border-color: #0f2747; }
 
 /* Card Layout */
 .timeline-card {
   width: calc(100% - 48px);
-  background: #FFF;
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.84);
+  border-radius: 12px;
   padding: 16px 20px;
-  border: 1px solid #EAEAEA;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  border: 1px solid rgba(15, 39, 71, 0.1);
+  box-shadow: 0 18px 34px rgba(15, 39, 71, 0.08);
   position: relative;
   transition: all 0.2s;
 }
 
 .timeline-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border-color: #DDD;
+  box-shadow: 0 22px 38px rgba(15, 39, 71, 0.12);
+  border-color: rgba(212, 160, 23, 0.28);
 }
 
 /* Left side (Twitter) */
@@ -1050,7 +1053,7 @@ onUnmounted(() => {
   align-items: flex-start;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #F5F5F5;
+  border-bottom: 1px solid rgba(15, 39, 71, 0.08);
 }
 
 .agent-info {
@@ -1062,7 +1065,7 @@ onUnmounted(() => {
 .avatar-placeholder {
   width: 24px;
   height: 24px;
-  background: #000;
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
   color: #FFF;
   border-radius: 50%;
   display: flex;
@@ -1076,7 +1079,7 @@ onUnmounted(() => {
 .agent-name {
   font-size: 13px;
   font-weight: 600;
-  color: #000;
+  color: #0f2747;
 }
 
 .header-meta {
@@ -1086,7 +1089,7 @@ onUnmounted(() => {
 }
 
 .platform-indicator {
-  color: #999;
+  color: #8b95a7;
   display: flex;
   align-items: center;
 }
@@ -1102,33 +1105,33 @@ onUnmounted(() => {
 }
 
 /* Monochromatic Badges */
-.badge-post { background: #F0F0F0; color: #333; border-color: #E0E0E0; }
-.badge-comment { background: #F0F0F0; color: #666; border-color: #E0E0E0; }
-.badge-action { background: #FFF; color: #666; border: 1px solid #E0E0E0; }
-.badge-meta { background: #FAFAFA; color: #999; border: 1px dashed #DDD; }
+.badge-post { background: rgba(212, 160, 23, 0.12); color: #8a6310; border-color: rgba(212, 160, 23, 0.24); }
+.badge-comment { background: rgba(15, 39, 71, 0.06); color: #4b5563; border-color: rgba(15, 39, 71, 0.12); }
+.badge-action { background: rgba(255, 255, 255, 0.9); color: #4b5563; border: 1px solid rgba(15, 39, 71, 0.12); }
+.badge-meta { background: rgba(15, 39, 71, 0.04); color: #8b95a7; border: 1px dashed rgba(15, 39, 71, 0.16); }
 .badge-idle { opacity: 0.5; }
 
 .content-text {
   font-size: 13px;
   line-height: 1.6;
-  color: #333;
+  color: #374151;
   margin-bottom: 10px;
 }
 
 .content-text.main-text {
   font-size: 14px;
-  color: #000;
+  color: #0f2747;
 }
 
 /* Info Blocks (Quote, Repost, etc) */
 .quoted-block, .repost-content {
-  background: #F9F9F9;
-  border: 1px solid #EEE;
+  background: rgba(15, 39, 71, 0.04);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   padding: 10px 12px;
-  border-radius: 2px;
+  border-radius: 10px;
   margin-top: 8px;
   font-size: 12px;
-  color: #555;
+  color: #4b5563;
 }
 
 .quote-header, .repost-info, .like-info, .search-info, .follow-info, .vote-info, .idle-info, .comment-context {
@@ -1137,11 +1140,11 @@ onUnmounted(() => {
   gap: 6px;
   margin-bottom: 6px;
   font-size: 11px;
-  color: #666;
+  color: #4b5563;
 }
 
 .icon-small {
-  color: #999;
+  color: #8b95a7;
 }
 .icon-small.filled {
   color: #999; /* Keep icons neutral unless highlighted */
@@ -1149,7 +1152,7 @@ onUnmounted(() => {
 
 .search-query {
   font-family: 'JetBrains Mono', monospace;
-  background: #F0F0F0;
+  background: rgba(212, 160, 23, 0.12);
   padding: 0 4px;
   border-radius: 2px;
 }
@@ -1159,7 +1162,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   font-size: 10px;
-  color: #BBB;
+  color: #8b95a7;
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -1209,22 +1212,22 @@ onUnmounted(() => {
 
 /* Logs */
 .system-logs {
-  background: #000;
-  color: #DDD;
+  background: linear-gradient(135deg, #0b1b31 0%, #102949 100%);
+  color: #e5dcc7;
   padding: 16px;
   font-family: 'JetBrains Mono', monospace;
-  border-top: 1px solid #222;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
   margin-bottom: 8px;
   font-size: 10px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .log-content {
@@ -1237,7 +1240,7 @@ onUnmounted(() => {
 }
 
 .log-content::-webkit-scrollbar { width: 4px; }
-.log-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.log-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
 
 .log-line {
   font-size: 11px;

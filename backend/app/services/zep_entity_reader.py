@@ -1,37 +1,34 @@
 """
-Zep实体读取与过滤服务
-从Zep图谱中读取节点，筛选出符合预定义实体类型的节点
+Servico de leitura e filtragem de entidades do grafo.
+Le fatos do Graphiti Server e filtra os que correspondem a tipos de entidade pre-definidos.
 """
 
 import time
 from typing import Dict, Any, List, Optional, Set, Callable, TypeVar
 from dataclasses import dataclass, field
 
-from zep_cloud.client import Zep
-
 from ..config import Config
 from ..utils.logger import get_logger
-from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
+from ..utils.graphiti_client import GraphitiClient
 
 logger = get_logger('mirofish.zep_entity_reader')
 
-# 用于泛型返回类型
 T = TypeVar('T')
 
 
 @dataclass
 class EntityNode:
-    """实体节点数据结构"""
+    """Estrutura de dados do no de entidade"""
     uuid: str
     name: str
     labels: List[str]
     summary: str
     attributes: Dict[str, Any]
-    # 相关的边信息
+    # Informacoes de arestas relacionadas
     related_edges: List[Dict[str, Any]] = field(default_factory=list)
-    # 相关的其他节点信息
+    # Informacoes de outros nos relacionados
     related_nodes: List[Dict[str, Any]] = field(default_factory=list)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "uuid": self.uuid,
@@ -42,9 +39,9 @@ class EntityNode:
             "related_edges": self.related_edges,
             "related_nodes": self.related_nodes,
         }
-    
+
     def get_entity_type(self) -> Optional[str]:
-        """获取实体类型（排除默认的Entity标签）"""
+        """Obter tipo da entidade (excluindo o label padrao Entity)"""
         for label in self.labels:
             if label not in ["Entity", "Node"]:
                 return label
@@ -53,12 +50,12 @@ class EntityNode:
 
 @dataclass
 class FilteredEntities:
-    """过滤后的实体集合"""
+    """Conjunto de entidades filtradas"""
     entities: List[EntityNode]
     entity_types: Set[str]
     total_count: int
     filtered_count: int
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "entities": [e.to_dict() for e in self.entities],
@@ -70,43 +67,34 @@ class FilteredEntities:
 
 class ZepEntityReader:
     """
-    Zep实体读取与过滤服务
-    
-    主要功能：
-    1. 从Zep图谱读取所有节点
-    2. 筛选出符合预定义实体类型的节点（Labels不只是Entity的节点）
-    3. 获取每个实体的相关边和关联节点信息
+    Servico de leitura e filtragem de entidades do grafo.
+
+    Funcionalidades principais:
+    1. Buscar fatos no Graphiti Server via POST /search
+    2. Extrair entidades unicas a partir dos fatos retornados
+    3. Filtrar entidades por tipo pre-definido
     """
-    
+
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY 未配置")
-        
-        self.client = Zep(api_key=self.api_key)
-    
+        """Inicializa o leitor.
+
+        Args:
+            api_key: Mantido na assinatura para compatibilidade. Nao e
+                     necessario para o Graphiti Server.
+        """
+        self.client = GraphitiClient()
+
     def _call_with_retry(
-        self, 
-        func: Callable[[], T], 
+        self,
+        func: Callable[[], T],
         operation_name: str,
         max_retries: int = 3,
         initial_delay: float = 2.0
     ) -> T:
-        """
-        带重试机制的Zep API调用
-        
-        Args:
-            func: 要执行的函数（无参数的lambda或callable）
-            operation_name: 操作名称，用于日志
-            max_retries: 最大重试次数（默认3次，即最多尝试3次）
-            initial_delay: 初始延迟秒数
-            
-        Returns:
-            API调用结果
-        """
+        """Chamada com mecanismo de retentativa."""
         last_exception = None
         delay = initial_delay
-        
+
         for attempt in range(max_retries):
             try:
                 return func()
@@ -114,324 +102,272 @@ class ZepEntityReader:
                 last_exception = e
                 if attempt < max_retries - 1:
                     logger.warning(
-                        f"Zep {operation_name} 第 {attempt + 1} 次尝试失败: {str(e)[:100]}, "
-                        f"{delay:.1f}秒后重试..."
+                        f"Graphiti {operation_name} tentativa {attempt + 1} falhou: {str(e)[:100]}, "
+                        f"retentando em {delay:.1f}s..."
                     )
                     time.sleep(delay)
-                    delay *= 2  # 指数退避
+                    delay *= 2
                 else:
-                    logger.error(f"Zep {operation_name} 在 {max_retries} 次尝试后仍失败: {str(e)}")
-        
+                    logger.error(f"Graphiti {operation_name} falhou apos {max_retries} tentativas: {str(e)}")
+
         raise last_exception
-    
+
     def get_all_nodes(self, graph_id: str) -> List[Dict[str, Any]]:
         """
-        获取图谱的所有节点（分页获取）
+        Obter todos os nos do grafo via busca ampla no Graphiti.
 
-        Args:
-            graph_id: 图谱ID
-
-        Returns:
-            节点列表
+        No Graphiti, nao ha endpoint direto de listagem de nos.
+        Fazemos uma busca ampla e extraimos entidades unicas dos fatos.
         """
-        logger.info(f"获取图谱 {graph_id} 的所有节点...")
+        logger.info(f"Obtendo todos os nos do grafo {graph_id}...")
 
-        nodes = fetch_all_nodes(self.client, graph_id)
+        search_result = self.client.search(
+            group_ids=[graph_id],
+            query="*",
+            max_facts=500,
+        )
 
+        raw_facts = search_result.get("facts", [])
         nodes_data = []
-        for node in nodes:
-            nodes_data.append({
-                "uuid": getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
-                "name": node.name or "",
-                "labels": node.labels or [],
-                "summary": node.summary or "",
-                "attributes": node.attributes or {},
-            })
+        seen_names = set()
 
-        logger.info(f"共获取 {len(nodes_data)} 个节点")
+        for fact in raw_facts:
+            if isinstance(fact, dict):
+                name = fact.get("name", "")
+                if name and name not in seen_names:
+                    seen_names.add(name)
+                    nodes_data.append({
+                        "uuid": fact.get("uuid", ""),
+                        "name": name,
+                        "labels": ["Entity"],
+                        "summary": fact.get("fact", ""),
+                        "attributes": {},
+                    })
+
+        logger.info(f"Total de {len(nodes_data)} nos obtidos")
         return nodes_data
 
     def get_all_edges(self, graph_id: str) -> List[Dict[str, Any]]:
         """
-        获取图谱的所有边（分页获取）
-
-        Args:
-            graph_id: 图谱ID
-
-        Returns:
-            边列表
+        Obter todas as arestas (fatos) do grafo via busca ampla.
         """
-        logger.info(f"获取图谱 {graph_id} 的所有边...")
+        logger.info(f"Obtendo todas as arestas do grafo {graph_id}...")
 
-        edges = fetch_all_edges(self.client, graph_id)
+        search_result = self.client.search(
+            group_ids=[graph_id],
+            query="*",
+            max_facts=500,
+        )
 
+        raw_facts = search_result.get("facts", [])
         edges_data = []
-        for edge in edges:
-            edges_data.append({
-                "uuid": getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', ''),
-                "name": edge.name or "",
-                "fact": edge.fact or "",
-                "source_node_uuid": edge.source_node_uuid,
-                "target_node_uuid": edge.target_node_uuid,
-                "attributes": edge.attributes or {},
-            })
 
-        logger.info(f"共获取 {len(edges_data)} 条边")
+        for fact in raw_facts:
+            if isinstance(fact, dict):
+                edges_data.append({
+                    "uuid": fact.get("uuid", ""),
+                    "name": fact.get("name", ""),
+                    "fact": fact.get("fact", ""),
+                    "source_node_uuid": "",
+                    "target_node_uuid": "",
+                    "attributes": {},
+                })
+            elif isinstance(fact, str):
+                edges_data.append({
+                    "uuid": "",
+                    "name": "",
+                    "fact": fact,
+                    "source_node_uuid": "",
+                    "target_node_uuid": "",
+                    "attributes": {},
+                })
+
+        logger.info(f"Total de {len(edges_data)} arestas obtidas")
         return edges_data
-    
+
     def get_node_edges(self, node_uuid: str) -> List[Dict[str, Any]]:
         """
-        获取指定节点的所有相关边（带重试机制）
-        
-        Args:
-            node_uuid: 节点UUID
-            
-        Returns:
-            边列表
+        Obter arestas relacionadas a um no especifico.
+
+        No Graphiti, buscamos pelo nome da entidade.
         """
-        try:
-            # 使用重试机制调用Zep API
-            edges = self._call_with_retry(
-                func=lambda: self.client.graph.node.get_entity_edges(node_uuid=node_uuid),
-                operation_name=f"获取节点边(node={node_uuid[:8]}...)"
-            )
-            
-            edges_data = []
-            for edge in edges:
-                edges_data.append({
-                    "uuid": getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', ''),
-                    "name": edge.name or "",
-                    "fact": edge.fact or "",
-                    "source_node_uuid": edge.source_node_uuid,
-                    "target_node_uuid": edge.target_node_uuid,
-                    "attributes": edge.attributes or {},
-                })
-            
-            return edges_data
-        except Exception as e:
-            logger.warning(f"获取节点 {node_uuid} 的边失败: {str(e)}")
-            return []
-    
+        # Sem endpoint direto para listar arestas de um no no Graphiti
+        logger.debug(f"get_node_edges nao disponivel diretamente no Graphiti para uuid {node_uuid}")
+        return []
+
     def filter_defined_entities(
-        self, 
+        self,
         graph_id: str,
         defined_entity_types: Optional[List[str]] = None,
         enrich_with_edges: bool = True
     ) -> FilteredEntities:
         """
-        筛选出符合预定义实体类型的节点
-        
-        筛选逻辑：
-        - 如果节点的Labels只有一个"Entity"，说明这个实体不符合我们预定义的类型，跳过
-        - 如果节点的Labels包含除"Entity"和"Node"之外的标签，说明符合预定义类型，保留
-        
-        Args:
-            graph_id: 图谱ID
-            defined_entity_types: 预定义的实体类型列表（可选，如果提供则只保留这些类型）
-            enrich_with_edges: 是否获取每个实体的相关边信息
-            
-        Returns:
-            FilteredEntities: 过滤后的实体集合
+        Filtrar entidades por tipo, via busca semantica no Graphiti.
+
+        Se defined_entity_types for fornecido, faz busca direcionada
+        para cada tipo. Caso contrario, retorna todas as entidades encontradas.
         """
-        logger.info(f"开始筛选图谱 {graph_id} 的实体...")
-        
-        # 获取所有节点
-        all_nodes = self.get_all_nodes(graph_id)
-        total_count = len(all_nodes)
-        
-        # 获取所有边（用于后续关联查找）
-        all_edges = self.get_all_edges(graph_id) if enrich_with_edges else []
-        
-        # 构建节点UUID到节点数据的映射
-        node_map = {n["uuid"]: n for n in all_nodes}
-        
-        # 筛选符合条件的实体
-        filtered_entities = []
-        entity_types_found = set()
-        
-        for node in all_nodes:
-            labels = node.get("labels", [])
-            
-            # 筛选逻辑：Labels必须包含除"Entity"和"Node"之外的标签
-            custom_labels = [l for l in labels if l not in ["Entity", "Node"]]
-            
-            if not custom_labels:
-                # 只有默认标签，跳过
-                continue
-            
-            # 如果指定了预定义类型，检查是否匹配
-            if defined_entity_types:
-                matching_labels = [l for l in custom_labels if l in defined_entity_types]
-                if not matching_labels:
-                    continue
-                entity_type = matching_labels[0]
-            else:
-                entity_type = custom_labels[0]
-            
-            entity_types_found.add(entity_type)
-            
-            # 创建实体节点对象
-            entity = EntityNode(
-                uuid=node["uuid"],
-                name=node["name"],
-                labels=labels,
-                summary=node["summary"],
-                attributes=node["attributes"],
+        logger.info(f"Iniciando filtragem de entidades do grafo {graph_id}...")
+
+        all_facts = []
+        seen_fact_ids = set()
+
+        if defined_entity_types:
+            # Busca direcionada por tipo
+            for entity_type in defined_entity_types:
+                search_result = self.client.search(
+                    group_ids=[graph_id],
+                    query=entity_type,
+                    max_facts=100,
+                )
+                for fact in search_result.get("facts", []):
+                    fact_id = fact.get("uuid", "") if isinstance(fact, dict) else fact
+                    if fact_id not in seen_fact_ids:
+                        seen_fact_ids.add(fact_id)
+                        all_facts.append(fact)
+        else:
+            # Busca ampla
+            search_result = self.client.search(
+                group_ids=[graph_id],
+                query="*",
+                max_facts=500,
             )
-            
-            # 获取相关边和节点
+            all_facts = search_result.get("facts", [])
+
+        # Extrair entidades dos fatos
+        entities = []
+        entity_types_found = set()
+        seen_names = set()
+
+        for fact in all_facts:
+            if isinstance(fact, dict):
+                name = fact.get("name", "")
+                fact_text = fact.get("fact", "")
+            elif isinstance(fact, str):
+                name = ""
+                fact_text = fact
+            else:
+                continue
+
+            if not name or name in seen_names:
+                continue
+            seen_names.add(name)
+
+            # Determinar tipo de entidade
+            entity_type = name  # No Graphiti, o nome da relacao funciona como tipo
+            if defined_entity_types:
+                matching = [t for t in defined_entity_types if t.lower() in name.lower() or t.lower() in fact_text.lower()]
+                if not matching:
+                    continue
+                entity_type = matching[0]
+
+            entity_types_found.add(entity_type)
+
+            entity = EntityNode(
+                uuid=fact.get("uuid", "") if isinstance(fact, dict) else "",
+                name=name,
+                labels=["Entity", entity_type],
+                summary=fact_text,
+                attributes={},
+            )
+
+            # Enriquecer com arestas relacionadas
             if enrich_with_edges:
-                related_edges = []
-                related_node_uuids = set()
-                
-                for edge in all_edges:
-                    if edge["source_node_uuid"] == node["uuid"]:
-                        related_edges.append({
-                            "direction": "outgoing",
-                            "edge_name": edge["name"],
-                            "fact": edge["fact"],
-                            "target_node_uuid": edge["target_node_uuid"],
-                        })
-                        related_node_uuids.add(edge["target_node_uuid"])
-                    elif edge["target_node_uuid"] == node["uuid"]:
-                        related_edges.append({
-                            "direction": "incoming",
-                            "edge_name": edge["name"],
-                            "fact": edge["fact"],
-                            "source_node_uuid": edge["source_node_uuid"],
-                        })
-                        related_node_uuids.add(edge["source_node_uuid"])
-                
-                entity.related_edges = related_edges
-                
-                # 获取关联节点的基本信息
-                related_nodes = []
-                for related_uuid in related_node_uuids:
-                    if related_uuid in node_map:
-                        related_node = node_map[related_uuid]
-                        related_nodes.append({
-                            "uuid": related_node["uuid"],
-                            "name": related_node["name"],
-                            "labels": related_node["labels"],
-                            "summary": related_node.get("summary", ""),
-                        })
-                
-                entity.related_nodes = related_nodes
-            
-            filtered_entities.append(entity)
-        
-        logger.info(f"筛选完成: 总节点 {total_count}, 符合条件 {len(filtered_entities)}, "
-                   f"实体类型: {entity_types_found}")
-        
+                related_search = self.client.search(
+                    group_ids=[graph_id],
+                    query=name,
+                    max_facts=20,
+                )
+                related_facts = related_search.get("facts", [])
+                entity.related_edges = [
+                    {
+                        "direction": "related",
+                        "edge_name": f.get("name", "") if isinstance(f, dict) else "",
+                        "fact": f.get("fact", f) if isinstance(f, dict) else f,
+                    }
+                    for f in related_facts
+                ]
+
+            entities.append(entity)
+
+        total_count = len(all_facts)
+        logger.info(
+            f"Filtragem concluida: total de fatos {total_count}, "
+            f"entidades encontradas {len(entities)}, tipos: {entity_types_found}"
+        )
+
         return FilteredEntities(
-            entities=filtered_entities,
+            entities=entities,
             entity_types=entity_types_found,
             total_count=total_count,
-            filtered_count=len(filtered_entities),
+            filtered_count=len(entities),
         )
-    
+
     def get_entity_with_context(
-        self, 
-        graph_id: str, 
+        self,
+        graph_id: str,
         entity_uuid: str
     ) -> Optional[EntityNode]:
         """
-        获取单个实体及其完整上下文（边和关联节点，带重试机制）
-        
-        Args:
-            graph_id: 图谱ID
-            entity_uuid: 实体UUID
-            
-        Returns:
-            EntityNode或None
+        Obter uma entidade com contexto completo.
+
+        No Graphiti, buscamos fatos relacionados ao nome da entidade.
         """
         try:
-            # 使用重试机制获取节点
-            node = self._call_with_retry(
-                func=lambda: self.client.graph.node.get(uuid_=entity_uuid),
-                operation_name=f"获取节点详情(uuid={entity_uuid[:8]}...)"
-            )
-            
-            if not node:
-                return None
-            
-            # 获取节点的边
-            edges = self.get_node_edges(entity_uuid)
-            
-            # 获取所有节点用于关联查找
+            # Primeiro buscar a entidade por UUID (via busca ampla)
             all_nodes = self.get_all_nodes(graph_id)
-            node_map = {n["uuid"]: n for n in all_nodes}
-            
-            # 处理相关边和节点
-            related_edges = []
-            related_node_uuids = set()
-            
-            for edge in edges:
-                if edge["source_node_uuid"] == entity_uuid:
-                    related_edges.append({
-                        "direction": "outgoing",
-                        "edge_name": edge["name"],
-                        "fact": edge["fact"],
-                        "target_node_uuid": edge["target_node_uuid"],
-                    })
-                    related_node_uuids.add(edge["target_node_uuid"])
-                else:
-                    related_edges.append({
-                        "direction": "incoming",
-                        "edge_name": edge["name"],
-                        "fact": edge["fact"],
-                        "source_node_uuid": edge["source_node_uuid"],
-                    })
-                    related_node_uuids.add(edge["source_node_uuid"])
-            
-            # 获取关联节点信息
-            related_nodes = []
-            for related_uuid in related_node_uuids:
-                if related_uuid in node_map:
-                    related_node = node_map[related_uuid]
-                    related_nodes.append({
-                        "uuid": related_node["uuid"],
-                        "name": related_node["name"],
-                        "labels": related_node["labels"],
-                        "summary": related_node.get("summary", ""),
-                    })
-            
-            return EntityNode(
-                uuid=getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
-                name=node.name or "",
-                labels=node.labels or [],
-                summary=node.summary or "",
-                attributes=node.attributes or {},
-                related_edges=related_edges,
-                related_nodes=related_nodes,
+            target_node = None
+            for node in all_nodes:
+                if node["uuid"] == entity_uuid:
+                    target_node = node
+                    break
+
+            if not target_node:
+                return None
+
+            entity_name = target_node["name"]
+
+            # Buscar fatos relacionados
+            search_result = self.client.search(
+                group_ids=[graph_id],
+                query=entity_name,
+                max_facts=30,
             )
-            
+
+            related_facts = search_result.get("facts", [])
+            related_edges = [
+                {
+                    "direction": "related",
+                    "edge_name": f.get("name", "") if isinstance(f, dict) else "",
+                    "fact": f.get("fact", f) if isinstance(f, dict) else f,
+                }
+                for f in related_facts
+            ]
+
+            return EntityNode(
+                uuid=target_node["uuid"],
+                name=target_node["name"],
+                labels=target_node["labels"],
+                summary=target_node["summary"],
+                attributes=target_node.get("attributes", {}),
+                related_edges=related_edges,
+                related_nodes=[],
+            )
+
         except Exception as e:
-            logger.error(f"获取实体 {entity_uuid} 失败: {str(e)}")
+            logger.error(f"Falha ao obter entidade {entity_uuid}: {str(e)}")
             return None
-    
+
     def get_entities_by_type(
-        self, 
-        graph_id: str, 
+        self,
+        graph_id: str,
         entity_type: str,
         enrich_with_edges: bool = True
     ) -> List[EntityNode]:
-        """
-        获取指定类型的所有实体
-        
-        Args:
-            graph_id: 图谱ID
-            entity_type: 实体类型（如 "Student", "PublicFigure" 等）
-            enrich_with_edges: 是否获取相关边信息
-            
-        Returns:
-            实体列表
-        """
+        """Obter todas as entidades de um tipo especifico."""
         result = self.filter_defined_entities(
             graph_id=graph_id,
             defined_entity_types=[entity_type],
             enrich_with_edges=enrich_with_edges
         )
         return result.entities
-
-

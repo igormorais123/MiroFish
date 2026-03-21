@@ -1,5 +1,5 @@
 """
-文本处理服务
+Servico de processamento de texto
 """
 
 from typing import List, Optional
@@ -7,13 +7,13 @@ from ..utils.file_parser import FileParser, split_text_into_chunks
 
 
 class TextProcessor:
-    """文本处理器"""
-    
+    """Processador de texto"""
+
     @staticmethod
     def extract_from_files(file_paths: List[str]) -> str:
-        """从多个文件提取文本"""
+        """Extrair texto de multiplos arquivos"""
         return FileParser.extract_from_multiple(file_paths)
-    
+
     @staticmethod
     def split_text(
         text: str,
@@ -21,51 +21,50 @@ class TextProcessor:
         overlap: int = 50
     ) -> List[str]:
         """
-        分割文本
-        
+        Dividir texto em blocos
+
         Args:
-            text: 原始文本
-            chunk_size: 块大小
-            overlap: 重叠大小
-            
+            text: Texto original
+            chunk_size: Tamanho do bloco
+            overlap: Tamanho da sobreposicao
+
         Returns:
-            文本块列表
+            Lista de blocos de texto
         """
         return split_text_into_chunks(text, chunk_size, overlap)
-    
+
     @staticmethod
     def preprocess_text(text: str) -> str:
         """
-        预处理文本
-        - 移除多余空白
-        - 标准化换行
-        
+        Pre-processar texto
+        - Remover espacos em branco excessivos
+        - Padronizar quebras de linha
+
         Args:
-            text: 原始文本
-            
+            text: Texto original
+
         Returns:
-            处理后的文本
+            Texto processado
         """
         import re
-        
-        # 标准化换行
+
+        # Padronizar quebras de linha
         text = text.replace('\r\n', '\n').replace('\r', '\n')
-        
-        # 移除连续空行（保留最多两个换行）
+
+        # Remover linhas em branco consecutivas (manter no maximo duas quebras de linha)
         text = re.sub(r'\n{3,}', '\n\n', text)
-        
-        # 移除行首行尾空白
+
+        # Remover espacos no inicio e fim das linhas
         lines = [line.strip() for line in text.split('\n')]
         text = '\n'.join(lines)
-        
+
         return text.strip()
-    
+
     @staticmethod
     def get_text_stats(text: str) -> dict:
-        """获取文本统计信息"""
+        """Obter estatisticas do texto"""
         return {
             "total_chars": len(text),
             "total_lines": text.count('\n') + 1,
             "total_words": len(text.split()),
         }
-

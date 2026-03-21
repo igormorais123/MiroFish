@@ -127,7 +127,7 @@
             </div>
           </div>
 
-          <!-- Next Step Button - 在完成后显示 -->
+          <!-- Botao Proxima Etapa - exibido após conclusão -->
           <button v-if="isComplete" class="next-step-btn" @click="goToInteraction">
             <span>Ir para a interação profunda</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -194,7 +194,7 @@
                     </div>
                   </template>
                   
-                  <!-- Section Content Generated (内容生成完成，但整个章节可能还没完成) -->
+                  <!-- Conteúdo da seção gerado (conteúdo pronto, mas a seção pode não estar completa) -->
                   <template v-if="log.action === 'section_content'">
                     <div class="section-tag content-ready">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
@@ -205,7 +205,7 @@
                     </div>
                   </template>
 
-                  <!-- Section Complete (章节生成完成) -->
+                  <!-- Secao completa (geração da seção concluida) -->
                   <template v-if="log.action === 'section_complete'">
                     <div class="section-tag completed">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
@@ -315,7 +315,7 @@
                         Final: {{ log.details?.has_final_answer ? 'Sim' : 'Não' }}
                       </span>
                     </div>
-                    <!-- 当是最终答案时，显示特殊提示 -->
+                    <!-- Quando e a resposta final, exibir aviso especial -->
                     <div v-if="log.details?.has_final_answer" class="final-answer-hint">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
@@ -431,22 +431,22 @@ const showRawResult = reactive({})
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
-  // 保存按钮相对于视口的位置
+  // Salvar posição do botao relativa a viewport
   const button = event?.target
   const buttonRect = button?.getBoundingClientRect()
   const buttonTopBeforeToggle = buttonRect?.top
   
-  // 切换状态
+  // Alternar estado
   showRawResult[timestamp] = !showRawResult[timestamp]
   
-  // 等待 DOM 更新后，调整滚动位置以保持按钮在相同位置
+  // Após atualização do DOM, ajustar posição de rolagem para manter o botao na mesma posição
   if (button && buttonTopBeforeToggle !== undefined && rightPanel.value) {
     nextTick(() => {
       const newButtonRect = button.getBoundingClientRect()
       const buttonTopAfterToggle = newButtonRect.top
       const scrollDelta = buttonTopAfterToggle - buttonTopBeforeToggle
       
-      // 调整滚动位置
+      // Ajustar posição de rolagem
       rightPanel.value.scrollTop += scrollDelta
     })
   }
@@ -464,7 +464,7 @@ const toggleSectionContent = (idx) => {
 }
 
 const toggleSectionCollapse = (idx) => {
-  // 只有已完成的章节才能折叠
+  // Apenas secoes concluidas podem ser recolhidas
   if (!generatedSections.value[idx + 1]) return
   const newSet = new Set(collapsedSections.value)
   if (newSet.has(idx)) {
@@ -497,32 +497,32 @@ const toolConfig = {
   'insight_forge': {
     name: 'Insight profundo',
     color: 'purple',
-    icon: 'lightbulb' // 灯泡图标 - 代表洞察
+    icon: 'lightbulb' // Icone de lampada - representa insight
   },
   'panorama_search': {
     name: 'Busca panorâmica',
     color: 'blue',
-    icon: 'globe' // 地球图标 - 代表全景搜索
+    icon: 'globe' // Icone de globo - representa busca panoramica
   },
   'interview_agents': {
     name: 'Entrevista com agentes',
     color: 'green',
-    icon: 'users' // 用户图标 - 代表对话
+    icon: 'users' // Icone de usuarios - representa dialogo
   },
   'quick_search': {
     name: 'Busca rápida',
     color: 'orange',
-    icon: 'zap' // 闪电图标 - 代表快速
+    icon: 'zap' // Icone de raio - representa rapidez
   },
   'get_graph_statistics': {
     name: 'Estatísticas do grafo',
     color: 'cyan',
-    icon: 'chart' // 图表图标 - 代表统计
+    icon: 'chart' // Icone de grafico - representa estatisticas
   },
   'get_entities_by_type': {
     name: 'Consulta de entidades',
     color: 'pink',
-    icon: 'database' // 数据库图标 - 代表实体
+    icon: 'database' // Icone de banco de dados - representa entidades
   }
 }
 
@@ -551,31 +551,31 @@ const parseInsightForge = (text) => {
   }
   
   try {
-    // 提取分析问题
-    const queryMatch = text.match(/分析问题:\s*(.+?)(?:\n|$)/)
+    // Extrair pergunta de analise
+    const queryMatch = text.match(/Problema de analise:\s*(.+?)(?:\n|$)/)
     if (queryMatch) result.query = queryMatch[1].trim()
     
-    // 提取预测场景
-    const reqMatch = text.match(/预测场景:\s*(.+?)(?:\n|$)/)
+    // Extrair cenario de previsao
+    const reqMatch = text.match(/Cenario de previsao:\s*(.+?)(?:\n|$)/)
     if (reqMatch) result.simulationRequirement = reqMatch[1].trim()
     
-    // 提取统计数据 - 匹配"相关预测事实: X条"格式
-    const factMatch = text.match(/相关预测事实:\s*(\d+)/)
-    const entityMatch = text.match(/涉及实体:\s*(\d+)/)
-    const relMatch = text.match(/关系链:\s*(\d+)/)
+    // Extrair dados estatisticos - formato "fatos previsionais relevantes: X"
+    const factMatch = text.match(/Fatos de previsao relacionados:\s*(\d+)/)
+    const entityMatch = text.match(/Entidades envolvidas:\s*(\d+)/)
+    const relMatch = text.match(/Cadeia de relações:\s*(\d+)/)
     if (factMatch) result.stats.facts = parseInt(factMatch[1])
     if (entityMatch) result.stats.entities = parseInt(entityMatch[1])
     if (relMatch) result.stats.relationships = parseInt(relMatch[1])
     
-    // 提取子问题 - 完整提取，不限制数量
-    const subQSection = text.match(/### 分析的子问题\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair subquestões - extração completa, sem limite de quantidade
+    const subQSection = text.match(/### Sub-problemas analisados\n([\s\S]*?)(?=\n###|$)/)
     if (subQSection) {
       const lines = subQSection[1].split('\n').filter(l => l.match(/^\d+\./))
       result.subQueries = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
     }
     
-    // 提取关键事实 - 完整提取，不限制数量
-    const factsSection = text.match(/### 【关键事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair fatos-chave - extração completa, sem limite de quantidade
+    const factsSection = text.match(/### \[Fatos-chave\][\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
     if (factsSection) {
       const lines = factsSection[1].split('\n').filter(l => l.match(/^\d+\./))
       result.facts = lines.map(l => {
@@ -584,16 +584,16 @@ const parseInsightForge = (text) => {
       }).filter(Boolean)
     }
     
-    // 提取核心实体 - 完整提取，包含摘要和相关事实数
-    const entitySection = text.match(/### 【核心实体】\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair entidades centrais - extração completa, com resumo e quantidade de fatos relacionados
+    const entitySection = text.match(/### \[Entidades principais\]\n([\s\S]*?)(?=\n###|$)/)
     if (entitySection) {
       const entityText = entitySection[1]
-      // 按 "- **" 分割实体块
+      // Dividir blocos de entidade por "- **"
       const entityBlocks = entityText.split(/\n(?=- \*\*)/).filter(b => b.trim().startsWith('- **'))
       result.entities = entityBlocks.map(block => {
         const nameMatch = block.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/)
-        const summaryMatch = block.match(/摘要:\s*"?(.+?)"?(?:\n|$)/)
-        const relatedMatch = block.match(/相关事实:\s*(\d+)/)
+        const summaryMatch = block.match(/Resumo:\s*"?(.+?)"?(?:\n|$)/)
+        const relatedMatch = block.match(/Fatos relacionados:\s*(\d+)/)
         return {
           name: nameMatch ? nameMatch[1].trim() : '',
           type: nameMatch ? nameMatch[2].trim() : '',
@@ -603,8 +603,8 @@ const parseInsightForge = (text) => {
       }).filter(e => e.name)
     }
     
-    // 提取关系链 - 完整提取，不限制数量
-    const relSection = text.match(/### 【关系链】\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair cadeia de relações - extração completa, sem limite de quantidade
+    const relSection = text.match(/### \[Cadeia de relações\]\n([\s\S]*?)(?=\n###|$)/)
     if (relSection) {
       const lines = relSection[1].split('\n').filter(l => l.trim().startsWith('-'))
       result.relations = lines.map(l => {
@@ -632,33 +632,33 @@ const parsePanorama = (text) => {
   }
   
   try {
-    // 提取查询
-    const queryMatch = text.match(/查询:\s*(.+?)(?:\n|$)/)
+    // Extrair consulta
+    const queryMatch = text.match(/Consulta:\s*(.+?)(?:\n|$)/)
     if (queryMatch) result.query = queryMatch[1].trim()
     
-    // 提取统计数据
-    const nodesMatch = text.match(/总节点数:\s*(\d+)/)
-    const edgesMatch = text.match(/总边数:\s*(\d+)/)
-    const activeMatch = text.match(/当前有效事实:\s*(\d+)/)
-    const histMatch = text.match(/历史\/过期事实:\s*(\d+)/)
+    // Extrair dados estatisticos
+    const nodesMatch = text.match(/Total de nos:\s*(\d+)/)
+    const edgesMatch = text.match(/Total de arestas:\s*(\d+)/)
+    const activeMatch = text.match(/Fatos validos atuais:\s*(\d+)/)
+    const histMatch = text.match(/Fatos históricos\/expirados:\s*(\d+)/)
     if (nodesMatch) result.stats.nodes = parseInt(nodesMatch[1])
     if (edgesMatch) result.stats.edges = parseInt(edgesMatch[1])
     if (activeMatch) result.stats.activeFacts = parseInt(activeMatch[1])
     if (histMatch) result.stats.historicalFacts = parseInt(histMatch[1])
     
-    // 提取当前有效事实 - 完整提取，不限制数量
-    const activeSection = text.match(/### 【当前有效事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair fatos ativos atuais - extração completa, sem limite de quantidade
+    const activeSection = text.match(/### \[Fatos validos atuais\][\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
     if (activeSection) {
       const lines = activeSection[1].split('\n').filter(l => l.match(/^\d+\./))
       result.activeFacts = lines.map(l => {
-        // 移除编号和引号
+        // Remover numeração e aspas
         const factText = l.replace(/^\d+\.\s*/, '').replace(/^"|"$/g, '').trim()
         return factText
       }).filter(Boolean)
     }
     
-    // 提取历史/过期事实 - 完整提取，不限制数量
-    const histSection = text.match(/### 【历史\/过期事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair fatos históricos/expirados - extração completa, sem limite de quantidade
+    const histSection = text.match(/### \[Fatos históricos\/expirados\][\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
     if (histSection) {
       const lines = histSection[1].split('\n').filter(l => l.match(/^\d+\./))
       result.historicalFacts = lines.map(l => {
@@ -667,8 +667,8 @@ const parsePanorama = (text) => {
       }).filter(Boolean)
     }
     
-    // 提取涉及实体 - 完整提取，不限制数量
-    const entitySection = text.match(/### 【涉及实体】\n([\s\S]*?)(?=\n###|$)/)
+    // Extrair entidades envolvidas - extração completa, sem limite de quantidade
+    const entitySection = text.match(/### \[Entidades envolvidas\]\n([\s\S]*?)(?=\n###|$)/)
     if (entitySection) {
       const lines = entitySection[1].split('\n').filter(l => l.trim().startsWith('-'))
       result.entities = lines.map(l => {
@@ -696,25 +696,25 @@ const parseInterview = (text) => {
   }
   
   try {
-    // 提取采访主题
-    const topicMatch = text.match(/\*\*采访主题:\*\*\s*(.+?)(?:\n|$)/)
+    // Extrair tema da entrevista
+    const topicMatch = text.match(/\*\*Tema da entrevista:\*\*\s*(.+?)(?:\n|$)/)
     if (topicMatch) result.topic = topicMatch[1].trim()
     
-    // 提取采访人数（如 "5 / 9 位模拟Agent"）
-    const countMatch = text.match(/\*\*采访人数:\*\*\s*(\d+)\s*\/\s*(\d+)/)
+    // Extrair quantidade de entrevistados (ex: "5 / 9 agentes simulados")
+    const countMatch = text.match(/\*\*Numero de entrevistados:\*\*\s*(\d+)\s*\/\s*(\d+)/)
     if (countMatch) {
       result.successCount = parseInt(countMatch[1])
       result.totalCount = parseInt(countMatch[2])
       result.agentCount = `${countMatch[1]} / ${countMatch[2]}`
     }
     
-    // 提取采访对象选择理由
-    const reasonMatch = text.match(/### 采访对象选择理由\n([\s\S]*?)(?=\n---\n|\n### 采访实录)/)
+    // Extrair razão da seleção dos entrevistados
+    const reasonMatch = text.match(/### Razao de seleção dos entrevistados\n([\s\S]*?)(?=\n---\n|\n### Registro de entrevistas)/)
     if (reasonMatch) {
       result.selectionReason = reasonMatch[1].trim()
     }
     
-    // 解析每个人的选择理由
+    // Analisar a razão de seleção de cada pessoa
     const parseIndividualReasons = (reasonText) => {
       const reasons = {}
       if (!reasonText) return reasons
@@ -728,26 +728,26 @@ const parseInterview = (text) => {
         let name = null
         let reasonStart = null
         
-        // 格式1: 数字. **名字（index=X）**：理由
-        // 例如: 1. **校友_345（index=1）**：作为武大校友...
+        // Formato 1: numero. **nome(index=X)**: razão
+        // Exemplo: 1. **ex-aluno_345(index=1)**: como ex-aluno...
         headerMatch = line.match(/^\d+\.\s*\*\*([^*（(]+)(?:[（(]index\s*=?\s*\d+[)）])?\*\*[：:]\s*(.*)/)
         if (headerMatch) {
           name = headerMatch[1].trim()
           reasonStart = headerMatch[2]
         }
         
-        // 格式2: - 选择名字（index X）：理由
-        // 例如: - 选择家长_601（index 0）：作为家长群体代表...
+        // Formato 2: - selecionar nome(index X): razão
+        // Exemplo: - selecionar pai_601(index 0): como representante dos pais...
         if (!headerMatch) {
-          headerMatch = line.match(/^-\s*选择([^（(]+)(?:[（(]index\s*=?\s*\d+[)）])?[：:]\s*(.*)/)
+          headerMatch = line.match(/^-\s*Selecao([^（(]+)(?:[（(]index\s*=?\s*\d+[)）])?[：:]\s*(.*)/)
           if (headerMatch) {
             name = headerMatch[1].trim()
             reasonStart = headerMatch[2]
           }
         }
         
-        // 格式3: - **名字（index X）**：理由
-        // 例如: - **家长_601（index 0）**：作为家长群体代表...
+        // Formato 3: - **nome(index X)**: razão
+        // Exemplo: - **pai_601(index 0)**: como representante dos pais...
         if (!headerMatch) {
           headerMatch = line.match(/^-\s*\*\*([^*（(]+)(?:[（(]index\s*=?\s*\d+[)）])?\*\*[：:]\s*(.*)/)
           if (headerMatch) {
@@ -757,20 +757,20 @@ const parseInterview = (text) => {
         }
         
         if (name) {
-          // 保存上一个人的理由
+          // Salvar a razão da pessoa anterior
           if (currentName && currentReason.length > 0) {
             reasons[currentName] = currentReason.join(' ').trim()
           }
-          // 开始新的人
+          // Iniciar nova pessoa
           currentName = name
           currentReason = reasonStart ? [reasonStart.trim()] : []
-        } else if (currentName && line.trim() && !line.match(/^未选|^综上|^最终选择/)) {
-          // 理由的续行（排除结尾总结段落）
+        } else if (currentName && line.trim() && !line.match(/^Nao selecionado|^Em resumo|^Selecao final/)) {
+          // Continuação da razão (excluir parágrafo de conclusão)
           currentReason.push(line.trim())
         }
       }
       
-      // 保存最后一个人的理由
+      // Salvar a razão da última pessoa
       if (currentName && currentReason.length > 0) {
         reasons[currentName] = currentReason.join(' ').trim()
       }
@@ -780,8 +780,8 @@ const parseInterview = (text) => {
     
     const individualReasons = parseIndividualReasons(result.selectionReason)
     
-    // 提取每个采访记录
-    const interviewBlocks = text.split(/#### 采访 #\d+:/).slice(1)
+    // Extrair cada registro de entrevista
+    const interviewBlocks = text.split(/#### Entrevista #\d+:/).slice(1)
     
     interviewBlocks.forEach((block, index) => {
       const interview = {
@@ -797,33 +797,33 @@ const parseInterview = (text) => {
         quotes: []
       }
       
-      // 提取标题（如 "学生"、"教育从业者" 等）
+      // Extrair título (ex: "estudante", "profissional da educação" etc.)
       const titleMatch = block.match(/^(.+?)\n/)
       if (titleMatch) interview.title = titleMatch[1].trim()
       
-      // 提取姓名和角色
+      // Extrair nome e funcao
       const nameRoleMatch = block.match(/\*\*(.+?)\*\*\s*\((.+?)\)/)
       if (nameRoleMatch) {
         interview.name = nameRoleMatch[1].trim()
         interview.role = nameRoleMatch[2].trim()
-        // 设置该人的选择理由
+        // Definir a razão de seleção desta pessoa
         interview.selectionReason = individualReasons[interview.name] || ''
       }
       
-      // 提取简介
-      const bioMatch = block.match(/_简介:\s*([\s\S]*?)_\n/)
+      // Extrair resumo
+      const bioMatch = block.match(/_Resumo:\s*([\s\S]*?)_\n/)
       if (bioMatch) {
         interview.bio = bioMatch[1].trim().replace(/\.\.\.$/, '...')
       }
       
-      // 提取问题列表
+      // Extrair lista de perguntas
       const qMatch = block.match(/\*\*Q:\*\*\s*([\s\S]*?)(?=\n\n\*\*A:\*\*|\*\*A:\*\*)/)
       if (qMatch) {
         const qText = qMatch[1].trim()
-        // 按数字编号分割问题
+        // Dividir perguntas por numeração
         const questions = qText.split(/\n\d+\.\s+/).filter(q => q.trim())
         if (questions.length > 0) {
-          // 如果第一个问题前面有"1."，需要特殊处理
+          // Se a primeira pergunta tem "1." antes, requer tratamento especial
           const firstQ = qText.match(/^1\.\s+(.+)/)
           if (firstQ) {
             interview.questions = [firstQ[1].trim(), ...questions.slice(1).map(q => q.trim())]
@@ -833,14 +833,14 @@ const parseInterview = (text) => {
         }
       }
       
-      // 提取回答 - 分Twitter和Reddit
-      const answerMatch = block.match(/\*\*A:\*\*\s*([\s\S]*?)(?=\*\*关键引言|$)/)
+      // Extrair respostas - separar Twitter e Reddit
+      const answerMatch = block.match(/\*\*A:\*\*\s*([\s\S]*?)(?=\*\*Citações-chave|$)/)
       if (answerMatch) {
         const answerText = answerMatch[1].trim()
         
         // Separa as respostas por plataforma, aceitando rótulos antigos e novos
-        const twitterMatch = answerText.match(/【(?:Twitter平台回答|Resposta do Feed aberto)】\n?([\s\S]*?)(?=【(?:Reddit平台回答|Resposta da Comunidade)】|$)/)
-        const redditMatch = answerText.match(/【(?:Reddit平台回答|Resposta da Comunidade)】\n?([\s\S]*?)$/)
+        const twitterMatch = answerText.match(/【Resposta do Feed aberto】\n?([\s\S]*?)(?=【Resposta da Comunidade】|$)/)
+        const redditMatch = answerText.match(/【Resposta da Comunidade】\n?([\s\S]*?)$/)
         
         if (twitterMatch) {
           interview.twitterAnswer = twitterMatch[1].trim()
@@ -849,29 +849,29 @@ const parseInterview = (text) => {
           interview.redditAnswer = redditMatch[1].trim()
         }
         
-        // 平台回退逻辑（兼容旧格式：只有一个平台标记的情况）
+        // Logica de fallback de plataforma (compativel com formato antigo: apenas uma marca de plataforma)
         if (!twitterMatch && redditMatch) {
-          // 只有 Reddit 回答，仅在非占位文本时复制为默认显示
-          if (interview.redditAnswer && !['（该平台未获得回复）', '(该平台未获得回复)', '[无回复]', '[Sem resposta nesta plataforma]'].includes(interview.redditAnswer)) {
+          // Apenas resposta do Reddit, copiar como padrão apenas se não for texto de placeholder
+          if (interview.redditAnswer && !['[Sem resposta]', '[Sem resposta nesta plataforma]'].includes(interview.redditAnswer)) {
             interview.twitterAnswer = interview.redditAnswer
           }
         } else if (twitterMatch && !redditMatch) {
-          if (interview.twitterAnswer && !['（该平台未获得回复）', '(该平台未获得回复)', '[无回复]', '[Sem resposta nesta plataforma]'].includes(interview.twitterAnswer)) {
+          if (interview.twitterAnswer && !['[Sem resposta]', '[Sem resposta nesta plataforma]'].includes(interview.twitterAnswer)) {
             interview.redditAnswer = interview.twitterAnswer
           }
         } else if (!twitterMatch && !redditMatch) {
-          // 没有分平台标记（极旧格式），整体作为回答
+          // Sem marca de plataforma (formato muito antigo), usar como resposta inteira
           interview.twitterAnswer = answerText
         }
       }
       
-      // 提取关键引言（兼容多种引号格式）
-      const quotesMatch = block.match(/\*\*关键引言:\*\*\n([\s\S]*?)(?=\n---|\n####|$)/)
+      // Extrair citações-chave (compativel com diversos formatos de aspas)
+      const quotesMatch = block.match(/\*\*Citações-chave:\*\*\n([\s\S]*?)(?=\n---|\n####|$)/)
       if (quotesMatch) {
         const quotesText = quotesMatch[1]
-        // 优先匹配 > "text" 格式
+        // Priorizar formato > "text"
         let quoteMatches = quotesText.match(/> "([^"]+)"/g)
-        // 回退：匹配 > "text" 或 > \u201Ctext\u201D（中文引号）
+        // Fallback: corresponder > "text" ou > \u201Ctext\u201D (aspas chinesas)
         if (!quoteMatches) {
           quoteMatches = quotesText.match(/> [\u201C""]([^\u201D""]+)[\u201D""]/g)
         }
@@ -887,8 +887,8 @@ const parseInterview = (text) => {
       }
     })
     
-    // 提取采访摘要
-    const summaryMatch = text.match(/### 采访摘要与核心观点\n([\s\S]*?)$/)
+    // Extrair resumo da entrevista
+    const summaryMatch = text.match(/### Resumo das entrevistas e pontos principais\n([\s\S]*?)$/)
     if (summaryMatch) {
       result.summary = summaryMatch[1].trim()
     }
@@ -909,23 +909,23 @@ const parseQuickSearch = (text) => {
   }
   
   try {
-    // 提取搜索查询
-    const queryMatch = text.match(/搜索查询:\s*(.+?)(?:\n|$)/)
+    // Extrair consulta de busca
+    const queryMatch = text.match(/Consulta de busca:\s*(.+?)(?:\n|$)/)
     if (queryMatch) result.query = queryMatch[1].trim()
     
-    // 提取结果数量
-    const countMatch = text.match(/找到\s*(\d+)\s*条/)
+    // Extrair quantidade de resultados
+    const countMatch = text.match(/Encontrados\s*(\d+)\s*resultados/)
     if (countMatch) result.count = parseInt(countMatch[1])
     
-    // 提取相关事实 - 完整提取，不限制数量
-    const factsSection = text.match(/### 相关事实:\n([\s\S]*)$/)
+    // Extrair fatos relacionados - extração completa, sem limite de quantidade
+    const factsSection = text.match(/### Fatos relacionados:\n([\s\S]*)$/)
     if (factsSection) {
       const lines = factsSection[1].split('\n').filter(l => l.match(/^\d+\./))
       result.facts = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
     }
     
-    // 尝试提取边信息（如果有）
-    const edgesSection = text.match(/### 相关边:\n([\s\S]*?)(?=\n###|$)/)
+    // Tentar extrair informações de arestas (se houver)
+    const edgesSection = text.match(/### Arestas relacionadas:\n([\s\S]*?)(?=\n###|$)/)
     if (edgesSection) {
       const lines = edgesSection[1].split('\n').filter(l => l.trim().startsWith('-'))
       result.edges = lines.map(l => {
@@ -937,8 +937,8 @@ const parseQuickSearch = (text) => {
       }).filter(Boolean)
     }
     
-    // 尝试提取节点信息（如果有）
-    const nodesSection = text.match(/### 相关节点:\n([\s\S]*?)(?=\n###|$)/)
+    // Tentar extrair informações de nós (se houver)
+    const nodesSection = text.match(/### Nos relacionados:\n([\s\S]*?)(?=\n###|$)/)
     if (nodesSection) {
       const lines = nodesSection[1].split('\n').filter(l => l.trim().startsWith('-'))
       result.nodes = lines.map(l => {
@@ -1292,16 +1292,16 @@ const InterviewDisplay = {
     
     const activeIndex = ref(0)
     const expandedAnswers = ref(new Set())
-    // 为每个问题-回答对维护独立的平台选择状态
+    // Manter estado de seleção de plataforma independente para cada par pergunta-resposta
     const platformTabs = reactive({}) // { 'agentIdx-qIdx': 'twitter' | 'reddit' }
     
-    // 获取某个问题的当前平台选择
+    // Obter seleção de plataforma atual para uma pergunta
     const getPlatformTab = (agentIdx, qIdx) => {
       const key = `${agentIdx}-${qIdx}`
       return platformTabs[key] || 'twitter'
     }
     
-    // 设置某个问题的平台选择
+    // Definir seleção de plataforma para uma pergunta
     const setPlatformTab = (agentIdx, qIdx, platform) => {
       const key = `${agentIdx}-${qIdx}`
       platformTabs[key] = platform
@@ -1323,26 +1323,26 @@ const InterviewDisplay = {
       return text.substring(0, 400) + '...'
     }
     
-    // 检查是否为平台占位文本
+    // Verificar se e texto de placeholder de plataforma
     const isPlaceholderText = (text) => {
       if (!text) return true
       const t = text.trim()
-      return t === '（该平台未获得回复）' || t === '(该平台未获得回复)' || t === '[无回复]' || t === '[Sem resposta nesta plataforma]'
+      return t === '[Sem resposta]' || t === '[Sem resposta nesta plataforma]'
     }
 
-    // 尝试按问题编号分割回答
+    // Tentar dividir respostas por numeração de perguntas
     const splitAnswerByQuestions = (answerText, questionCount) => {
       if (!answerText || questionCount <= 0) return [answerText]
       if (isPlaceholderText(answerText)) return ['']
 
-      // 支持两种编号格式：
-      // 1. "问题X：" 或 "问题X:" （中文格式，后端新格式）
-      // 2. "1. " 或 "\n1. " （数字+点，旧格式兼容）
+      // Suporta dois formatos de numeração:
+      // 1. "PerguntaX:" (formato portugues)
+      // 2. "1. " ou "\n1. " (numero+ponto, compatibilidade com formato antigo)
       let matches = []
       let match
 
-      // 优先尝试 "问题X：" 格式
-      const cnPattern = /(?:^|[\r\n]+)问题(\d+)[：:]\s*/g
+      // Priorizar formato "PerguntaX:"
+      const cnPattern = /(?:^|[\r\n]+)Pergunta(\d+)[：:]\s*/g
       while ((match = cnPattern.exec(answerText)) !== null) {
         matches.push({
           num: parseInt(match[1]),
@@ -1351,7 +1351,7 @@ const InterviewDisplay = {
         })
       }
 
-      // 如果没匹配到，回退到 "数字." 格式
+      // Se não encontrou, fallback para formato "numero."
       if (matches.length === 0) {
         const numPattern = /(?:^|[\r\n]+)(\d+)\.\s+/g
         while ((match = numPattern.exec(answerText)) !== null) {
@@ -1363,16 +1363,16 @@ const InterviewDisplay = {
         }
       }
 
-      // 如果没有找到编号或只找到一个，返回整体
+      // Se não encontrou numeração ou encontrou apenas uma, retornar inteiro
       if (matches.length <= 1) {
         const cleaned = answerText
-          .replace(/^问题\d+[：:]\s*/, '')
+          .replace(/^Pergunta\d+[：:]\s*/, '')
           .replace(/^\d+\.\s+/, '')
           .trim()
         return [cleaned || answerText]
       }
 
-      // 按编号提取各部分
+      // Extrair cada parte por numeração
       const parts = []
       for (let i = 0; i < matches.length; i++) {
         const current = matches[i]
@@ -1393,7 +1393,7 @@ const InterviewDisplay = {
       return [answerText]
     }
     
-    // 获取某个问题对应的回答
+    // Obter resposta correspondente a uma pergunta
     const getAnswerForQuestion = (interview, qIdx, platform) => {
       const answer = platform === 'twitter' ? interview.twitterAnswer : (interview.redditAnswer || interview.twitterAnswer)
       if (!answer || isPlaceholderText(answer)) return answer || ''
@@ -1401,21 +1401,21 @@ const InterviewDisplay = {
       const questionCount = interview.questions?.length || 1
       const answers = splitAnswerByQuestions(answer, questionCount)
 
-      // 分割成功且索引有效
+      // Divisao bem-sucedida e indice valido
       if (answers.length > 1 && qIdx < answers.length) {
         return answers[qIdx] || ''
       }
 
-      // 分割失败：第一个问题返回完整回答，其余返回空
+      // Divisao falhou: primeira pergunta retorna resposta completa, demais retornam vazio
       return qIdx === 0 ? answer : ''
     }
     
-    // 检查某个问题是否有双平台回答（过滤占位文本）
+    // Verificar se uma pergunta tem respostas em ambas as plataformas (filtrando placeholders)
     const hasMultiplePlatforms = (interview, qIdx) => {
       if (!interview.twitterAnswer || !interview.redditAnswer) return false
       const twitterAnswer = getAnswerForQuestion(interview, qIdx, 'twitter')
       const redditAnswer = getAnswerForQuestion(interview, qIdx, 'reddit')
-      // 两个平台都有真实回答（非占位文本）且内容不同
+      // Ambas as plataformas tem respostas reais (nao-placeholder) e conteúdos diferentes
       return !isPlaceholderText(twitterAnswer) && !isPlaceholderText(redditAnswer) && twitterAnswer !== redditAnswer
     }
     
@@ -1465,13 +1465,13 @@ const InterviewDisplay = {
           ])
         ]),
         
-        // Selection Reason - 选择理由
+        // Selection Reason - Motivo da seleção
         props.result.interviews[activeIndex.value]?.selectionReason && h('div', { class: 'selection-reason' }, [
           h('div', { class: 'reason-label' }, 'Motivo da seleção'),
           h('div', { class: 'reason-content' }, props.result.interviews[activeIndex.value].selectionReason)
         ]),
         
-        // Q&A Conversation Thread - 一问一答样式
+        // Q&A Conversation Thread - Estilo pergunta-resposta
         h('div', { class: 'qa-thread' }, 
           (props.result.interviews[activeIndex.value]?.questions?.length > 0 
             ? props.result.interviews[activeIndex.value].questions 
@@ -1501,7 +1501,7 @@ const InterviewDisplay = {
                 h('div', { class: 'qa-content' }, [
                   h('div', { class: 'qa-answer-header' }, [
                     h('div', { class: 'qa-sender' }, interview?.name || 'Agente'),
-                    // 双平台切换按钮（仅在有真实双平台回答时显示）
+                    // Botões de alternancia entre plataformas (exibidos apenas quando há respostas reais em ambas)
                     hasDualPlatform && h('div', { class: 'platform-switch' }, [
                       h('button', {
                         class: ['platform-btn', { active: currentPlatform === 'twitter' }],
@@ -1533,7 +1533,7 @@ const InterviewDisplay = {
                           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                           .replace(/\n/g, '<br>')
                   }),
-                  // Expand/Collapse Button（占位文本不显示）
+                  // Expand/Collapse Button (não exibir para texto de placeholder)
                   !isPlaceholder && answerText.length > 400 && h('button', {
                     class: 'expand-answer-btn',
                     onClick: () => toggleAnswer(expandKey)
@@ -1764,18 +1764,18 @@ const isFinalizing = computed(() => {
   return !isComplete.value && isPlanningDone.value && totalSections.value > 0 && completedSections.value >= totalSections.value
 })
 
-// 当前活跃的步骤（用于顶部显示）
+// Etapa ativa atualmente (para exibição no topo)
 const activeStep = computed(() => {
   const steps = workflowSteps.value
-  // 找到当前 active 的步骤
+  // Encontrar a etapa ativa atual
   const active = steps.find(s => s.status === 'active')
   if (active) return active
   
-  // 如果没有 active，返回最后一个 done 的步骤
+  // Se não ha etapa ativa, retornar a última etapa concluida
   const doneSteps = steps.filter(s => s.status === 'done')
   if (doneSteps.length > 0) return doneSteps[doneSteps.length - 1]
   
-  // 否则返回第一个步骤
+  // Caso contrario, retornar a primeira etapa
   return steps[0] || { noLabel: '--', title: 'Aguardando início', status: 'todo', meta: '' }
 })
 
@@ -1869,25 +1869,25 @@ const truncateText = (text, maxLen) => {
 const renderMarkdown = (content) => {
   if (!content) return ''
   
-  // 去掉开头的二级标题（## xxx），因为章节标题已在外层显示
+  // Remover título de nível 2 (## xxx) do início, pois o título da seção já está no elemento externo
   let processedContent = content.replace(/^##\s+.+\n+/, '')
   
-  // 处理代码块
+  // Processar blocos de código
   let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
   
-  // 处理行内代码
+  // Processar código inline
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
   
-  // 处理标题
+  // Processar títulos
   html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>')
   html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>')
   html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>')
   html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>')
   
-  // 处理引用块
+  // Processar blocos de citação
   html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
   
-  // 处理列表 - 支持子列表
+  // Processar listas - suportar sublistas
   html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {
     const level = Math.floor(indent.length / 2)
     return `<li class="md-li" data-level="${level}">${text}</li>`
@@ -1897,52 +1897,52 @@ const renderMarkdown = (content) => {
     return `<li class="md-oli" data-level="${level}">${text}</li>`
   })
 
-  // 包装无序列表
+  // Encapsular lista não ordenada
   html = html.replace(/(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g, '<ul class="md-ul">$&</ul>')
-  // 包装有序列表
+  // Encapsular lista ordenada
   html = html.replace(/(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g, '<ol class="md-ol">$&</ol>')
 
-  // 清理列表项之间的所有空白
+  // Limpar todos os espacos entre itens de lista
   html = html.replace(/<\/li>\s+<li/g, '</li><li')
-  // 清理列表开始标签后的空白
+  // Limpar espacos após tag de abertura da lista
   html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">')
   html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">')
-  // 清理列表结束标签前的空白
+  // Limpar espacos antes da tag de fechamento da lista
   html = html.replace(/\s+<\/ul>/g, '</ul>')
   html = html.replace(/\s+<\/ol>/g, '</ol>')
   
-  // 处理粗体和斜体
+  // Processar negrito e italico
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
   html = html.replace(/_(.+?)_/g, '<em>$1</em>')
   
-  // 处理分隔线
+  // Processar linha divisória
   html = html.replace(/^---$/gm, '<hr class="md-hr">')
   
-  // 处理换行 - 空行变成段落分隔，单换行变成 <br>
+  // Processar quebras de linha - linha vazia vira separação de parágrafo, quebra simples vira <br>
   html = html.replace(/\n\n/g, '</p><p class="md-p">')
   html = html.replace(/\n/g, '<br>')
   
-  // 包装在段落中
+  // Encapsular em parágrafos
   html = '<p class="md-p">' + html + '</p>'
   
-  // 清理空段落
+  // Limpar parágrafos vazios
   html = html.replace(/<p class="md-p"><\/p>/g, '')
   html = html.replace(/<p class="md-p">(<h[2-5])/g, '$1')
   html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
   html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
   html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
-  // 清理块级元素前后的 <br> 标签
+  // Limpar tags <br> antes e depois de elementos de bloco
   html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
   html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
-  // 清理 <p><br> 紧跟块级元素的情况（多余空行导致）
+  // Limpar caso <p><br> após elemento de bloco (causado por linhas em branco extras)
   html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
-  // 清理连续的 <br> 标签
+  // Limpar tags <br> consecutivas
   html = html.replace(/(<br>\s*){2,}/g, '<br>')
-  // 清理块级元素后紧跟的段落开始标签前的 <br>
+  // Limpar <br> antes de tag de abertura de parágrafo após elemento de bloco
   html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, '$1$2')
 
-  // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
+  // Corrigir numeração de listas ordenadas não consecutivas: manter numeração crescente quando <ol> sao separadas por parágrafos
   const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
   let olCounter = 0
   let inSequence = false
@@ -2006,9 +2006,9 @@ const getActionLabel = (action) => {
 }
 
 const getLogLevelClass = (log) => {
-  if (log.includes('ERROR') || log.includes('错误')) return 'error'
-  if (log.includes('WARNING') || log.includes('警告')) return 'warning'
-  // INFO 使用默认颜色，不标记为 success
+  if (log.includes('ERROR') || log.includes('erro')) return 'error'
+  if (log.includes('WARNING') || log.includes('aviso')) return 'warning'
+  // INFO usa cor padrão, não marcar como success
   return ''
 }
 
@@ -2037,11 +2037,11 @@ const fetchAgentLog = async () => {
             currentSectionIndex.value = log.section_index
           }
 
-          // section_complete - 章节生成完成
+          // section_complete - seção gerada com sucesso
           if (log.action === 'section_complete') {
             if (log.details?.content) {
               generatedSections.value[log.section_index] = log.details.content
-              // 自动展开刚生成的章节
+              // Expandir automaticamente a seção recem-gerada
               expandedContent.value.add(log.section_index - 1)
               currentSectionIndex.value = null
             }
@@ -2049,10 +2049,10 @@ const fetchAgentLog = async () => {
           
           if (log.action === 'report_complete') {
             isComplete.value = true
-            currentSectionIndex.value = null  // 确保清除 loading 状态
+            currentSectionIndex.value = null  // Garantir limpeza do estado de loading
             emit('update-status', 'completed')
             stopPolling()
-            // 滚动逻辑统一在循环结束后的 nextTick 中处理
+            // Logica de rolagem unificada no nextTick após o fim do loop
           }
           
           if (log.action === 'report_start') {
@@ -2064,7 +2064,7 @@ const fetchAgentLog = async () => {
         
         nextTick(() => {
           if (rightPanel.value) {
-            // 如果任务已完成，滚动到顶部；否则滚动到底部跟随最新日志
+            // Se a tarefa foi concluida, rolar para o topo; caso contrario, rolar ate o final para acompanhar os logs mais recentes
             if (isComplete.value) {
               rightPanel.value.scrollTop = 0
             } else {
@@ -2079,39 +2079,39 @@ const fetchAgentLog = async () => {
   }
 }
 
-// 提取最终答案内容 - 从 LLM response 中提取章节内容
+// Extrair conteúdo da resposta final - extrair conteúdo da seção da resposta do LLM
 const extractFinalContent = (response) => {
   if (!response) return null
   
-  // 尝试提取 <final_answer> 标签内的内容
+  // Tentar extrair conteúdo dentro da tag <final_answer>
   const finalAnswerTagMatch = response.match(/<final_answer>([\s\S]*?)<\/final_answer>/)
   if (finalAnswerTagMatch) {
     return finalAnswerTagMatch[1].trim()
   }
   
-  // 尝试找 Final Answer: 后面的内容（支持多种格式）
-  // 格式1: Final Answer:\n\n内容
-  // 格式2: Final Answer: 内容
+  // Tentar encontrar conteúdo após Final Answer: (suporta múltiplos formatos)
+  // Formato 1: Final Answer:\n\nconteúdo
+  // Formato 2: Final Answer: conteúdo
   const finalAnswerMatch = response.match(/Final\s*Answer:\s*\n*([\s\S]*)$/i)
   if (finalAnswerMatch) {
     return finalAnswerMatch[1].trim()
   }
   
-  // 尝试找 最终答案: 后面的内容
-  const localizedFinalMatch = response.match(/(?:最终答案|Resposta final)[:：]\s*\n*([\s\S]*)$/i)
+  // Tentar encontrar conteúdo após "Resposta final:"
+  const localizedFinalMatch = response.match(/Resposta final[:：]\s*\n*([\s\S]*)$/i)
   if (localizedFinalMatch) {
     return localizedFinalMatch[1].trim()
   }
   
-  // 如果以 ## 或 # 或 > 开头，可能是直接的 markdown 内容
+  // Se comeca com ## ou # ou >, pode ser conteúdo markdown direto
   const trimmedResponse = response.trim()
   if (trimmedResponse.match(/^[#>]/)) {
     return trimmedResponse
   }
   
-  // 如果内容较长且包含markdown格式，尝试移除思考过程后返回
+  // Se o conteúdo e longo e contem formato markdown, tentar remover o processo de raciocinio e retornar
   if (response.length > 300 && (response.includes('**') || response.includes('>'))) {
-    // 移除 Thought: 开头的思考过程
+    // Remover processo de raciocinio que comeca com Thought:
     const thoughtMatch = response.match(/^Thought:[\s\S]*?(?=\n\n[^T]|\n\n$)/i)
     if (thoughtMatch) {
       const afterThought = response.substring(thoughtMatch[0].length).trim()
@@ -2207,8 +2207,10 @@ watch(() => props.reportId, (newId) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #F8F9FA;
-  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  background:
+    radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 24%),
+    linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
+  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
   overflow: hidden;
 }
 
@@ -2225,11 +2227,11 @@ watch(() => props.reportId, (newId) => {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid rgba(15, 39, 71, 0.1);
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #0f2747;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   position: sticky;
@@ -2241,8 +2243,8 @@ watch(() => props.reportId, (newId) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1F2937;
-  box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.15);
+  background: #d4a017;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
   margin-right: 10px;
   flex-shrink: 0;
   animation: pulse-dot 1.5s ease-in-out infinite;
@@ -2250,17 +2252,17 @@ watch(() => props.reportId, (newId) => {
 
 @keyframes pulse-dot {
   0%, 100% {
-    box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.15);
+    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(31, 41, 55, 0.1);
+    box-shadow: 0 0 0 5px rgba(212, 160, 23, 0.12);
   }
 }
 
 .header-index {
   font-size: 12px;
   font-weight: 600;
-  color: #9CA3AF;
+  color: #8b95a7;
   margin-right: 10px;
   flex-shrink: 0;
 }
@@ -2268,7 +2270,7 @@ watch(() => props.reportId, (newId) => {
 .header-title {
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #0f2747;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2280,47 +2282,47 @@ watch(() => props.reportId, (newId) => {
   margin-left: auto;
   font-size: 10px;
   font-weight: 600;
-  color: #6B7280;
+  color: #4b5563;
   flex-shrink: 0;
 }
 
 /* Panel header status variants */
 .panel-header--active {
-  background: #FAFAFA;
-  border-color: #1F2937;
+  background: rgba(212, 160, 23, 0.08);
+  border-color: rgba(212, 160, 23, 0.4);
 }
 
 .panel-header--active .header-index {
-  color: #1F2937;
+  color: #8a6310;
 }
 
 .panel-header--active .header-title {
-  color: #1F2937;
+  color: #0f2747;
 }
 
 .panel-header--active .header-meta {
-  color: #1F2937;
+  color: #8a6310;
 }
 
 .panel-header--done {
-  background: #F9FAFB;
+  background: rgba(94, 122, 52, 0.06);
 }
 
 .panel-header--done .header-index {
-  color: #10B981;
+  color: #5e7a34;
 }
 
 .panel-header--todo .header-index,
 .panel-header--todo .header-title {
-  color: #9CA3AF;
+  color: #8b95a7;
 }
 
 /* Left Panel - Report Style */
 .left-panel.report-style {
   width: 45%;
   min-width: 450px;
-  background: #FFFFFF;
-  border-right: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.82);
+  border-right: 1px solid rgba(15, 39, 71, 0.1);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2368,8 +2370,8 @@ watch(() => props.reportId, (newId) => {
 }
 
 .report-tag {
-  background: #000000;
-  color: #FFFFFF;
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
+  color: #f7f2e8;
   font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
@@ -2379,7 +2381,7 @@ watch(() => props.reportId, (newId) => {
 
 .report-id {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #8b95a7;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -2388,7 +2390,7 @@ watch(() => props.reportId, (newId) => {
   font-family: 'Times New Roman', Times, serif;
   font-size: 36px;
   font-weight: 700;
-  color: #111827;
+  color: #0f2747;
   line-height: 1.2;
   margin: 0 0 16px 0;
   letter-spacing: -0.02em;
@@ -2397,7 +2399,7 @@ watch(() => props.reportId, (newId) => {
 .sub-title {
   font-family: 'Times New Roman', Times, serif;
   font-size: 16px;
-  color: #6B7280;
+  color: #4b5563;
   font-style: italic;
   line-height: 1.6;
   margin: 0 0 30px 0;
@@ -2406,7 +2408,7 @@ watch(() => props.reportId, (newId) => {
 
 .header-divider {
   height: 1px;
-  background: #E5E7EB;
+  background: rgba(15, 39, 71, 0.12);
   width: 100%;
 }
 
@@ -2438,7 +2440,7 @@ watch(() => props.reportId, (newId) => {
 }
 
 .section-header-row.clickable:hover {
-  background-color: #F9FAFB;
+  background-color: rgba(212, 160, 23, 0.08);
 }
 
 .collapse-icon {
@@ -2456,7 +2458,7 @@ watch(() => props.reportId, (newId) => {
 .section-number {
   font-family: 'JetBrains Mono', monospace;
   font-size: 16px;
-  color: #9CA3AF; /* 深灰色，不随状态变化 */
+  color: #8b95a7;
   font-weight: 500;
 }
 
@@ -2464,19 +2466,19 @@ watch(() => props.reportId, (newId) => {
   font-family: 'Times New Roman', Times, serif;
   font-size: 24px;
   font-weight: 600;
-  color: #111827;
+  color: #0f2747;
   margin: 0;
   transition: color 0.3s ease;
 }
 
 /* States */
 .report-section-item.is-pending .section-title {
-  color: #D1D5DB;
+  color: rgba(15, 39, 71, 0.24);
 }
 
 .report-section-item.is-active .section-title,
 .report-section-item.is-completed .section-title {
-  color: #111827;
+  color: #0f2747;
 }
 
 .section-body {
@@ -2500,13 +2502,13 @@ watch(() => props.reportId, (newId) => {
 .generated-content :deep(.md-h3),
 .generated-content :deep(.md-h4) {
   font-family: 'Times New Roman', Times, serif;
-  color: #111827;
+  color: #0f2747;
   margin-top: 1.5em;
   margin-bottom: 0.8em;
   font-weight: 700;
 }
 
-.generated-content :deep(.md-h2) { font-size: 20px; border-bottom: 1px solid #F3F4F6; padding-bottom: 8px; }
+.generated-content :deep(.md-h2) { font-size: 20px; border-bottom: 1px solid rgba(15, 39, 71, 0.08); padding-bottom: 8px; }
 .generated-content :deep(.md-h3) { font-size: 18px; }
 .generated-content :deep(.md-h4) { font-size: 16px; }
 
@@ -2522,28 +2524,28 @@ watch(() => props.reportId, (newId) => {
 }
 
 .generated-content :deep(.md-quote) {
-  border-left: 3px solid #E5E7EB;
+  border-left: 3px solid rgba(212, 160, 23, 0.4);
   padding-left: 16px;
   margin: 1.5em 0;
-  color: #6B7280;
+  color: #4b5563;
   font-style: italic;
   font-family: 'Times New Roman', Times, serif;
 }
 
 .generated-content :deep(.code-block) {
-  background: #F9FAFB;
+  background: rgba(15, 39, 71, 0.04);
   padding: 12px;
   border-radius: 6px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   overflow-x: auto;
   margin: 1em 0;
-  border: 1px solid #E5E7EB;
+  border: 1px solid rgba(15, 39, 71, 0.1);
 }
 
 .generated-content :deep(strong) {
   font-weight: 600;
-  color: #111827;
+  color: #0f2747;
 }
 
 /* Loading State */
@@ -2551,7 +2553,7 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #6B7280;
+  color: #4b5563;
   font-size: 14px;
   margin-top: 4px;
 }
@@ -2568,14 +2570,14 @@ watch(() => props.reportId, (newId) => {
 .loading-text {
   font-family: 'Times New Roman', Times, serif;
   font-size: 15px;
-  color: #4B5563;
+  color: #0f2747;
 }
 
 .cursor-blink {
   display: inline-block;
   width: 8px;
   height: 14px;
-  background: #8B5CF6;
+  background: #d4a017;
   opacity: 0.5;
   animation: blink 1s step-end infinite;
 }
@@ -2625,7 +2627,7 @@ watch(() => props.reportId, (newId) => {
   justify-content: center;
   gap: 20px;
   padding: 40px;
-  color: #9CA3AF;
+  color: #8b95a7;
 }
 
 .waiting-animation {
@@ -2638,7 +2640,7 @@ watch(() => props.reportId, (newId) => {
   position: absolute;
   width: 100%;
   height: 100%;
-  border: 2px solid #E5E7EB;
+  border: 2px solid rgba(15, 39, 71, 0.1);
   border-radius: 50%;
   animation: ripple 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
@@ -2663,7 +2665,7 @@ watch(() => props.reportId, (newId) => {
 /* Right Panel */
 .right-panel {
   flex: 1;
-  background: #FFFFFF;
+  background: rgba(255, 255, 255, 0.74);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2961,7 +2963,7 @@ watch(() => props.reportId, (newId) => {
 /* Connector dot: status only */
 .dot-active {
   background: var(--wf-active-dot);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
 }
 
 .dot-done {
@@ -2996,20 +2998,20 @@ watch(() => props.reportId, (newId) => {
 .action-label {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: #0f2747;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
 .action-time {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #8b95a7;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .timeline-body {
   font-size: 13px;
-  color: #4B5563;
+  color: #4b5563;
 }
 
 .timeline-footer {
@@ -3018,7 +3020,7 @@ watch(() => props.reportId, (newId) => {
   align-items: center;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid #F3F4F6;
+  border-top: 1px solid rgba(15, 39, 71, 0.08);
 }
 
 .elapsed-placeholder {
@@ -3033,8 +3035,8 @@ watch(() => props.reportId, (newId) => {
 
 .elapsed-badge {
   font-size: 11px;
-  color: #6B7280;
-  background: #F3F4F6;
+  color: #4b5563;
+  background: rgba(15, 39, 71, 0.06);
   padding: 2px 8px;
   border-radius: 10px;
   font-family: 'JetBrains Mono', monospace;
@@ -3049,12 +3051,12 @@ watch(() => props.reportId, (newId) => {
 
 .info-key {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #8b95a7;
   min-width: 80px;
 }
 
 .info-val {
-  color: #374151;
+  color: #0f2747;
 }
 
 .status-message {
@@ -3071,18 +3073,18 @@ watch(() => props.reportId, (newId) => {
 }
 
 .status-message.success {
-  background: #ECFDF5;
-  border-color: #A7F3D0;
-  color: #065F46;
+  background: rgba(94, 122, 52, 0.08);
+  border-color: rgba(94, 122, 52, 0.22);
+  color: #4d6b2d;
 }
 
 .outline-badge {
   display: inline-block;
   margin-top: 8px;
   padding: 4px 10px;
-  background: #F9FAFB;
-  color: #6B7280;
-  border: 1px solid #E5E7EB;
+  background: rgba(15, 39, 71, 0.05);
+  color: #4b5563;
+  border: 1px solid rgba(15, 39, 71, 0.1);
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
@@ -3093,9 +3095,9 @@ watch(() => props.reportId, (newId) => {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: #F9FAFB;
+  background: rgba(255, 255, 255, 0.76);
   border: 1px solid var(--wf-border);
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 .section-tag.content-ready {
@@ -3109,28 +3111,28 @@ watch(() => props.reportId, (newId) => {
 
 
 .section-tag.completed {
-  background: #ECFDF5;
-  border: 1px solid #A7F3D0;
+  background: rgba(94, 122, 52, 0.08);
+  border: 1px solid rgba(94, 122, 52, 0.22);
 }
 
 .section-tag.completed svg {
-  color: #059669;
+  color: #5e7a34;
 }
 
 .tag-num {
   font-size: 11px;
   font-weight: 700;
-  color: #6B7280;
+  color: #4b5563;
 }
 
 .section-tag.completed .tag-num {
-  color: #059669;
+  color: #5e7a34;
 }
 
 .tag-title {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: #0f2747;
 }
 
 .tool-badge {
@@ -3138,8 +3140,8 @@ watch(() => props.reportId, (newId) => {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: #F9FAFB;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.84);
+  color: #0f2747;
   border: 1px solid var(--wf-border);
   border-radius: 6px;
   font-size: 12px;
@@ -3153,72 +3155,72 @@ watch(() => props.reportId, (newId) => {
 
 /* Tool Colors - Purple (Deep Insight) */
 .tool-badge.tool-purple {
-  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
-  border-color: #C4B5FD;
-  color: #6D28D9;
+  background: linear-gradient(135deg, rgba(15, 39, 71, 0.08) 0%, rgba(15, 39, 71, 0.14) 100%);
+  border-color: rgba(15, 39, 71, 0.18);
+  color: #0f2747;
 }
 .tool-badge.tool-purple .tool-icon {
-  stroke: #7C3AED;
+  stroke: #0f2747;
 }
 
 /* Tool Colors - Blue (Panorama Search) */
 .tool-badge.tool-blue {
-  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-  border-color: #93C5FD;
-  color: #1D4ED8;
+  background: linear-gradient(135deg, rgba(47, 93, 138, 0.08) 0%, rgba(47, 93, 138, 0.14) 100%);
+  border-color: rgba(47, 93, 138, 0.2);
+  color: #2f5d8a;
 }
 .tool-badge.tool-blue .tool-icon {
-  stroke: #2563EB;
+  stroke: #2f5d8a;
 }
 
 /* Tool Colors - Green (Agent Interview) */
 .tool-badge.tool-green {
-  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
-  border-color: #86EFAC;
-  color: #15803D;
+  background: linear-gradient(135deg, rgba(94, 122, 52, 0.08) 0%, rgba(94, 122, 52, 0.14) 100%);
+  border-color: rgba(94, 122, 52, 0.2);
+  color: #5e7a34;
 }
 .tool-badge.tool-green .tool-icon {
-  stroke: #16A34A;
+  stroke: #5e7a34;
 }
 
 /* Tool Colors - Orange (Quick Search) */
 .tool-badge.tool-orange {
-  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
-  border-color: #FDBA74;
-  color: #C2410C;
+  background: linear-gradient(135deg, rgba(212, 160, 23, 0.1) 0%, rgba(212, 160, 23, 0.18) 100%);
+  border-color: rgba(212, 160, 23, 0.22);
+  color: #b8860b;
 }
 .tool-badge.tool-orange .tool-icon {
-  stroke: #EA580C;
+  stroke: #b8860b;
 }
 
 /* Tool Colors - Cyan (Graph Stats) */
 .tool-badge.tool-cyan {
-  background: linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%);
-  border-color: #67E8F9;
-  color: #0E7490;
+  background: linear-gradient(135deg, rgba(47, 93, 138, 0.08) 0%, rgba(47, 93, 138, 0.12) 100%);
+  border-color: rgba(47, 93, 138, 0.18);
+  color: #2f5d8a;
 }
 .tool-badge.tool-cyan .tool-icon {
-  stroke: #0891B2;
+  stroke: #2f5d8a;
 }
 
 /* Tool Colors - Pink (Entity Query) */
 .tool-badge.tool-pink {
-  background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%);
-  border-color: #F9A8D4;
-  color: #BE185D;
+  background: linear-gradient(135deg, rgba(181, 93, 47, 0.08) 0%, rgba(181, 93, 47, 0.14) 100%);
+  border-color: rgba(181, 93, 47, 0.18);
+  color: #b55d2f;
 }
 .tool-badge.tool-pink .tool-icon {
-  stroke: #DB2777;
+  stroke: #b55d2f;
 }
 
 /* Tool Colors - Gray (Default) */
 .tool-badge.tool-gray {
-  background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
-  border-color: #D1D5DB;
-  color: #374151;
+  background: linear-gradient(135deg, rgba(15, 39, 71, 0.04) 0%, rgba(15, 39, 71, 0.08) 100%);
+  border-color: rgba(15, 39, 71, 0.14);
+  color: #4b5563;
 }
 .tool-badge.tool-gray .tool-icon {
-  stroke: #6B7280;
+  stroke: #4b5563;
 }
 
 .tool-params {
@@ -3234,33 +3236,33 @@ watch(() => props.reportId, (newId) => {
   margin: 0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: #4B5563;
+  color: #4b5563;
   white-space: pre-wrap;
   word-break: break-all;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
+  background: rgba(15, 39, 71, 0.04);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   border-radius: 6px;
   padding: 10px;
 }
 
 /* Unified Action Buttons */
 .action-btn {
-  background: #F3F4F6;
-  border: 1px solid #E5E7EB;
+  background: rgba(15, 39, 71, 0.06);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
-  color: #6B7280;
+  color: #4b5563;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .action-btn:hover {
-  background: #E5E7EB;
-  color: #374151;
-  border-color: #D1D5DB;
+  background: rgba(212, 160, 23, 0.12);
+  color: #0f2747;
+  border-color: rgba(212, 160, 23, 0.24);
 }
 
 /* Result Wrapper */
@@ -3282,12 +3284,12 @@ watch(() => props.reportId, (newId) => {
 .result-tool {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: #0f2747;
 }
 
 .result-size {
   font-size: 10px;
-  color: #6B7280;
+  color: #4b5563;
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -3304,8 +3306,8 @@ watch(() => props.reportId, (newId) => {
   white-space: pre-wrap;
   word-break: break-word;
   color: #374151;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   padding: 10px;
   border-radius: 6px;
 }
@@ -3331,19 +3333,19 @@ watch(() => props.reportId, (newId) => {
 .meta-tag {
   font-size: 11px;
   padding: 3px 8px;
-  background: #F3F4F6;
-  color: #6B7280;
+  background: rgba(15, 39, 71, 0.06);
+  color: #4b5563;
   border-radius: 4px;
 }
 
 .meta-tag.active {
-  background: #DBEAFE;
-  color: #1E40AF;
+  background: rgba(47, 93, 138, 0.12);
+  color: #2f5d8a;
 }
 
 .meta-tag.final-answer {
-  background: #D1FAE5;
-  color: #059669;
+  background: rgba(94, 122, 52, 0.12);
+  color: #5e7a34;
   font-weight: 600;
 }
 
@@ -3898,7 +3900,7 @@ watch(() => props.reportId, (newId) => {
   overflow: hidden;
 }
 
-/* Selection Reason - 选择理由 */
+/* Selection Reason - Motivo da seleção */
 :deep(.interview-display .selection-reason) {
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
@@ -5097,24 +5099,24 @@ watch(() => props.reportId, (newId) => {
   border-radius: 4px;
 }
 
-/* Console Logs - 与 Step3Simulation.vue 保持一致 */
+/* Console Logs - consistente com Step3Simulation.vue */
 .console-logs {
-  background: #000;
-  color: #DDD;
+  background: linear-gradient(135deg, #0b1b31 0%, #102949 100%);
+  color: #e5dcc7;
   padding: 16px;
   font-family: 'JetBrains Mono', monospace;
-  border-top: 1px solid #222;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
   margin-bottom: 8px;
   font-size: 10px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .log-title {

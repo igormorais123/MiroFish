@@ -2,7 +2,7 @@
   <div class="graph-panel">
     <div class="panel-header">
       <span class="panel-title">Visualização do grafo</span>
-      <!-- 顶部工具栏 (Internal Top Right) -->
+      <!-- Barra de ferramentas superior (canto superior direito interno) -->
       <div class="header-tools">
         <button class="tool-btn" @click="$emit('refresh')" :disabled="loading" title="Atualizar grafo">
           <span class="icon-refresh" :class="{ 'spinning': loading }">↻</span>
@@ -15,11 +15,11 @@
     </div>
     
     <div class="graph-container" ref="graphContainer">
-      <!-- 图谱可视化 -->
+      <!-- Visualização do grafo -->
       <div v-if="graphData" class="graph-view">
         <svg ref="graphSvg" class="graph-svg"></svg>
         
-        <!-- 构建中/模拟中提示 -->
+        <!-- Aviso de construção/simulação em andamento -->
         <div v-if="currentPhase === 1 || isSimulating" class="graph-building-hint">
           <div class="memory-icon-wrapper">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="memory-icon">
@@ -30,7 +30,7 @@
           {{ isSimulating ? 'Memória de curto e longo prazo do GraphRAG sendo atualizada em tempo real' : 'Atualizando em tempo real...' }}
         </div>
         
-        <!-- 模拟结束后的提示 -->
+        <!-- Aviso após o término da simulação -->
         <div v-if="showSimulationFinishedHint" class="graph-building-hint finished-hint">
           <div class="hint-icon-wrapper">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hint-icon">
@@ -48,7 +48,7 @@
           </button>
         </div>
         
-        <!-- 节点/边详情面板 -->
+        <!-- Painel de detalhes de nos/arestas -->
         <div v-if="selectedItem" class="detail-panel">
           <div class="detail-panel-header">
             <span class="detail-title">{{ selectedItem.type === 'node' ? 'Detalhes do nó' : 'Relacionamento' }}</span>
@@ -58,7 +58,7 @@
             <button class="detail-close" @click="closeDetailPanel">×</button>
           </div>
           
-          <!-- 节点详情 -->
+          <!-- Detalhes do no -->
           <div v-if="selectedItem.type === 'node'" class="detail-content">
             <div class="detail-row">
               <span class="detail-label">Nome:</span>
@@ -101,9 +101,9 @@
             </div>
           </div>
           
-          <!-- 边详情 -->
+          <!-- Detalhes da aresta -->
           <div v-else class="detail-content">
-            <!-- 自环组详情 -->
+            <!-- Detalhes do grupo de auto-relações -->
             <template v-if="selectedItem.data.isSelfLoopGroup">
               <div class="edge-relation-header self-loop-header">
                 {{ selectedItem.data.source_name }} - Autorrelações
@@ -154,7 +154,7 @@
               </div>
             </template>
             
-            <!-- 普通边详情 -->
+            <!-- Detalhes da aresta normal -->
             <template v-else>
               <div class="edge-relation-header">
                 {{ selectedItem.data.source_name }} → {{ selectedItem.data.name || 'RELACIONADO_A' }} → {{ selectedItem.data.target_name }}
@@ -200,20 +200,20 @@
         </div>
       </div>
       
-      <!-- 加载状态 -->
+      <!-- Estado de carregamento -->
       <div v-else-if="loading" class="graph-state">
         <div class="loading-spinner"></div>
         <p>Carregando dados do grafo...</p>
       </div>
       
-      <!-- 等待/空状态 -->
+      <!-- Estado de espera/vazio -->
       <div v-else class="graph-state">
         <div class="empty-icon">❖</div>
         <p class="empty-text">Aguardando a geração da ontologia...</p>
       </div>
     </div>
 
-    <!-- 底部图例 (Bottom Left) -->
+    <!-- Legenda inferior (canto inferior esquerdo) -->
     <div v-if="graphData && entityTypes.length" class="graph-legend">
       <span class="legend-title">Tipos de entidade</span>
       <div class="legend-items">
@@ -224,7 +224,7 @@
       </div>
     </div>
     
-    <!-- 显示边标签开关 -->
+    <!-- Interruptor de exibição de rótulos das arestas -->
     <div v-if="graphData" class="edge-labels-toggle">
       <label class="toggle-switch">
         <input type="checkbox" v-model="showEdgeLabels" />
@@ -251,26 +251,26 @@ const emit = defineEmits(['refresh', 'toggle-maximize'])
 const graphContainer = ref(null)
 const graphSvg = ref(null)
 const selectedItem = ref(null)
-const showEdgeLabels = ref(true) // 默认显示边标签
-const expandedSelfLoops = ref(new Set()) // 展开的自环项
-const showSimulationFinishedHint = ref(false) // 模拟结束后的提示
-const wasSimulating = ref(false) // 追踪之前是否在模拟中
+const showEdgeLabels = ref(true) // Exibir rótulos das arestas por padrão
+const expandedSelfLoops = ref(new Set()) // Itens de auto-relação expandidos
+const showSimulationFinishedHint = ref(false) // Aviso após o término da simulação
+const wasSimulating = ref(false) // Rastrear se estava em simulação anteriormente
 
-// 关闭模拟结束提示
+// Fechar aviso de término da simulação
 const dismissFinishedHint = () => {
   showSimulationFinishedHint.value = false
 }
 
-// 监听 isSimulating 变化，检测模拟结束
+// Observar mudanças em isSimulating para detectar término da simulação
 watch(() => props.isSimulating, (newValue, oldValue) => {
   if (wasSimulating.value && !newValue) {
-    // 从模拟中变为非模拟状态，显示结束提示
+    // Transição de simulação para nao-simulação, exibir aviso de término
     showSimulationFinishedHint.value = true
   }
   wasSimulating.value = newValue
 }, { immediate: true })
 
-// 切换自环项展开/折叠状态
+// Alternar estado expandido/recolhido de itens de auto-relação
 const toggleSelfLoop = (id) => {
   const newSet = new Set(expandedSelfLoops.value)
   if (newSet.has(id)) {
@@ -281,12 +281,12 @@ const toggleSelfLoop = (id) => {
   expandedSelfLoops.value = newSet
 }
 
-// 计算实体类型用于图例
+// Calcular tipos de entidade para a legenda
 const entityTypes = computed(() => {
   if (!props.graphData?.nodes) return []
   const typeMap = {}
-  // 美观的颜色调色板
-  const colors = ['#FF6B35', '#004E89', '#7B2D8E', '#1A936F', '#C5283D', '#E9724C', '#3498db', '#9b59b6', '#27ae60', '#f39c12']
+  // Paleta de cores estetica
+  const colors = ['#d4a017', '#0f2747', '#2f5d8a', '#5e7a34', '#b55d2f', '#8a1c1c', '#4f7cac', '#8c6f3f', '#3f7d58', '#d97706']
   
   props.graphData.nodes.forEach(node => {
     const type = node.labels?.find(l => l !== 'Entity') || 'Entity'
@@ -298,7 +298,7 @@ const entityTypes = computed(() => {
   return Object.values(typeMap)
 })
 
-// 格式化时间
+// Formatar hora
 const formatDateTime = (dateStr) => {
   if (!dateStr) return ''
   try {
@@ -318,7 +318,7 @@ const formatDateTime = (dateStr) => {
 
 const closeDetailPanel = () => {
   selectedItem.value = null
-  expandedSelfLoops.value = new Set() // 重置展开状态
+  expandedSelfLoops.value = new Set() // Redefinir estado de expansao
 }
 
 let currentSimulation = null
@@ -328,7 +328,7 @@ let linkLabelBgRef = null
 const renderGraph = () => {
   if (!graphSvg.value || !props.graphData) return
   
-  // 停止之前的仿真
+  // Parar simulação anterior
   if (currentSimulation) {
     currentSimulation.stop()
   }
@@ -362,16 +362,16 @@ const renderGraph = () => {
   
   const nodeIds = new Set(nodes.map(n => n.id))
   
-  // 处理边数据，计算同一对节点间的边数量和索引
+  // Processar dados de arestas, calcular quantidade e indices de arestas entre pares de nos
   const edgePairCount = {}
-  const selfLoopEdges = {} // 按节点分组的自环边
+  const selfLoopEdges = {} // Arestas de auto-relação agrupadas por nó
   const tempEdges = edgesData
     .filter(e => nodeIds.has(e.source_node_uuid) && nodeIds.has(e.target_node_uuid))
   
-  // 统计每对节点之间的边数量，收集自环边
+  // Contar arestas entre cada par de nós e coletar auto-relações
   tempEdges.forEach(e => {
     if (e.source_node_uuid === e.target_node_uuid) {
-      // 自环 - 收集到数组中
+      // Auto-relação - coletar no array
       if (!selfLoopEdges[e.source_node_uuid]) {
         selfLoopEdges[e.source_node_uuid] = []
       }
@@ -386,9 +386,9 @@ const renderGraph = () => {
     }
   })
   
-  // 记录当前处理到每对节点的第几条边
+  // Registrar a aresta atual sendo processada para cada par de nos
   const edgePairIndex = {}
-  const processedSelfLoopNodes = new Set() // 已处理的自环节点
+  const processedSelfLoopNodes = new Set() // Nós de auto-relação já processados
   
   const edges = []
   
@@ -396,9 +396,9 @@ const renderGraph = () => {
     const isSelfLoop = e.source_node_uuid === e.target_node_uuid
     
     if (isSelfLoop) {
-      // 自环边 - 每个节点只添加一条合并的自环
+      // Aresta de auto-relação - adicionar apenas uma auto-relação consolidada por nó
       if (processedSelfLoopNodes.has(e.source_node_uuid)) {
-        return // 已处理过，跳过
+        return // Ja processado, pular
       }
       processedSelfLoopNodes.add(e.source_node_uuid)
       
@@ -417,7 +417,7 @@ const renderGraph = () => {
           source_name: nodeName,
           target_name: nodeName,
           selfLoopCount: allSelfLoops.length,
-          selfLoopEdges: allSelfLoops // 存储所有自环边的详细信息
+          selfLoopEdges: allSelfLoops // Armazenar informações detalhadas de todas as arestas de auto-relação
         }
       })
       return
@@ -428,19 +428,19 @@ const renderGraph = () => {
     const currentIndex = edgePairIndex[pairKey] || 0
     edgePairIndex[pairKey] = currentIndex + 1
     
-    // 判断边的方向是否与标准化方向一致（源UUID < 目标UUID）
+    // Verificar se a direção da aresta e consistente com a direção padronizada (UUID origem < UUID destino)
     const isReversed = e.source_node_uuid > e.target_node_uuid
     
-    // 计算曲率：多条边时分散开，单条边为直线
+    // Calcular curvatura: dispersar quando há multiplas arestas, linha reta para aresta unica
     let curvature = 0
     if (totalCount > 1) {
-      // 均匀分布曲率，确保明显区分
-      // 曲率范围根据边数量增加，边越多曲率范围越大
+      // Distribuir curvatura uniformemente, garantindo distincao clara
+      // O intervalo de curvatura aumenta com a quantidade de arestas
       const curvatureRange = Math.min(1.2, 0.6 + totalCount * 0.15)
       curvature = ((currentIndex / (totalCount - 1)) - 0.5) * curvatureRange * 2
       
-      // 如果边的方向与标准化方向相反，翻转曲率
-      // 这样确保所有边在同一参考系下分布，不会因方向不同而重叠
+      // Se a direção da aresta e oposta a direção padronizada, inverter curvatura
+      // Isso garante distribuição uniforme no mesmo referêncial, sem sobreposição por direção
       if (isReversed) {
         curvature = -curvature
       }
@@ -468,11 +468,11 @@ const renderGraph = () => {
   entityTypes.value.forEach(t => colorMap[t.name] = t.color)
   const getColor = (type) => colorMap[type] || '#999'
 
-  // Simulation - 根据边数量动态调整节点间距
+  // Simulation - Ajustar espaçamento entre nós dinâmicamente com base na quantidade de arestas
   const simulation = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(edges).id(d => d.id).distance(d => {
-      // 根据这对节点之间的边数量动态调整距离
-      // 基础距离 150，每多一条边增加 40
+      // Ajustar distancia dinâmicamente com base na quantidade de arestas entre este par de nos
+      // Distancia base 150, acrescimo de 40 por aresta adicional
       const baseDistance = 150
       const edgeCount = d.pairTotal || 1
       return baseDistance + (edgeCount - 1) * 50
@@ -480,7 +480,7 @@ const renderGraph = () => {
     .force('charge', d3.forceManyBody().strength(-400))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collide', d3.forceCollide(50))
-    // 添加向中心的引力，让独立的节点群聚集到中心区域
+    // Adicionar gravidade em direção ao centro para agrupar nós isolados na área central
     .force('x', d3.forceX(width / 2).strength(0.04))
     .force('y', d3.forceY(height / 2).strength(0.04))
   
@@ -493,39 +493,39 @@ const renderGraph = () => {
     g.attr('transform', event.transform)
   }))
 
-  // Links - 使用 path 支持曲线
+  // Links - usar path para suportar curvas
   const linkGroup = g.append('g').attr('class', 'links')
   
-  // 计算曲线路径
+  // Calcular caminho da curva
   const getLinkPath = (d) => {
     const sx = d.source.x, sy = d.source.y
     const tx = d.target.x, ty = d.target.y
     
-    // 检测自环
+    // Detectar auto-relação
     if (d.isSelfLoop) {
-      // 自环：绘制一个圆弧从节点出发再返回
+      // Auto-relação: desenhar arco do nó de volta para si mesmo
       const loopRadius = 30
-      // 从节点右侧出发，绕一圈回来
-      const x1 = sx + 8  // 起点偏移
+      // Partir do lado direito do nó e voltar em círculo
+      const x1 = sx + 8  // Deslocamento do ponto inicial
       const y1 = sy - 4
-      const x2 = sx + 8  // 终点偏移
+      const x2 = sx + 8  // Deslocamento do ponto final
       const y2 = sy + 4
-      // 使用圆弧绘制自环（sweep-flag=1 顺时针）
+      // Usar arco circular para desenhar auto-relação (sweep-flag=1 sentido horario)
       return `M${x1},${y1} A${loopRadius},${loopRadius} 0 1,1 ${x2},${y2}`
     }
     
     if (d.curvature === 0) {
-      // 直线
+      // Linha reta
       return `M${sx},${sy} L${tx},${ty}`
     }
     
-    // 计算曲线控制点 - 根据边数量和距离动态调整
+    // Calcular ponto de controle da curva - ajustar dinâmicamente com base na quantidade e distancia
     const dx = tx - sx, dy = ty - sy
     const dist = Math.sqrt(dx * dx + dy * dy)
-    // 垂直于连线方向的偏移，根据距离比例计算，保证曲线明显可见
-    // 边越多，偏移量占距离的比例越大
+    // Deslocamento perpendicular a direção da conexao, calculado proporcionalmente para visibilidade
+    // Quanto mais arestas, maior a proporção de deslocamento em relação a distancia
     const pairTotal = d.pairTotal || 1
-    const offsetRatio = 0.25 + pairTotal * 0.05 // 基础25%，每多一条边增加5%
+    const offsetRatio = 0.25 + pairTotal * 0.05 // Base 25%, acrescimo de 5% por aresta adicional
     const baseOffset = Math.max(35, dist * offsetRatio)
     const offsetX = -dy / dist * d.curvature * baseOffset
     const offsetY = dx / dist * d.curvature * baseOffset
@@ -535,14 +535,14 @@ const renderGraph = () => {
     return `M${sx},${sy} Q${cx},${cy} ${tx},${ty}`
   }
   
-  // 计算曲线中点（用于标签定位）
+  // Calcular ponto medio da curva (para posicionamento de rótulos)
   const getLinkMidpoint = (d) => {
     const sx = d.source.x, sy = d.source.y
     const tx = d.target.x, ty = d.target.y
     
-    // 检测自环
+    // Detectar auto-relação
     if (d.isSelfLoop) {
-      // 自环标签位置：节点右侧
+      // Posição do rótulo de auto-relação: lado direito do nó
       return { x: sx + 70, y: sy }
     }
     
@@ -550,7 +550,7 @@ const renderGraph = () => {
       return { x: (sx + tx) / 2, y: (sy + ty) / 2 }
     }
     
-    // 二次贝塞尔曲线的中点 t=0.5
+    // Ponto medio da curva de Bezier quadratica t=0.5
     const dx = tx - sx, dy = ty - sy
     const dist = Math.sqrt(dx * dx + dy * dy)
     const pairTotal = d.pairTotal || 1
@@ -561,7 +561,7 @@ const renderGraph = () => {
     const cx = (sx + tx) / 2 + offsetX
     const cy = (sy + ty) / 2 + offsetY
     
-    // 二次贝塞尔曲线公式 B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2, t=0.5
+    // Formula da curva de Bezier quadratica B(t) = (1-t)^2*P0 + 2(1-t)tP1 + t^2*P2, t=0.5
     const midX = 0.25 * sx + 0.5 * cx + 0.25 * tx
     const midY = 0.25 * sy + 0.5 * cy + 0.25 * ty
     
@@ -577,11 +577,11 @@ const renderGraph = () => {
     .style('cursor', 'pointer')
     .on('click', (event, d) => {
       event.stopPropagation()
-      // 重置之前选中边的样式
+      // Redefinir estilo da aresta selecionada anteriormente
       linkGroup.selectAll('path').attr('stroke', '#C0C0C0').attr('stroke-width', 1.5)
       linkLabelBg.attr('fill', 'rgba(255,255,255,0.95)')
       linkLabels.attr('fill', '#666')
-      // 高亮当前选中的边
+      // Destacar a aresta selecionada atualmente
       d3.select(event.target).attr('stroke', '#3498db').attr('stroke-width', 3)
       
       selectedItem.value = {
@@ -590,7 +590,7 @@ const renderGraph = () => {
       }
     })
 
-  // Link labels background (白色背景使文字更清晰)
+  // Link labels background (Fundo branco torna o texto mais legivel)
   const linkLabelBg = linkGroup.selectAll('rect')
     .data(edges)
     .enter().append('rect')
@@ -605,7 +605,7 @@ const renderGraph = () => {
       linkGroup.selectAll('path').attr('stroke', '#C0C0C0').attr('stroke-width', 1.5)
       linkLabelBg.attr('fill', 'rgba(255,255,255,0.95)')
       linkLabels.attr('fill', '#666')
-      // 高亮对应的边
+      // Destacar a aresta correspondente
       link.filter(l => l === d).attr('stroke', '#3498db').attr('stroke-width', 3)
       d3.select(event.target).attr('fill', 'rgba(52, 152, 219, 0.1)')
       
@@ -633,7 +633,7 @@ const renderGraph = () => {
       linkGroup.selectAll('path').attr('stroke', '#C0C0C0').attr('stroke-width', 1.5)
       linkLabelBg.attr('fill', 'rgba(255,255,255,0.95)')
       linkLabels.attr('fill', '#666')
-      // 高亮对应的边
+      // Destacar a aresta correspondente
       link.filter(l => l === d).attr('stroke', '#3498db').attr('stroke-width', 3)
       d3.select(event.target).attr('fill', '#3498db')
       
@@ -643,7 +643,7 @@ const renderGraph = () => {
       }
     })
   
-  // 保存引用供外部控制显隐
+  // Salvar referência para controle externo de visibilidade
   linkLabelsRef = linkLabels
   linkLabelBgRef = linkLabelBg
 
@@ -661,7 +661,7 @@ const renderGraph = () => {
     .style('cursor', 'pointer')
     .call(d3.drag()
       .on('start', (event, d) => {
-        // 只记录位置，不重启仿真（区分点击和拖拽）
+        // Apenas registrar posição, não reiniciar simulação (distinguir clique de arrasto)
         d.fx = d.x
         d.fy = d.y
         d._dragStartX = event.x
@@ -669,13 +669,13 @@ const renderGraph = () => {
         d._isDragging = false
       })
       .on('drag', (event, d) => {
-        // 检测是否真正开始拖拽（移动超过阈值）
+        // Detectar se realmente comecou a arrastar (movimento acima do limiar)
         const dx = event.x - d._dragStartX
         const dy = event.y - d._dragStartY
         const distance = Math.sqrt(dx * dx + dy * dy)
         
         if (!d._isDragging && distance > 3) {
-          // 首次检测到真正拖拽，才重启仿真
+          // Reiniciar simulação apenas no primeiro arrasto detectado
           d._isDragging = true
           simulation.alphaTarget(0.3).restart()
         }
@@ -686,7 +686,7 @@ const renderGraph = () => {
         }
       })
       .on('end', (event, d) => {
-        // 只有真正拖拽过才让仿真逐渐停止
+        // Permitir parada gradual da simulação apenas se houve arrasto real
         if (d._isDragging) {
           simulation.alphaTarget(0)
         }
@@ -697,14 +697,14 @@ const renderGraph = () => {
     )
     .on('click', (event, d) => {
       event.stopPropagation()
-      // 重置所有节点样式
+      // Redefinir estilo de todos os nos
       node.attr('stroke', '#fff').attr('stroke-width', 2.5)
       linkGroup.selectAll('path').attr('stroke', '#C0C0C0').attr('stroke-width', 1.5)
-      // 高亮选中节点
-      d3.select(event.target).attr('stroke', '#E91E63').attr('stroke-width', 4)
-      // 高亮与此节点相连的边
+      // Destacar no selecionado
+      d3.select(event.target).attr('stroke', '#d4a017').attr('stroke-width', 4)
+      // Destacar arestas conectadas a este nó
       link.filter(l => l.source.id === d.id || l.target.id === d.id)
-        .attr('stroke', '#E91E63')
+        .attr('stroke', '#d4a017')
         .attr('stroke-width', 2.5)
       
       selectedItem.value = {
@@ -739,19 +739,19 @@ const renderGraph = () => {
     .style('font-family', 'system-ui, sans-serif')
 
   simulation.on('tick', () => {
-    // 更新曲线路径
+    // Atualizar caminho da curva
     link.attr('d', d => getLinkPath(d))
     
-    // 更新边标签位置（无旋转，水平显示更清晰）
+    // Atualizar posição dos rótulos das arestas (sem rotação, exibição horizontal mais clara)
     linkLabels.each(function(d) {
       const mid = getLinkMidpoint(d)
       d3.select(this)
         .attr('x', mid.x)
         .attr('y', mid.y)
-        .attr('transform', '') // 移除旋转，保持水平
+        .attr('transform', '') // Remover rotação, manter horizontal
     })
     
-    // 更新边标签背景
+    // Atualizar fundo dos rótulos das arestas
     linkLabelBg.each(function(d, i) {
       const mid = getLinkMidpoint(d)
       const textEl = linkLabels.nodes()[i]
@@ -761,7 +761,7 @@ const renderGraph = () => {
         .attr('y', mid.y - bbox.height / 2 - 2)
         .attr('width', bbox.width + 8)
         .attr('height', bbox.height + 4)
-        .attr('transform', '') // 移除旋转
+        .attr('transform', '') // Remover rotação
     })
 
     node
@@ -773,7 +773,7 @@ const renderGraph = () => {
       .attr('y', d => d.y)
   })
   
-  // 点击空白处关闭详情面板
+  // Clicar em área vazia para fechar painel de detalhes
   svg.on('click', () => {
     selectedItem.value = null
     node.attr('stroke', '#fff').attr('stroke-width', 2.5)
@@ -787,7 +787,7 @@ watch(() => props.graphData, () => {
   nextTick(renderGraph)
 }, { deep: true })
 
-// 监听边标签显示开关
+// Observar interruptor de exibição de rótulos das arestas
 watch(showEdgeLabels, (newVal) => {
   if (linkLabelsRef) {
     linkLabelsRef.style('display', newVal ? 'block' : 'none')
@@ -818,8 +818,10 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100%;
-  background-color: #FAFAFA;
-  background-image: radial-gradient(#D0D0D0 1.5px, transparent 1.5px);
+  background-color: #f7f2e8;
+  background-image:
+    radial-gradient(rgba(15, 39, 71, 0.12) 1.2px, transparent 1.2px),
+    radial-gradient(circle at top right, rgba(212, 160, 23, 0.14), transparent 28%);
   background-size: 24px 24px;
   overflow: hidden;
 }
@@ -834,14 +836,14 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0));
+  background: linear-gradient(to bottom, rgba(247, 242, 232, 0.95), rgba(247, 242, 232, 0));
   pointer-events: none;
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #0f2747;
   pointer-events: auto;
 }
 
@@ -855,24 +857,24 @@ onUnmounted(() => {
 .tool-btn {
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #E0E0E0;
-  background: #FFF;
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  background: rgba(255, 255, 255, 0.92);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   cursor: pointer;
-  color: #666;
+  color: #4b5563;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  box-shadow: 0 10px 24px rgba(15, 39, 71, 0.08);
   font-size: 13px;
 }
 
 .tool-btn:hover {
-  background: #F5F5F5;
-  color: #000;
-  border-color: #CCC;
+  background: rgba(212, 160, 23, 0.12);
+  color: #0f2747;
+  border-color: rgba(212, 160, 23, 0.45);
 }
 
 .tool-btn .btn-text {
@@ -902,7 +904,7 @@ onUnmounted(() => {
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  color: #999;
+  color: #6b7280;
 }
 
 .empty-icon {
@@ -916,11 +918,11 @@ onUnmounted(() => {
   position: absolute;
   bottom: 24px;
   left: 24px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 250, 240, 0.96);
   padding: 12px 16px;
   border-radius: 8px;
-  border: 1px solid #EAEAEA;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  border: 1px solid rgba(15, 39, 71, 0.1);
+  box-shadow: 0 12px 32px rgba(15, 39, 71, 0.1);
   z-index: 10;
 }
 
@@ -928,7 +930,7 @@ onUnmounted(() => {
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: #E91E63;
+  color: #0f2747;
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -946,7 +948,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #555;
+  color: #4b5563;
 }
 
 .legend-dot {
@@ -968,11 +970,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #FFF;
+  background: rgba(255, 255, 255, 0.92);
   padding: 8px 14px;
   border-radius: 20px;
-  border: 1px solid #E0E0E0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  box-shadow: 0 10px 24px rgba(15, 39, 71, 0.08);
   z-index: 10;
 }
 
@@ -996,7 +998,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #E0E0E0;
+  background-color: rgba(15, 39, 71, 0.18);
   border-radius: 22px;
   transition: 0.3s;
 }
@@ -1014,7 +1016,7 @@ onUnmounted(() => {
 }
 
 input:checked + .slider {
-  background-color: #7B2D8E;
+  background-color: #d4a017;
 }
 
 input:checked + .slider:before {
@@ -1023,7 +1025,7 @@ input:checked + .slider:before {
 
 .toggle-label {
   font-size: 12px;
-  color: #666;
+  color: #4b5563;
 }
 
 /* Detail Panel - Right Side */
@@ -1033,10 +1035,10 @@ input:checked + .slider:before {
   right: 20px;
   width: 320px;
   max-height: calc(100% - 100px);
-  background: #FFF;
-  border: 1px solid #EAEAEA;
+  background: rgba(255, 250, 240, 0.98);
+  border: 1px solid rgba(15, 39, 71, 0.12);
   border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 40px rgba(15, 39, 71, 0.14);
   overflow: hidden;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
   font-size: 13px;
@@ -1050,14 +1052,14 @@ input:checked + .slider:before {
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  background: #FAFAFA;
-  border-bottom: 1px solid #EEE;
+  background: linear-gradient(180deg, rgba(15, 39, 71, 0.05), rgba(255, 255, 255, 0.9));
+  border-bottom: 1px solid rgba(15, 39, 71, 0.08);
   flex-shrink: 0;
 }
 
 .detail-title {
   font-weight: 600;
-  color: #333;
+  color: #0f2747;
   font-size: 14px;
 }
 
@@ -1075,14 +1077,14 @@ input:checked + .slider:before {
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #999;
+  color: #6b7280;
   line-height: 1;
   padding: 0;
   transition: color 0.2s;
 }
 
 .detail-close:hover {
-  color: #333;
+  color: #1f2937;
 }
 
 .detail-content {
@@ -1114,7 +1116,7 @@ input:checked + .slider:before {
 .detail-value.uuid-text {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: #666;
+  color: #6b7280;
 }
 
 .detail-value.fact-text {
@@ -1125,13 +1127,13 @@ input:checked + .slider:before {
 .detail-section {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid #F0F0F0;
+  border-top: 1px solid rgba(15, 39, 71, 0.08);
 }
 
 .section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: #4b5563;
   margin-bottom: 10px;
 }
 
@@ -1172,11 +1174,11 @@ input:checked + .slider:before {
 .label-tag {
   display: inline-block;
   padding: 4px 12px;
-  background: #F5F5F5;
-  border: 1px solid #E0E0E0;
+  background: rgba(212, 160, 23, 0.08);
+  border: 1px solid rgba(212, 160, 23, 0.2);
   border-radius: 16px;
   font-size: 11px;
-  color: #555;
+  color: #4b5563;
 }
 
 .episodes-list {
@@ -1188,24 +1190,24 @@ input:checked + .slider:before {
 .episode-tag {
   display: inline-block;
   padding: 6px 10px;
-  background: #F8F8F8;
-  border: 1px solid #E8E8E8;
+  background: rgba(15, 39, 71, 0.04);
+  border: 1px solid rgba(15, 39, 71, 0.08);
   border-radius: 6px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: #666;
+  color: #4b5563;
   word-break: break-all;
 }
 
 /* Edge relation header */
 .edge-relation-header {
-  background: #F8F8F8;
+  background: rgba(15, 39, 71, 0.05);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 16px;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: #0f2747;
   line-height: 1.5;
   word-break: break-word;
 }
@@ -1216,7 +1218,7 @@ input:checked + .slider:before {
   bottom: 160px; /* Moved up from 80px */
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(15, 39, 71, 0.84);
   backdrop-filter: blur(8px);
   color: #fff;
   padding: 10px 20px;
@@ -1242,17 +1244,17 @@ input:checked + .slider:before {
 .memory-icon {
   width: 18px;
   height: 18px;
-  color: #4CAF50;
+  color: #f2c14a;
 }
 
 @keyframes breathe {
-  0%, 100% { opacity: 0.7; transform: scale(1); filter: drop-shadow(0 0 2px rgba(76, 175, 80, 0.3)); }
-  50% { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.6)); }
+  0%, 100% { opacity: 0.7; transform: scale(1); filter: drop-shadow(0 0 2px rgba(212, 160, 23, 0.3)); }
+  50% { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(212, 160, 23, 0.55)); }
 }
 
-/* 模拟结束后的提示样式 */
+/* Estilo do aviso após término da simulação */
 .graph-building-hint.finished-hint {
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(15, 39, 71, 0.84);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -1298,8 +1300,8 @@ input:checked + .slider:before {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #E0E0E0;
-  border-top-color: #7B2D8E;
+  border: 3px solid rgba(15, 39, 71, 0.12);
+  border-top-color: #d4a017;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;

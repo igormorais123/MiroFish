@@ -154,8 +154,8 @@
             <div class="tools-card-header">
               <div class="tools-card-avatar">R</div>
               <div class="tools-card-info">
-                <div class="tools-card-name">Report Agent - Chat</div>
-                <div class="tools-card-subtitle">Versão rápida de conversa do agente de relatório, com 4 ferramentas especializadas e memória completa do MiroFish</div>
+                <div class="tools-card-name">INTEIA Report Agent</div>
+                <div class="tools-card-subtitle">Canal operacional de conversa com o agente de relatório, com 4 ferramentas especializadas e memória do ambiente INTEIA / MiroFish</div>
               </div>
               <button class="tools-card-toggle" @click="showToolsDetail = !showToolsDetail">
                 <svg :class="{ 'is-expanded': showToolsDetail }" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -434,7 +434,7 @@ const showToolsDetail = ref(true)
 // Chat State
 const chatInput = ref('')
 const chatHistory = ref([])
-const chatHistoryCache = ref({}) // 缓存所有对话记录: { 'report_agent': [], 'agent_0': [], 'agent_1': [], ... }
+const chatHistoryCache = ref({}) // Cache de todos os registros de conversa: { 'report_agent': [], 'agent_0': [], 'agent_1': [], ... }
 const isSending = ref(false)
 const chatMessages = ref(null)
 const chatInputRef = ref(null)
@@ -484,7 +484,7 @@ const selectChatTarget = (target) => {
   }
 }
 
-// 保存当前对话记录到缓存
+// Salvar registros de conversa atuais no cache
 const saveChatHistory = () => {
   if (chatHistory.value.length === 0) return
   
@@ -496,7 +496,7 @@ const saveChatHistory = () => {
 }
 
 const selectReportAgentChat = () => {
-  // 保存当前对话记录
+  // Salvar registros de conversa atuais
   saveChatHistory()
   
   activeTab.value = 'chat'
@@ -505,7 +505,7 @@ const selectReportAgentChat = () => {
   selectedAgentIndex.value = null
   showAgentDropdown.value = false
   
-  // 恢复 Report Agent 的对话记录
+  // Restaurar registros de conversa do Report Agent
   chatHistory.value = chatHistoryCache.value['report_agent'] || []
 }
 
@@ -525,7 +525,7 @@ const toggleAgentDropdown = () => {
 }
 
 const selectAgent = (agent, idx) => {
-  // 保存当前对话记录
+  // Salvar registros de conversa atuais
   saveChatHistory()
   
   selectedAgent.value = agent
@@ -533,7 +533,7 @@ const selectAgent = (agent, idx) => {
   chatTarget.value = 'agent'
   showAgentDropdown.value = false
   
-  // 恢复该 Agent 的对话记录
+  // Restaurar registros de conversa deste Agent
   chatHistory.value = chatHistoryCache.value[`agent_${idx}`] || []
   addLog(`Interlocutor selecionado: ${agent.username}`)
 }
@@ -563,7 +563,7 @@ const renderMarkdown = (content) => {
   html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>')
   html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
   
-  // 处理列表 - 支持子列表
+  // Processar listas - suportar sublistas
   html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {
     const level = Math.floor(indent.length / 2)
     return `<li class="md-li" data-level="${level}">${text}</li>`
@@ -573,17 +573,17 @@ const renderMarkdown = (content) => {
     return `<li class="md-oli" data-level="${level}">${text}</li>`
   })
   
-  // 包装无序列表
+  // Encapsular lista não ordenada
   html = html.replace(/(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g, '<ul class="md-ul">$&</ul>')
-  // 包装有序列表
+  // Encapsular lista ordenada
   html = html.replace(/(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g, '<ol class="md-ol">$&</ol>')
   
-  // 清理列表项之间的所有空白
+  // Limpar todos os espacos entre itens de lista
   html = html.replace(/<\/li>\s+<li/g, '</li><li')
-  // 清理列表开始标签后的空白
+  // Limpar espacos após tag de abertura da lista
   html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">')
   html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">')
-  // 清理列表结束标签前的空白
+  // Limpar espacos antes da tag de fechamento da lista
   html = html.replace(/\s+<\/ul>/g, '</ul>')
   html = html.replace(/\s+<\/ol>/g, '</ol>')
   
@@ -599,17 +599,17 @@ const renderMarkdown = (content) => {
   html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
   html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
   html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
-  // 清理块级元素前后的 <br> 标签
+  // Limpar tags <br> antes e depois de elementos de bloco
   html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
   html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
-  // 清理 <p><br> 紧跟块级元素的情况（多余空行导致）
+  // Limpar caso <p><br> após elemento de bloco (causado por linhas em branco extras)
   html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
-  // 清理连续的 <br> 标签
+  // Limpar tags <br> consecutivas
   html = html.replace(/(<br>\s*){2,}/g, '<br>')
-  // 清理块级元素后紧跟的段落开始标签前的 <br>
+  // Limpar <br> antes de tag de abertura de parágrafo após elemento de bloco
   html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, '$1$2')
 
-  // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
+  // Corrigir numeração de listas ordenadas não consecutivas: manter numeração crescente quando <ol> sao separadas por parágrafos
   const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
   let olCounter = 0
   let inSequence = false
@@ -671,7 +671,7 @@ const sendMessage = async () => {
   } finally {
     isSending.value = false
     scrollToBottom()
-    // 自动保存对话记录到缓存
+    // Salvar registros de conversa no cache automaticamente
     saveChatHistory()
   }
 }
@@ -733,17 +733,17 @@ const sendToAgent = async (message) => {
   })
   
   if (res.success && res.data) {
-    // 正确的数据路径: res.data.result.results 是一个对象字典
-    // 格式: {"twitter_0": {...}, "reddit_0": {...}} 或单平台 {"reddit_0": {...}}
+    // Caminho correto dos dados: res.data.result.results e um dicionario de objetos
+    // Formato: {"twitter_0": {...}, "reddit_0": {...}} ou plataforma unica {"reddit_0": {...}}
     const resultData = res.data.result || res.data
     const resultsDict = resultData.results || resultData
     
-    // 将对象字典转换为数组，优先获取 reddit 平台的回复
+    // Converter dicionario de objetos em array, priorizando respostas da plataforma reddit
     let responseContent = null
     const agentId = selectedAgentIndex.value
     
     if (typeof resultsDict === 'object' && !Array.isArray(resultsDict)) {
-      // 优先使用 reddit 平台回复，其次 twitter
+      // Priorizar respostas do reddit, em seguida twitter
       const redditKey = `reddit_${agentId}`
       const twitterKey = `twitter_${agentId}`
       const agentResult = resultsDict[redditKey] || resultsDict[twitterKey] || Object.values(resultsDict)[0]
@@ -751,7 +751,7 @@ const sendToAgent = async (message) => {
         responseContent = agentResult.response || agentResult.answer
       }
     } else if (Array.isArray(resultsDict) && resultsDict.length > 0) {
-      // 兼容数组格式
+      // Compativel com formato de array
       responseContent = resultsDict[0].response || resultsDict[0].answer
     }
     
@@ -817,19 +817,19 @@ const submitSurvey = async () => {
     })
     
     if (res.success && res.data) {
-      // 正确的数据路径: res.data.result.results 是一个对象字典
-      // 格式: {"twitter_0": {...}, "reddit_0": {...}, "twitter_1": {...}, ...}
+      // Caminho correto dos dados: res.data.result.results e um dicionario de objetos
+      // Formato: {"twitter_0": {...}, "reddit_0": {...}, "twitter_1": {...}, ...}
       const resultData = res.data.result || res.data
       const resultsDict = resultData.results || resultData
       
-      // 将对象字典转换为数组格式
+      // Converter dicionario de objetos em formato de array
       const surveyResultsList = []
       
       for (const interview of interviews) {
         const agentIdx = interview.agent_id
         const agent = profiles.value[agentIdx]
         
-        // 优先使用 reddit 平台回复，其次 twitter
+        // Priorizar respostas do reddit, em seguida twitter
         let responseContent = 'Sem resposta'
         
         if (typeof resultsDict === 'object' && !Array.isArray(resultsDict)) {
@@ -840,7 +840,7 @@ const submitSurvey = async () => {
             responseContent = agentResult.response || agentResult.answer || 'Sem resposta'
           }
         } else if (Array.isArray(resultsDict)) {
-          // 兼容数组格式
+          // Compativel com formato de array
           const matchedResult = resultsDict.find(r => r.agent_id === agentIdx)
           if (matchedResult) {
             responseContent = matchedResult.response || matchedResult.answer || 'Sem resposta'
@@ -963,8 +963,10 @@ watch(() => props.simulationId, (newId) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #F8F9FA;
-  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  background:
+    radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 24%),
+    linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
+  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
   overflow: hidden;
 }
 
@@ -980,12 +982,12 @@ watch(() => props.simulationId, (newId) => {
   overflow: hidden;
 }
 
-/* Left Panel - Report Style (与 Step4Report.vue 完全一致) */
+/* Left Panel - Estilo de relatório (identico ao Step4Report.vue) */
 .left-panel.report-style {
   width: 45%;
   min-width: 450px;
-  background: #FFFFFF;
-  border-right: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.82);
+  border-right: 1px solid rgba(15, 39, 71, 0.1);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -1033,8 +1035,8 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .report-tag {
-  background: #000000;
-  color: #FFFFFF;
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
+  color: #f7f2e8;
   font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
@@ -1044,7 +1046,7 @@ watch(() => props.simulationId, (newId) => {
 
 .report-id {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #8b95a7;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -1053,7 +1055,7 @@ watch(() => props.simulationId, (newId) => {
   font-family: 'Times New Roman', Times, serif;
   font-size: 36px;
   font-weight: 700;
-  color: #111827;
+  color: #0f2747;
   line-height: 1.2;
   margin: 0 0 16px 0;
   letter-spacing: -0.02em;
@@ -1062,7 +1064,7 @@ watch(() => props.simulationId, (newId) => {
 .sub-title {
   font-family: 'Times New Roman', Times, serif;
   font-size: 16px;
-  color: #6B7280;
+  color: #4b5563;
   font-style: italic;
   line-height: 1.6;
   margin: 0 0 30px 0;
@@ -1071,7 +1073,7 @@ watch(() => props.simulationId, (newId) => {
 
 .header-divider {
   height: 1px;
-  background: #E5E7EB;
+  background: rgba(15, 39, 71, 0.12);
   width: 100%;
 }
 
@@ -1103,12 +1105,12 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .section-header-row.clickable:hover {
-  background-color: #F9FAFB;
+  background-color: rgba(212, 160, 23, 0.08);
 }
 
 .collapse-icon {
   margin-left: auto;
-  color: #9CA3AF;
+  color: #8b95a7;
   transition: transform 0.3s ease;
   flex-shrink: 0;
   align-self: center;
@@ -1130,7 +1132,7 @@ watch(() => props.simulationId, (newId) => {
   font-family: 'Times New Roman', Times, serif;
   font-size: 24px;
   font-weight: 600;
-  color: #111827;
+  color: #0f2747;
   margin: 0;
   transition: color 0.3s ease;
 }
@@ -1150,7 +1152,7 @@ watch(() => props.simulationId, (newId) => {
 
 .report-section-item.is-active .section-title,
 .report-section-item.is-completed .section-title {
-  color: #111827;
+  color: #0f2747;
 }
 
 .section-body {
@@ -1198,7 +1200,7 @@ watch(() => props.simulationId, (newId) => {
   border-left: 3px solid #E5E7EB;
   padding-left: 16px;
   margin: 1.5em 0;
-  color: #6B7280;
+  color: #4b5563;
   font-style: italic;
   font-family: 'Times New Roman', Times, serif;
 }
@@ -1304,7 +1306,7 @@ watch(() => props.simulationId, (newId) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
+  background: rgba(255, 255, 255, 0.72);
   overflow: hidden;
 }
 
@@ -1315,7 +1317,7 @@ watch(() => props.simulationId, (newId) => {
   justify-content: space-between;
   padding: 14px 20px;
   border-bottom: 1px solid #E5E7EB;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 242, 232, 0.82) 100%);
   gap: 16px;
 }
 
@@ -1327,7 +1329,7 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .action-bar-icon {
-  color: #1F2937;
+  color: #0f2747;
   flex-shrink: 0;
 }
 
@@ -1340,13 +1342,13 @@ watch(() => props.simulationId, (newId) => {
 .action-bar-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1F2937;
+  color: #0f2747;
   letter-spacing: -0.01em;
 }
 
 .action-bar-subtitle {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #8b95a7;
 }
 
 .action-bar-subtitle.mono {
@@ -1368,9 +1370,9 @@ watch(() => props.simulationId, (newId) => {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 500;
-  color: #6B7280;
-  background: #F3F4F6;
-  border: 1px solid transparent;
+  color: #4b5563;
+  background: rgba(15, 39, 71, 0.06);
+  border: 1px solid rgba(15, 39, 71, 0.04);
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1378,14 +1380,14 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .tab-pill:hover {
-  background: #E5E7EB;
-  color: #374151;
+  background: rgba(212, 160, 23, 0.14);
+  color: #0f2747;
 }
 
 .tab-pill.active {
-  background: #1F2937;
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
   color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(31, 41, 55, 0.15);
+  box-shadow: 0 12px 24px rgba(15, 39, 71, 0.18);
 }
 
 .tab-pill svg {
@@ -1400,7 +1402,7 @@ watch(() => props.simulationId, (newId) => {
 .tab-divider {
   width: 1px;
   height: 24px;
-  background: #E5E7EB;
+  background: rgba(15, 39, 71, 0.12);
   margin: 0 6px;
 }
 
@@ -1418,19 +1420,19 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .survey-pill {
-  background: #ECFDF5;
-  color: #047857;
+  background: rgba(212, 160, 23, 0.12);
+  color: #8a6310;
 }
 
 .survey-pill:hover {
-  background: #D1FAE5;
-  color: #065F46;
+  background: rgba(212, 160, 23, 0.18);
+  color: #6f520c;
 }
 
 .survey-pill.active {
-  background: #047857;
-  color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(4, 120, 87, 0.2);
+  background: linear-gradient(135deg, #d4a017 0%, #f2c14a 100%);
+  color: #0f2747;
+  box-shadow: 0 12px 24px rgba(212, 160, 23, 0.24);
 }
 
 /* Interaction Header */
@@ -1486,7 +1488,7 @@ watch(() => props.simulationId, (newId) => {
 /* Report Agent Tools Card */
 .report-agent-tools-card {
   border-bottom: 1px solid #E5E7EB;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  background: linear-gradient(135deg, rgba(15, 39, 71, 0.06) 0%, rgba(212, 160, 23, 0.08) 100%);
 }
 
 .tools-card-header {
@@ -1501,7 +1503,7 @@ watch(() => props.simulationId, (newId) => {
   height: 44px;
   min-width: 44px;
   min-height: 44px;
-  background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
   color: #FFFFFF;
   border-radius: 50%;
   display: flex;
@@ -1510,7 +1512,7 @@ watch(() => props.simulationId, (newId) => {
   font-size: 18px;
   font-weight: 600;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(31, 41, 55, 0.2);
+  box-shadow: 0 10px 20px rgba(15, 39, 71, 0.18);
 }
 
 .tools-card-info {
@@ -1521,20 +1523,20 @@ watch(() => props.simulationId, (newId) => {
 .tools-card-name {
   font-size: 15px;
   font-weight: 600;
-  color: #1F2937;
+  color: #0f2747;
   margin-bottom: 2px;
 }
 
 .tools-card-subtitle {
   font-size: 12px;
-  color: #6B7280;
+  color: #4b5563;
 }
 
 .tools-card-toggle {
   width: 28px;
   height: 28px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(15, 39, 71, 0.1);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -1546,8 +1548,8 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .tools-card-toggle:hover {
-  background: #F9FAFB;
-  border-color: #D1D5DB;
+  background: rgba(212, 160, 23, 0.12);
+  border-color: rgba(212, 160, 23, 0.28);
 }
 
 .tools-card-toggle svg {
@@ -1572,14 +1574,14 @@ watch(() => props.simulationId, (newId) => {
   display: flex;
   gap: 10px;
   padding: 12px;
-  background: #FFFFFF;
+  background: rgba(255, 255, 255, 0.78);
   border-radius: 10px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid rgba(15, 39, 71, 0.1);
   transition: all 0.2s ease;
 }
 
 .tool-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 20px rgba(15, 39, 71, 0.08);
 }
 
 .tool-icon-wrapper {
@@ -1594,23 +1596,23 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .tool-purple .tool-icon-wrapper {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8B5CF6;
+  background: rgba(15, 39, 71, 0.1);
+  color: #0f2747;
 }
 
 .tool-blue .tool-icon-wrapper {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
+  background: rgba(47, 93, 138, 0.12);
+  color: #2f5d8a;
 }
 
 .tool-orange .tool-icon-wrapper {
-  background: rgba(249, 115, 22, 0.1);
-  color: #F97316;
+  background: rgba(212, 160, 23, 0.14);
+  color: #b8860b;
 }
 
 .tool-green .tool-icon-wrapper {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22C55E;
+  background: rgba(94, 122, 52, 0.14);
+  color: #5e7a34;
 }
 
 .tool-content {
@@ -1621,13 +1623,13 @@ watch(() => props.simulationId, (newId) => {
 .tool-name {
   font-size: 12px;
   font-weight: 600;
-  color: #1F2937;
+  color: #0f2747;
   margin-bottom: 4px;
 }
 
 .tool-desc {
   font-size: 11px;
-  color: #6B7280;
+  color: #4b5563;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2028,7 +2030,7 @@ watch(() => props.simulationId, (newId) => {
   margin-bottom: 0;
 }
 
-/* 修复有序列表编号 - 使用 CSS 计数器让多个 ol 连续编号 */
+/* Corrigir numeração de lista ordenada - usar contadores CSS para numeração contínua em múltiplos ol */
 .message-text {
   counter-reset: list-counter;
 }
@@ -2054,7 +2056,7 @@ watch(() => props.simulationId, (newId) => {
   flex-shrink: 0;
 }
 
-/* 无序列表样式 */
+/* Estilo de lista não ordenada */
 .message-text :deep(.md-ul) {
   padding-left: 20px;
   margin: 8px 0;
@@ -2533,7 +2535,7 @@ watch(() => props.simulationId, (newId) => {
   margin: 6px 0;
 }
 
-/* 聊天/问卷区域的引用样式 */
+/* Estilo de citação na área de chat/questionario */
 .chat-messages :deep(.md-quote),
 .result-answer :deep(.md-quote) {
   margin: 12px 0;

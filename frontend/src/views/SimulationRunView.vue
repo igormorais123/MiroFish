@@ -3,7 +3,13 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand-lockup" @click="router.push('/')">
+          <div class="brand-mark">IA</div>
+          <div class="brand-copy">
+            <div class="brand">INTEIA</div>
+            <div class="brand-sub">MiroFish Lab</div>
+          </div>
+        </div>
       </div>
       
       <div class="header-center">
@@ -33,7 +39,7 @@
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Área -->
     <main class="content-area">
       <!-- Left Panel: Graph -->
       <div class="panel-wrapper left" :style="leftPanelStyle">
@@ -47,7 +53,7 @@
         />
       </div>
 
-      <!-- Right Panel: Step3 开始模拟 -->
+      <!-- Right Panel: Step3 Iniciar simulação -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
         <Step3Simulation
           :simulationId="currentSimulationId"
@@ -87,9 +93,9 @@ const viewMode = ref('split')
 
 // Data State
 const currentSimulationId = ref(route.params.simulationId)
-// 直接在初始化时从 query 参数获取 maxRounds，确保子组件能立即获取到值
+// Obter maxRounds dos parâmetros de query na inicialização, garantindo acesso imediato pelos componentes filhos
 const maxRounds = ref(route.query.maxRounds ? parseInt(route.query.maxRounds) : null)
-const minutesPerRound = ref(30) // 默认每轮30分钟
+const minutesPerRound = ref(30) // Padrao de 30 minutos por rodada
 const projectData = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
@@ -145,14 +151,14 @@ const toggleMaximize = (target) => {
 }
 
 const handleGoBack = async () => {
-  // 在返回 Step 2 之前，先关闭正在运行的模拟
+  // Antes de voltar ao Step 2, encerrar a simulação em execução
   addLog('Preparando retorno para a etapa 2. Encerrando a simulação...')
   
-  // 停止轮询
+  // Parar polling
   stopGraphRefresh()
   
   try {
-    // 先尝试优雅关闭模拟环境
+    // Tentar primeiro encerrar o ambiente de simulação graciosamente
     const envStatusRes = await getEnvStatus({ simulation_id: currentSimulationId.value })
     
     if (envStatusRes.success && envStatusRes.data?.env_alive) {
@@ -173,7 +179,7 @@ const handleGoBack = async () => {
         }
       }
     } else {
-      // 环境未运行，检查是否需要停止进程
+      // Ambiente não está rodando, verificar se precisa parar o processo
       if (isSimulating.value) {
         addLog('Encerrando o processo da simulação...')
         try {
@@ -188,13 +194,13 @@ const handleGoBack = async () => {
     addLog(`Falha ao verificar o estado da simulação: ${err.message}`)
   }
   
-  // 返回到 Step 2 (环境搭建)
+  // Voltar ao Step 2 (configuração do ambiente)
   router.push({ name: 'Simulation', params: { simulationId: currentSimulationId.value } })
 }
 
 const handleNextStep = () => {
-  // Step3Simulation 组件会直接处理报告生成和路由跳转
-  // 这个方法仅作为备用
+  // O componente Step3Simulation trata diretamente a geração do relatório e navegação de rota
+  // Este metodo serve apenas como backup
   addLog('Entrando na etapa 4: geração de relatório')
 }
 
@@ -203,12 +209,12 @@ const loadSimulationData = async () => {
   try {
     addLog(`Carregando dados da simulação: ${currentSimulationId.value}`)
     
-    // 获取 simulation 信息
+    // Obter informações da simulação
     const simRes = await getSimulation(currentSimulationId.value)
     if (simRes.success && simRes.data) {
       const simData = simRes.data
       
-      // 获取 simulation config 以获取 minutes_per_round
+      // Obter simulation config para obter minutes_per_round
       try {
         const configRes = await getSimulationConfig(currentSimulationId.value)
         if (configRes.success && configRes.data?.time_config?.minutes_per_round) {
@@ -219,14 +225,14 @@ const loadSimulationData = async () => {
         addLog(`Falha ao obter a configuração de tempo. Usando padrão: ${minutesPerRound.value} min/rodada`)
       }
       
-      // 获取 project 信息
+      // Obter informações do projeto
       if (simData.project_id) {
         const projRes = await getProject(simData.project_id)
         if (projRes.success && projRes.data) {
           projectData.value = projRes.data
           addLog(`Projeto carregado: ${projRes.data.project_id}`)
           
-          // 获取 graph 数据
+          // Obter dados do grafo
           if (projRes.data.graph_id) {
             await loadGraph(projRes.data.graph_id)
           }
@@ -241,8 +247,8 @@ const loadSimulationData = async () => {
 }
 
 const loadGraph = async (graphId) => {
-  // 当正在模拟时，自动刷新不显示全屏 loading，以免闪烁
-  // 手动刷新或初始加载时显示 loading
+  // Durante simulação, atualização automatica não exibe loading em tela cheia para evitar cintilação
+  // Exibir loading em atualização manual ou carregamento inicial
   if (!isSimulating.value) {
     graphLoading.value = true
   }
@@ -274,7 +280,7 @@ let graphRefreshTimer = null
 const startGraphRefresh = () => {
   if (graphRefreshTimer) return
   addLog('Atualização automática do grafo iniciada (30s)')
-  // 立即刷新一次，然后每30秒刷新
+  // Atualizar imediatamente uma vez, depois a cada 30 segundos
   graphRefreshTimer = setInterval(refreshGraph, 30000)
 }
 
@@ -297,7 +303,7 @@ watch(isSimulating, (newValue) => {
 onMounted(() => {
   addLog('Tela de execução da simulação inicializada')
   
-  // 记录 maxRounds 配置（值已在初始化时从 query 参数获取）
+  // Registrar configuração de maxRounds (valor já obtido dos parâmetros de query na inicialização)
   if (maxRounds.value) {
     addLog(`Total de rodadas personalizado: ${maxRounds.value}`)
   }
@@ -315,20 +321,20 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: linear-gradient(180deg, #f7f3ea 0%, #f1ece3 100%);
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(11, 20, 38, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: linear-gradient(135deg, rgba(8, 17, 31, 0.98) 0%, rgba(19, 33, 58, 0.98) 100%);
   z-index: 100;
   position: relative;
 }
@@ -339,17 +345,51 @@ onUnmounted(() => {
   transform: translateX(-50%);
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .brand {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
-  cursor: pointer;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: #fff;
+}
+
+.brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(214, 158, 46, 0.92);
 }
 
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: rgba(255,255,255,0.08);
   padding: 4px;
   border-radius: 6px;
   gap: 4px;
@@ -361,16 +401,16 @@ onUnmounted(() => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: rgba(255,255,255,0.7);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(185, 125, 19, 0.22);
 }
 
 .header-right {
@@ -389,18 +429,18 @@ onUnmounted(() => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: rgba(214, 158, 46, 0.86);
 }
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: #fff;
 }
 
 .step-divider {
   width: 1px;
   height: 14px;
-  background-color: #E0E0E0;
+  background-color: rgba(255,255,255,0.16);
 }
 
 .status-indicator {
@@ -408,7 +448,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #666;
+  color: rgba(255,255,255,0.72);
   font-weight: 500;
 }
 
@@ -419,7 +459,7 @@ onUnmounted(() => {
   background: #CCC;
 }
 
-.status-indicator.processing .dot { background: #FF5722; animation: pulse 1s infinite; }
+.status-indicator.processing .dot { background: #d69e2e; animation: pulse 1s infinite; }
 .status-indicator.completed .dot { background: #4CAF50; }
 .status-indicator.error .dot { background: #F44336; }
 
@@ -441,7 +481,7 @@ onUnmounted(() => {
 }
 
 .panel-wrapper.left {
-  border-right: 1px solid #EAEAEA;
+  border-right: 1px solid rgba(11, 20, 38, 0.08);
 }
 </style>
 

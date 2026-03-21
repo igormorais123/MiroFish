@@ -3,7 +3,13 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand-lockup" @click="router.push('/')">
+          <div class="brand-mark">IA</div>
+          <div class="brand-copy">
+            <div class="brand">INTEIA</div>
+            <div class="brand-sub">MiroFish Lab</div>
+          </div>
+        </div>
       </div>
       
       <div class="header-center">
@@ -33,7 +39,7 @@
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Área -->
     <main class="content-area">
       <!-- Left Panel: Graph -->
       <div class="panel-wrapper left" :style="leftPanelStyle">
@@ -48,7 +54,7 @@
 
       <!-- Right Panel: Step Components -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
-        <!-- Step 1: 图谱构建 -->
+        <!-- Step 1: Construção do grafo -->
         <Step1GraphBuild 
           v-if="currentStep === 1"
           :currentPhase="currentPhase"
@@ -59,7 +65,7 @@
           :systemLogs="systemLogs"
           @next-step="handleNextStep"
         />
-        <!-- Step 2: 环境搭建 -->
+        <!-- Step 2: Configuração do ambiente -->
         <Step2EnvSetup
           v-else-if="currentStep === 2"
           :projectData="projectData"
@@ -161,7 +167,7 @@ const handleNextStep = (params = {}) => {
     currentStep.value++
     addLog(`Entrando na etapa ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
     
-    // 如果是从 Step 2 进入 Step 3，记录模拟轮数配置
+    // Se entrou no Step 3 a partir do Step 2, registrar configuração de rodadas
     if (currentStep.value === 3 && params.maxRounds) {
       addLog(`Total de rodadas personalizado: ${params.maxRounds}`)
     }
@@ -409,22 +415,23 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: linear-gradient(180deg, #f7f3ea 0%, #f1ece3 100%);
   overflow: hidden;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
 }
 
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(11, 20, 38, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: linear-gradient(135deg, rgba(8, 17, 31, 0.98) 0%, rgba(19, 33, 58, 0.98) 100%);
   z-index: 100;
   position: relative;
+  color: #f7fbff;
 }
 
 .header-center {
@@ -433,20 +440,55 @@ onUnmounted(() => {
   transform: translateX(-50%);
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .brand {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 1px;
-  cursor: pointer;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: #fff;
+}
+
+.brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(214, 158, 46, 0.92);
 }
 
 .view-switcher {
   display: flex;
-  background: #F5F5F5;
+  background: rgba(255,255,255,0.08);
   padding: 4px;
-  border-radius: 6px;
+  border-radius: 10px;
   gap: 4px;
+  border: 1px solid rgba(214, 158, 46, 0.14);
 }
 
 .switch-btn {
@@ -455,16 +497,16 @@ onUnmounted(() => {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: rgba(255,255,255,0.7);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .switch-btn.active {
-  background: #FFF;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: linear-gradient(135deg, #d69e2e 0%, #b97d13 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(185, 125, 19, 0.22);
 }
 
 .status-indicator {
@@ -472,7 +514,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #666;
+  color: rgba(255,255,255,0.72);
   font-weight: 500;
 }
 
@@ -492,18 +534,18 @@ onUnmounted(() => {
 .step-num {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: #999;
+  color: rgba(214, 158, 46, 0.86);
 }
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: #fff;
 }
 
 .step-divider {
   width: 1px;
   height: 14px;
-  background-color: #E0E0E0;
+  background-color: rgba(255,255,255,0.16);
 }
 
 .dot {
@@ -513,7 +555,7 @@ onUnmounted(() => {
   background: #CCC;
 }
 
-.status-indicator.processing .dot { background: #FF5722; animation: pulse 1s infinite; }
+.status-indicator.processing .dot { background: #d69e2e; animation: pulse 1s infinite; }
 .status-indicator.completed .dot { background: #4CAF50; }
 .status-indicator.error .dot { background: #F44336; }
 
@@ -535,6 +577,6 @@ onUnmounted(() => {
 }
 
 .panel-wrapper.left {
-  border-right: 1px solid #EAEAEA;
+  border-right: 1px solid rgba(11, 20, 38, 0.08);
 }
 </style>

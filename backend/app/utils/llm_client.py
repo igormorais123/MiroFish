@@ -1,19 +1,23 @@
 """
-LLM客户端封装
-统一使用OpenAI格式调用
+Cliente unificado de LLM.
+
+Opera sobre provedores compativeis com a API OpenAI e prioriza a configuracao
+OmniRoute-first definida no backend INTEIA.
 """
 
 import json
 import re
+import time
 from typing import Optional, Dict, Any, List
+
 from openai import OpenAI
 
 from ..config import Config
 
 
 class LLMClient:
-    """LLM客户端"""
-    
+    """Cliente de LLM com suporte a alias de modelos, timeout e retry."""
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -22,16 +26,37 @@ class LLMClient:
     ):
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
-        self.model = model or Config.LLM_MODEL_NAME
-        
+        self.model = Config.resolve_model_name(model or Config.LLM_MODEL_NAME)
+        self.timeout = Config.LLM_TIMEOUT_SECONDS
+        self.max_retries = Config.LLM_MAX_RETRIES
+
         if not self.api_key:
-            raise ValueError("LLM_API_KEY 未配置")
-        
+            raise ValueError("LLM_API_KEY ou OMNIROUTE_API_KEY nao configurada")
+
         self.client = OpenAI(
             api_key=self.api_key,
-            base_url=self.base_url
+            base_url=self.base_url,
+            timeout=self.timeout,
         )
-    
+
+    def _request_with_retry(self, **kwargs):
+        """Executa a chamada ao provider com retry simples e observabilidade minima."""
+        last_error = None
+
+        for attempt in range(1, self.max_retries + 1):
+            started_at = time.perf_counter()
+            try:
+                response = self.client.chat.completions.create(**kwargs)
+                elapsed_ms = round((time.perf_counter() - started_at) * 1000, 1)
+                return response, elapsed_ms, attempt
+            except Exception as exc:
+                last_error = exc
+                if attempt >= self.max_retries:
+                    break
+                time.sleep(min(2 * attempt, 5))
+
+        raise last_error
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -39,58 +64,35 @@ class LLMClient:
         max_tokens: int = 4096,
         response_format: Optional[Dict] = None
     ) -> str:
-        """
-        发送聊天请求
-        
-        Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            response_format: 响应格式（如JSON模式）
-            
-        Returns:
-            模型响应文本
-        """
+        """Envia uma requisicao de chat e retorna o texto final limpo."""
         kwargs = {
-            "model": self.model,
+            "model": Config.resolve_model_name(self.model),
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        
+
         if response_format:
             kwargs["response_format"] = response_format
-        
-        response = self.client.chat.completions.create(**kwargs)
+
+        response, _, _ = self._request_with_retry(**kwargs)
         content = response.choices[0].message.content
-        # 部分模型（如MiniMax M2.5）会在content中包含<think>思考内容，需要移除
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         return content
-    
+
     def chat_json(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.3,
         max_tokens: int = 4096
     ) -> Dict[str, Any]:
-        """
-        发送聊天请求并返回JSON
-        
-        Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            
-        Returns:
-            解析后的JSON对象
-        """
+        """Envia requisicao em modo JSON e retorna o objeto desserializado."""
         response = self.chat(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
             response_format={"type": "json_object"}
         )
-        # 清理markdown代码块标记
         cleaned_response = response.strip()
         cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
         cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
@@ -99,5 +101,4 @@ class LLMClient:
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError:
-            raise ValueError(f"LLM返回的JSON格式无效: {cleaned_response}")
-
+            raise ValueError(f"LLM retornou JSON invalido: {cleaned_response}")
