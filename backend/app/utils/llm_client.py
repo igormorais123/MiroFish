@@ -53,7 +53,7 @@ class LLMClient:
                 last_error = exc
                 if attempt >= self.max_retries:
                     break
-                time.sleep(min(2 * attempt, 5))
+                time.sleep(min(1 * attempt, 3))  # Backoff: 1s, 2s, 3s
 
         raise last_error
 

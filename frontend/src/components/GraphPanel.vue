@@ -53,7 +53,7 @@
           <div class="detail-panel-header">
             <span class="detail-title">{{ selectedItem.type === 'node' ? 'Detalhes do nó' : 'Relacionamento' }}</span>
             <span v-if="selectedItem.type === 'node'" class="detail-type-badge" :style="{ background: selectedItem.color, color: '#fff' }">
-              {{ selectedItem.entityType }}
+              {{ traduzirLabel(selectedItem.entityType) }}
             </span>
             <button class="detail-close" @click="closeDetailPanel">×</button>
           </div>
@@ -95,7 +95,7 @@
               <div class="section-title">Rótulos:</div>
               <div class="labels-list">
                 <span v-for="label in selectedItem.data.labels" :key="label" class="label-tag">
-                  {{ label }}
+                  {{ traduzirLabel(label) }}
                 </span>
               </div>
             </div>
@@ -122,7 +122,7 @@
                     @click="toggleSelfLoop(loop.uuid || idx)"
                   >
                     <span class="self-loop-index">#{{ idx + 1 }}</span>
-                    <span class="self-loop-name">{{ loop.name || loop.fact_type || 'RELACIONADO' }}</span>
+                    <span class="self-loop-name">{{ traduzirNome(loop.name || loop.fact_type || 'RELACIONADO') }}</span>
                     <span class="self-loop-toggle">{{ expandedSelfLoops.has(loop.uuid || idx) ? '−' : '+' }}</span>
                   </div>
                   
@@ -157,7 +157,7 @@
             <!-- Detalhes da aresta normal -->
             <template v-else>
               <div class="edge-relation-header">
-                {{ selectedItem.data.source_name }} → {{ selectedItem.data.name || 'RELACIONADO_A' }} → {{ selectedItem.data.target_name }}
+                {{ selectedItem.data.source_name }} → {{ traduzirNome(selectedItem.data.name || 'RELACIONADO_A') }} → {{ selectedItem.data.target_name }}
               </div>
               
               <div class="detail-row">
@@ -166,11 +166,11 @@
               </div>
               <div class="detail-row">
                 <span class="detail-label">Rótulo:</span>
-                <span class="detail-value">{{ selectedItem.data.name || 'RELACIONADO_A' }}</span>
+                <span class="detail-value">{{ traduzirNome(selectedItem.data.name || 'RELACIONADO_A') }}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Tipo:</span>
-                <span class="detail-value">{{ selectedItem.data.fact_type || 'Desconhecido' }}</span>
+                <span class="detail-value">{{ traduzirNome(selectedItem.data.fact_type || 'Desconhecido') }}</span>
               </div>
               <div class="detail-row" v-if="selectedItem.data.fact">
                 <span class="detail-label">Fato:</span>
@@ -219,7 +219,7 @@
       <div class="legend-items">
         <div class="legend-item" v-for="type in entityTypes" :key="type.name">
           <span class="legend-dot" :style="{ background: type.color }"></span>
-          <span class="legend-label">{{ type.name }}</span>
+          <span class="legend-label">{{ traduzirLabel(type.name) }}</span>
         </div>
       </div>
     </div>
@@ -297,6 +297,42 @@ const entityTypes = computed(() => {
   })
   return Object.values(typeMap)
 })
+
+// Traduzir labels de tipo de entidade
+const traduzirLabel = (label) => {
+  const mapa = {
+    'Entity': 'Entidade',
+    'Relation': 'Relação',
+    'Episode': 'Episódio',
+    'Fact': 'Fato',
+    'Node': 'Nó',
+  }
+  return mapa[label] || label
+}
+
+// Traduzir nomes UPPER_SNAKE_CASE de relações
+const traduzirNome = (nome) => {
+  const mapa = {
+    'SUPPORTS': 'APOIA',
+    'OPPOSES': 'SE_OPOE_A',
+    'COMPETES': 'COMPETE',
+    'COMPETES_WITH': 'COMPETE_COM',
+    'COLLABORATES_WITH': 'COLABORA_COM',
+    'WORKS_FOR': 'TRABALHA_PARA',
+    'STUDIES_AT': 'ESTUDA_EM',
+    'AFFILIATED_WITH': 'AFILIADO_A',
+    'REPRESENTS': 'REPRESENTA',
+    'REGULATES': 'REGULAMENTA',
+    'REPORTS_ON': 'REPORTA_SOBRE',
+    'COMMENTS_ON': 'COMENTA_SOBRE',
+    'RESPONDS_TO': 'RESPONDE_A',
+    'HAS_MARGINAL_BENEFIT': 'TEM_BENEFICIO_MARGINAL',
+    'HAS_APPROVAL_RATE': 'TEM_TAXA_APROVACAO',
+    'DECIDES': 'DECIDE',
+    'PROPOSED': 'PROPOE',
+  }
+  return mapa[nome] || nome
+}
 
 // Formatar hora
 const formatDateTime = (dateStr) => {
@@ -619,7 +655,7 @@ const renderGraph = () => {
   const linkLabels = linkGroup.selectAll('text')
     .data(edges)
     .enter().append('text')
-    .text(d => d.name)
+    .text(d => traduzirNome(d.name))
     .attr('font-size', '9px')
     .attr('fill', '#666')
     .attr('text-anchor', 'middle')

@@ -212,7 +212,11 @@ class GraphBuilderService:
         do Graphiti considere esses tipos ao extrair entidades.
         """
         # Constroi descricao textual da ontologia
-        parts = ["Ontologia do grafo de conhecimento:"]
+        parts = [
+            "INSTRUÇÃO DE IDIOMA: Todo o conteúdo extraído (nomes de entidades, relações, resumos, fatos) DEVE ser em português brasileiro. NÃO extraia nomes ou resumos em inglês.",
+            "",
+            "Ontologia do grafo de conhecimento:"
+        ]
 
         for entity_def in ontology.get("entity_types", []):
             name = entity_def.get("name", "")
@@ -535,7 +539,7 @@ class GraphBuilderService:
                     nodes_data.append({
                         "uuid": fact_uuid,
                         "name": fact_name,
-                        "labels": ["Entity"],
+                        "labels": ["Entidade"],
                         "summary": fact_text,
                         "attributes": {},
                         "created_at": str(created_at) if created_at else None,

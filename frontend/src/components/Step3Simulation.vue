@@ -142,7 +142,7 @@
               <div class="card-header">
                 <div class="agent-info">
                   <div class="avatar-placeholder">{{ (action.agent_name || 'A')[0] }}</div>
-                  <span class="agent-name">{{ action.agent_name }}</span>
+                  <span class="agent-name">{{ traduzirNome(action.agent_name) }}</span>
                 </div>
                 
                 <div class="header-meta">
@@ -272,7 +272,7 @@
     <!-- Bottom Info / Logs -->
     <div class="system-logs">
       <div class="log-header">
-        <span class="log-title">SIMULATION MONITOR</span>
+        <span class="log-title">MONITOR DA SIMULAÇÃO</span>
         <span class="log-id">{{ simulationId || 'SEM_SIMULAÇÃO' }}</span>
       </div>
       <div class="log-content" ref="logContent">
@@ -586,6 +586,30 @@ const fetchRunStatusDetail = async () => {
   } catch (err) {
     console.warn('Falha ao obter status detalhado:', err)
   }
+}
+
+// Traduzir nomes UPPER_SNAKE_CASE de relações/agentes
+const traduzirNome = (nome) => {
+  const mapa = {
+    'SUPPORTS': 'APOIA',
+    'OPPOSES': 'SE_OPOE_A',
+    'COMPETES': 'COMPETE',
+    'COMPETES_WITH': 'COMPETE_COM',
+    'COLLABORATES_WITH': 'COLABORA_COM',
+    'WORKS_FOR': 'TRABALHA_PARA',
+    'STUDIES_AT': 'ESTUDA_EM',
+    'AFFILIATED_WITH': 'AFILIADO_A',
+    'REPRESENTS': 'REPRESENTA',
+    'REGULATES': 'REGULAMENTA',
+    'REPORTS_ON': 'REPORTA_SOBRE',
+    'COMMENTS_ON': 'COMENTA_SOBRE',
+    'RESPONDS_TO': 'RESPONDE_A',
+    'HAS_MARGINAL_BENEFIT': 'TEM_BENEFICIO_MARGINAL',
+    'HAS_APPROVAL_RATE': 'TEM_TAXA_APROVACAO',
+    'DECIDES': 'DECIDE',
+    'PROPOSED': 'PROPOE',
+  }
+  return mapa[nome] || nome
 }
 
 // Helpers

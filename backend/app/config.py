@@ -106,7 +106,7 @@ class Config:
     LLM_API_KEY = _default_llm_api_key()
     LLM_BASE_URL = _default_llm_base_url()
     LLM_MODEL_NAME = _default_llm_model_name()
-    LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '45'))
+    LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '25'))
     LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '3'))
     LLM_MODEL_ALIASES = _parse_alias_map()
 

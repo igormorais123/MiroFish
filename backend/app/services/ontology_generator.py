@@ -11,7 +11,7 @@ from ..utils.llm_client import LLMClient
 # Prompt de sistema para geracao de ontologia
 ONTOLOGY_SYSTEM_PROMPT = """Voce e um especialista profissional em design de ontologias para grafos de conhecimento. Sua tarefa e analisar o conteudo textual fornecido e as necessidades de simulacao, projetando tipos de entidades e tipos de relacoes adequados para **simulacao de opiniao publica em midias sociais**.
 
-IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
+IMPORTANTE: Todos os nomes de entidades, relações, descrições e atributos devem ser em português brasileiro. NÃO use nomes em inglês.
 
 **Importante: Voce deve gerar dados em formato JSON valido, sem nenhum outro conteudo.**
 
@@ -46,11 +46,11 @@ Gere o resultado em formato JSON com a seguinte estrutura:
 {
     "entity_types": [
         {
-            "name": "Nome do tipo de entidade (ingles, PascalCase)",
+            "name": "Nome do tipo de entidade (portugues, PascalCase, ex: Estudante, Professor, OrgaoGovernamental)",
             "description": "Descricao breve (portugues, no maximo 100 caracteres)",
             "attributes": [
                 {
-                    "name": "nome_atributo (ingles, snake_case)",
+                    "name": "nome_atributo (portugues, snake_case)",
                     "type": "text",
                     "description": "Descricao do atributo"
                 }
@@ -60,7 +60,7 @@ Gere o resultado em formato JSON com a seguinte estrutura:
     ],
     "edge_types": [
         {
-            "name": "NOME_TIPO_RELACAO (ingles, UPPER_SNAKE_CASE)",
+            "name": "NOME_TIPO_RELACAO (portugues, UPPER_SNAKE_CASE, ex: APOIA, TRABALHA_EM, COMPETE_COM)",
             "description": "Descricao breve (portugues, no maximo 100 caracteres)",
             "source_targets": [
                 {"source": "TipoEntidadeOrigem", "target": "TipoEntidadeDestino"}
@@ -83,18 +83,18 @@ Gere o resultado em formato JSON com a seguinte estrutura:
 Seus 10 tipos de entidade devem conter as seguintes camadas:
 
 A. **Tipos genericos (obrigatorios, devem ser os 2 ultimos da lista)**:
-   - `Person`: Tipo generico para qualquer pessoa fisica. Quando uma pessoa nao se encaixa em nenhum tipo mais especifico, deve ser classificada aqui.
-   - `Organization`: Tipo generico para qualquer organizacao. Quando uma organizacao nao se encaixa em nenhum tipo mais especifico, deve ser classificada aqui.
+   - `Pessoa`: Tipo generico para qualquer pessoa fisica. Quando uma pessoa nao se encaixa em nenhum tipo mais especifico, deve ser classificada aqui.
+   - `Organizacao`: Tipo generico para qualquer organizacao. Quando uma organizacao nao se encaixa em nenhum tipo mais especifico, deve ser classificada aqui.
 
 B. **Tipos especificos (8, projetados com base no conteudo textual)**:
    - Projete tipos mais especificos para os principais papeis presentes no texto
-   - Exemplo: se o texto envolve eventos academicos, pode ter `Student`, `Professor`, `University`
-   - Exemplo: se o texto envolve eventos empresariais, pode ter `Company`, `CEO`, `Employee`
+   - Exemplo: se o texto envolve eventos academicos, pode ter `Estudante`, `Professor`, `Universidade`
+   - Exemplo: se o texto envolve eventos empresariais, pode ter `Empresa`, `Executivo`, `Funcionario`
 
 **Por que tipos genericos sao necessarios**:
 - No texto aparecem diversas pessoas, como "professor do ensino medio", "transeunte", "um internauta"
-- Se nao houver um tipo especifico correspondente, devem ser classificadas em `Person`
-- Da mesma forma, pequenas organizacoes, grupos temporarios etc. devem ser classificados em `Organization`
+- Se nao houver um tipo especifico correspondente, devem ser classificadas em `Pessoa`
+- Da mesma forma, pequenas organizacoes, grupos temporarios etc. devem ser classificados em `Organizacao`
 
 **Principios de design dos tipos especificos**:
 - Identifique os tipos de papeis que aparecem com frequencia ou sao fundamentais no texto
@@ -116,44 +116,44 @@ B. **Tipos especificos (8, projetados com base no conteudo textual)**:
 ## Referencia de Tipos de Entidade
 
 **Categoria Individual (especificos)**:
-- Student: Estudante
+- Estudante: Estudante
 - Professor: Professor/Academico
-- Journalist: Jornalista
-- Celebrity: Celebridade/Influenciador
-- Executive: Executivo/Alta gestao
-- Official: Funcionario publico/Politico
-- Lawyer: Advogado
-- Doctor: Medico
+- Jornalista: Jornalista
+- Celebridade: Celebridade/Influenciador
+- Executivo: Executivo/Alta gestao
+- Funcionario: Funcionario publico/Politico
+- Advogado: Advogado
+- Medico: Medico
 
 **Categoria Individual (generico)**:
-- Person: Qualquer pessoa fisica (usar quando nao se encaixa nos tipos especificos acima)
+- Pessoa: Qualquer pessoa fisica (usar quando nao se encaixa nos tipos especificos acima)
 
 **Categoria Organizacional (especificos)**:
-- University: Universidade/Instituicao de ensino superior
-- Company: Empresa
-- GovernmentAgency: Orgao governamental
-- MediaOutlet: Veiculo de midia
+- Universidade: Universidade/Instituicao de ensino superior
+- Empresa: Empresa
+- OrgaoGovernamental: Orgao governamental
+- VeiculoDeMidia: Veiculo de midia
 - Hospital: Hospital
-- School: Escola de ensino basico/medio
-- NGO: Organizacao nao governamental
+- Escola: Escola de ensino basico/medio
+- ONG: Organizacao nao governamental
 
 **Categoria Organizacional (generico)**:
-- Organization: Qualquer organizacao (usar quando nao se encaixa nos tipos especificos acima)
+- Organizacao: Qualquer organizacao (usar quando nao se encaixa nos tipos especificos acima)
 
 ## Referencia de Tipos de Relacoes
 
-- WORKS_FOR: Trabalha em
-- STUDIES_AT: Estuda em
-- AFFILIATED_WITH: Vinculado a
-- REPRESENTS: Representa
-- REGULATES: Regula/Fiscaliza
-- REPORTS_ON: Reporta/Cobre
-- COMMENTS_ON: Comenta sobre
-- RESPONDS_TO: Responde a
-- SUPPORTS: Apoia
-- OPPOSES: Se opoe a
-- COLLABORATES_WITH: Colabora com
-- COMPETES_WITH: Compete com
+- TRABALHA_PARA: Trabalha em
+- ESTUDA_EM: Estuda em
+- AFILIADO_A: Vinculado a
+- REPRESENTA: Representa
+- REGULAMENTA: Regula/Fiscaliza
+- REPORTA_SOBRE: Reporta/Cobre
+- COMENTA_SOBRE: Comenta sobre
+- RESPONDE_A: Responde a
+- APOIA: Apoia
+- SE_OPOE_A: Se opoe a
+- COLABORA_COM: Colabora com
+- COMPETE_COM: Compete com
 """
 
 
@@ -248,7 +248,7 @@ Com base no conteudo acima, projete tipos de entidades e tipos de relacoes adequ
 
 **Regras obrigatorias**:
 1. Devem ser exatamente 10 tipos de entidade
-2. Os 2 ultimos devem ser tipos genericos: Person (generico para individuos) e Organization (generico para organizacoes)
+2. Os 2 ultimos devem ser tipos genericos: Pessoa (generico para individuos) e Organizacao (generico para organizacoes)
 3. Os 8 primeiros sao tipos especificos projetados com base no conteudo textual
 4. Todos os tipos de entidade devem ser sujeitos reais capazes de se manifestar, nao conceitos abstratos
 5. Nomes de atributos nao podem usar palavras reservadas como name, uuid, group_id; use full_name, org_name etc.
@@ -292,29 +292,29 @@ Com base no conteudo acima, projete tipos de entidades e tipos de relacoes adequ
 
         # Definicao dos tipos genericos
         person_fallback = {
-            "name": "Person",
-            "description": "Any individual person not fitting other specific person types.",
+            "name": "Pessoa",
+            "description": "Qualquer pessoa fisica que nao se encaixa nos tipos especificos.",
             "attributes": [
-                {"name": "full_name", "type": "text", "description": "Full name of the person"},
-                {"name": "role", "type": "text", "description": "Role or occupation"}
+                {"name": "nome_completo", "type": "text", "description": "Nome completo da pessoa"},
+                {"name": "papel", "type": "text", "description": "Papel ou ocupacao"}
             ],
             "examples": ["cidadao comum", "internauta anonimo"]
         }
 
         organization_fallback = {
-            "name": "Organization",
-            "description": "Any organization not fitting other specific organization types.",
+            "name": "Organizacao",
+            "description": "Qualquer organizacao que nao se encaixa nos tipos especificos.",
             "attributes": [
-                {"name": "org_name", "type": "text", "description": "Name of the organization"},
-                {"name": "org_type", "type": "text", "description": "Type of organization"}
+                {"name": "nome_organizacao", "type": "text", "description": "Nome da organizacao"},
+                {"name": "tipo_organizacao", "type": "text", "description": "Tipo de organizacao"}
             ],
             "examples": ["pequena empresa", "grupo comunitario"]
         }
 
         # Verificar se os tipos genericos ja existem
         entity_names = {e["name"] for e in result["entity_types"]}
-        has_person = "Person" in entity_names
-        has_organization = "Organization" in entity_names
+        has_person = "Pessoa" in entity_names
+        has_organization = "Organizacao" in entity_names
 
         # Tipos genericos que precisam ser adicionados
         fallbacks_to_add = []
