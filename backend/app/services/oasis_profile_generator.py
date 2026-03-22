@@ -160,7 +160,7 @@ class OasisProfileGenerator:
     # Lista de paises comuns
     COUNTRIES = [
         "Brazil", "US", "UK", "Canada", "Australia", "Germany",
-        "France", "Spain", "Portugal", "Argentina", "Chile", "Mexico"
+        "França", "Espanha", "Portugal", "Argentina", "Chile", "México"
     ]
 
     # Entidades de tipo individual (requerem perfil concreto)
@@ -613,7 +613,8 @@ class OasisProfileGenerator:
             "Voce e especialista em geracao de perfis para redes sociais. "
             "Crie perfis detalhados e realistas para simulacao social, preservando ao maximo o contexto fornecido. "
             "Retorne JSON valido. Todos os campos de texto devem ser de linha unica, sem quebras nao escapadas. "
-            "Use portugues do Brasil por padrao, com referencias culturais ocidentais e brasileiras quando o contexto nao indicar outra localidade."
+            "IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro. "
+            "Use referencias culturais ocidentais e brasileiras quando o contexto nao indicar outra localidade."
         )
         return base_prompt
 
@@ -736,7 +737,7 @@ Importante:
                 "mbti": random.choice(self.MBTI_TYPES),
                 "country": random.choice(self.COUNTRIES),
                 "profession": "Student",
-                "interested_topics": ["Education", "Social Issues", "Technology"],
+                "interested_topics": ["Educação", "Questões Sociais", "Tecnologia"],
             }
 
         elif entity_type_lower in ["publicfigure", "expert", "faculty"]:
@@ -747,8 +748,8 @@ Importante:
                 "gender": random.choice(["male", "female"]),
                 "mbti": random.choice(["ENTJ", "INTJ", "ENTP", "INTP"]),
                 "country": random.choice(self.COUNTRIES),
-                "profession": entity_attributes.get("occupation", "Expert"),
-                "interested_topics": ["Politics", "Economics", "Culture & Society"],
+                "profession": entity_attributes.get("occupation", "Especialista"),
+                "interested_topics": ["Política", "Economia", "Cultura e Sociedade"],
             }
 
         elif entity_type_lower in ["mediaoutlet", "socialmediaplatform"]:
@@ -760,7 +761,7 @@ Importante:
                 "mbti": "ISTJ",  # Estilo institucional: rigoroso e conservador
                 "country": "Brazil",
                 "profession": "Media",
-                "interested_topics": ["General News", "Current Events", "Public Affairs"],
+                "interested_topics": ["Notícias Gerais", "Atualidades", "Assuntos Públicos"],
             }
 
         elif entity_type_lower in ["university", "governmentagency", "ngo", "organization"]:
@@ -772,7 +773,7 @@ Importante:
                 "mbti": "ISTJ",  # Estilo institucional: rigoroso e conservador
                 "country": "Brazil",
                 "profession": entity_type,
-                "interested_topics": ["Public Policy", "Community", "Official Announcements"],
+                "interested_topics": ["Políticas Públicas", "Comunidade", "Comunicados Oficiais"],
             }
 
         else:
@@ -785,7 +786,7 @@ Importante:
                 "mbti": random.choice(self.MBTI_TYPES),
                 "country": random.choice(self.COUNTRIES),
                 "profession": entity_type,
-                "interested_topics": ["General", "Social Issues"],
+                "interested_topics": ["Geral", "Questões Sociais"],
             }
 
     def set_graph_id(self, graph_id: str):

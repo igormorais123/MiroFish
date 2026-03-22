@@ -837,6 +837,8 @@ class ZepToolsService:
         system_prompt = """Voce e um especialista em decomposicao de perguntas.
 Transforme uma questao complexa em subperguntas observaveis dentro do mundo simulado.
 
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
+
 Regras:
 1. Cada subpergunta deve ser especifica o bastante para gerar busca util
 2. O conjunto deve cobrir perspectivas diferentes do problema
@@ -1022,6 +1024,7 @@ Retorne somente o JSON."""
         INTERVIEW_PROMPT_PREFIX = (
             "Voce esta sendo entrevistado. Com base na sua persona, memoria e acoes anteriores, "
             "responda diretamente, em texto puro, as perguntas abaixo.\n"
+            "IMPORTANTE: Todas as respostas devem ser em português brasileiro.\n"
             "Regras de resposta:\n"
             "1. Responda em linguagem natural, sem chamar ferramentas\n"
             "2. Nao retorne JSON nem formato de tool call\n"
@@ -1227,6 +1230,8 @@ Retorne somente o JSON."""
         system_prompt = """Voce e um especialista em planejamento de entrevistas.
 Sua tarefa e selecionar, a partir da lista de agentes simulados, os perfis mais adequados para a pauta.
 
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
+
 Criterios:
 1. Relacao entre identidade/profissao e o tema
 2. Potencial de trazer perspectivas unicas ou valiosas
@@ -1289,6 +1294,8 @@ Escolha no maximo {max_agents} agentes e explique a selecao."""
         system_prompt = """Voce e um entrevistador profissional.
 Gere de 3 a 5 perguntas aprofundadas com base na pauta.
 
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
+
 Requisitos:
 1. Perguntas abertas
 2. Capazes de revelar perspectivas diferentes
@@ -1341,6 +1348,8 @@ Gere de 3 a 5 perguntas."""
 
         system_prompt = """Voce e um editor experiente.
 Com base nas respostas dos entrevistados, gere um resumo jornalistico.
+
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
 
 Requisitos:
 1. Sintetizar os principais pontos de vista

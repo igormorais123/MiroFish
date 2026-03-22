@@ -391,7 +391,7 @@ class SimulationConfigGenerator:
         # Agrupa por tipo.
         by_type: Dict[str, List[EntityNode]] = {}
         for e in entities:
-            t = e.get_entity_type() or "Unknown"
+            t = e.get_entity_type() or "Desconhecido"
             if t not in by_type:
                 by_type[t] = []
             by_type[t].append(e)
@@ -564,7 +564,7 @@ Campos:
 - work_hours (array[int]): horario comercial predominante
 - reasoning (string): breve explicacao do criterio adotado"""
 
-        system_prompt = "Você é especialista em simulação social. Retorne JSON puro e use, por padrão, uma rotina compatível com Brasil e horário de Brasília."
+        system_prompt = "Você é especialista em simulação social. Retorne JSON puro e use, por padrão, uma rotina compatível com Brasil e horário de Brasília. IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro."
         
         try:
             return self._call_llm_with_retry(prompt, system_prompt)
@@ -631,13 +631,13 @@ Campos:
         
         # Lista os tipos de entidade disponiveis para o LLM.
         entity_types_available = list(set(
-            e.get_entity_type() or "Unknown" for e in entities
+            e.get_entity_type() or "Desconhecido" for e in entities
         ))
         
         # Separa exemplos representativos por tipo.
         type_examples = {}
         for e in entities:
-            etype = e.get_entity_type() or "Unknown"
+            etype = e.get_entity_type() or "Desconhecido"
             if etype not in type_examples:
                 type_examples[etype] = []
             if len(type_examples[etype]) < 3:
@@ -680,7 +680,7 @@ Retorne apenas JSON puro, sem markdown:
     "reasoning": "<breve explicacao>"
 }}"""
 
-        system_prompt = "Você é especialista em análise de debate público. Retorne JSON puro. `poster_type` deve corresponder exatamente a um tipo de entidade disponível."
+        system_prompt = "Você é especialista em análise de debate público. Retorne JSON puro. `poster_type` deve corresponder exatamente a um tipo de entidade disponível. IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro."
         
         try:
             return self._call_llm_with_retry(prompt, system_prompt)
@@ -774,7 +774,7 @@ Retorne apenas JSON puro, sem markdown:
             
             updated_posts.append({
                 "content": content,
-                "poster_type": post.get("poster_type", "Unknown"),
+                "poster_type": post.get("poster_type", "Desconhecido"),
                 "poster_agent_id": matched_agent_id
             })
             
@@ -799,7 +799,7 @@ Retorne apenas JSON puro, sem markdown:
             entity_list.append({
                 "agent_id": start_idx + i,
                 "entity_name": e.name,
-                "entity_type": e.get_entity_type() or "Unknown",
+                "entity_type": e.get_entity_type() or "Desconhecido",
                 "summary": e.summary[:summary_len] if e.summary else ""
             })
         
@@ -839,7 +839,7 @@ Retorne apenas JSON puro, sem markdown:
     ]
 }}"""
 
-        system_prompt = "Você é especialista em comportamento em redes sociais. Retorne JSON puro com perfis compatíveis com rotina social brasileira."
+        system_prompt = "Você é especialista em comportamento em redes sociais. Retorne JSON puro com perfis compatíveis com rotina social brasileira. IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro."
         
         try:
             result = self._call_llm_with_retry(prompt, system_prompt)
@@ -862,7 +862,7 @@ Retorne apenas JSON puro, sem markdown:
                 agent_id=agent_id,
                 entity_uuid=entity.uuid,
                 entity_name=entity.name,
-                entity_type=entity.get_entity_type() or "Unknown",
+                entity_type=entity.get_entity_type() or "Desconhecido",
                 activity_level=cfg.get("activity_level", 0.5),
                 posts_per_hour=cfg.get("posts_per_hour", 0.5),
                 comments_per_hour=cfg.get("comments_per_hour", 1.0),
@@ -879,7 +879,7 @@ Retorne apenas JSON puro, sem markdown:
     
     def _generate_agent_config_by_rule(self, entity: EntityNode) -> Dict[str, Any]:
         """Gera a configuração de um agente com regras baseadas em rotina social brasileira."""
-        entity_type = (entity.get_entity_type() or "Unknown").lower()
+        entity_type = (entity.get_entity_type() or "Desconhecido").lower()
         
         if entity_type in ["university", "governmentagency", "ngo"]:
             # Instituicoes oficiais: horario comercial, baixa frequencia, alta influencia.

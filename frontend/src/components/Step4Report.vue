@@ -378,7 +378,7 @@
     <div class="console-logs">
       <div class="log-header">
         <span class="log-title">SAÍDA DO CONSOLE</span>
-        <span class="log-id">{{ reportId || 'NO_REPORT' }}</span>
+        <span class="log-id">{{ reportId || 'SEM_RELATÓRIO' }}</span>
       </div>
       <div class="log-content" ref="logContent">
         <div class="log-line" v-for="(log, idx) in consoleLogs" :key="idx">

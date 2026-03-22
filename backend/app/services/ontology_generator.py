@@ -11,6 +11,8 @@ from ..utils.llm_client import LLMClient
 # Prompt de sistema para geracao de ontologia
 ONTOLOGY_SYSTEM_PROMPT = """Voce e um especialista profissional em design de ontologias para grafos de conhecimento. Sua tarefa e analisar o conteudo textual fornecido e as necessidades de simulacao, projetando tipos de entidades e tipos de relacoes adequados para **simulacao de opiniao publica em midias sociais**.
 
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
+
 **Importante: Voce deve gerar dados em formato JSON valido, sem nenhum outro conteudo.**
 
 ## Contexto da Tarefa Principal

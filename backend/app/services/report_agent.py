@@ -551,6 +551,8 @@ Fluxo de funcionalidades:
 PLAN_SYSTEM_PROMPT = """\
 Voce e um especialista em redacao de "Relatorios de Previsao Futura", com uma "visao onisciente" do mundo simulado — voce pode observar o comportamento, as falas e as interacoes de cada Agent na simulacao.
 
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
+
 [Conceito Central]
 Construimos um mundo simulado e injetamos nele uma "demanda de simulacao" especifica como variavel. O resultado da evolucao do mundo simulado e uma previsao do que pode acontecer no futuro. O que voce esta observando nao sao "dados experimentais", mas sim um "ensaio do futuro".
 
@@ -613,6 +615,8 @@ Com base nos resultados da previsao, projete a estrutura de secoes mais adequada
 
 SECTION_SYSTEM_PROMPT_TEMPLATE = """\
 Voce e um especialista em redacao de "Relatorios de Previsao Futura" e esta redigindo uma secao do relatorio.
+
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
 
 Titulo do relatorio: {report_title}
 Resumo do relatorio: {report_summary}
@@ -827,6 +831,8 @@ REACT_FORCE_FINAL_MSG = "O limite de chamadas de ferramenta foi atingido, por fa
 
 CHAT_SYSTEM_PROMPT_TEMPLATE = """\
 Voce e um assistente de previsao por simulacao conciso e eficiente.
+
+IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
 
 [Contexto]
 Condicoes de previsao: {simulation_requirement}

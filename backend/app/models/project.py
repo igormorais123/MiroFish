@@ -83,7 +83,7 @@ class Project:
 
         return cls(
             project_id=data['project_id'],
-            name=data.get('name', 'Unnamed Project'),
+            name=data.get('name', 'Projeto sem nome'),
             status=status,
             created_at=data.get('created_at', ''),
             updated_at=data.get('updated_at', ''),
@@ -133,7 +133,7 @@ class ProjectManager:
         return os.path.join(cls._get_project_dir(project_id), 'extracted_text.txt')
 
     @classmethod
-    def create_project(cls, name: str = "Unnamed Project") -> Project:
+    def create_project(cls, name: str = "Projeto sem nome") -> Project:
         """
         Criar novo projeto
 

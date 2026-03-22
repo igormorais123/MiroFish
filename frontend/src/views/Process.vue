@@ -12,7 +12,7 @@
       
       <!-- Indicador central de etapa -->
       <div class="nav-center">
-        <div class="step-badge">STEP 01</div>
+        <div class="step-badge">ETAPA 01</div>
         <div class="step-name">Construção do grafo</div>
       </div>
 

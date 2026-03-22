@@ -34,12 +34,12 @@
           <div class="actions-tooltip">
           <div class="tooltip-title">Ações disponíveis</div>
             <div class="tooltip-actions">
-              <span class="tooltip-action">POST</span>
-              <span class="tooltip-action">LIKE</span>
-              <span class="tooltip-action">REPOST</span>
-              <span class="tooltip-action">QUOTE</span>
-              <span class="tooltip-action">FOLLOW</span>
-              <span class="tooltip-action">IDLE</span>
+              <span class="tooltip-action">PUBLICAÇÃO</span>
+              <span class="tooltip-action">CURTIDA</span>
+              <span class="tooltip-action">REPOSTAGEM</span>
+              <span class="tooltip-action">CITAÇÃO</span>
+              <span class="tooltip-action">SEGUIR</span>
+              <span class="tooltip-action">INATIVO</span>
             </div>
           </div>
         </div>
@@ -75,16 +75,16 @@
           <div class="actions-tooltip">
           <div class="tooltip-title">Ações disponíveis</div>
             <div class="tooltip-actions">
-              <span class="tooltip-action">POST</span>
-              <span class="tooltip-action">COMMENT</span>
-              <span class="tooltip-action">LIKE</span>
-              <span class="tooltip-action">DISLIKE</span>
-              <span class="tooltip-action">SEARCH</span>
-              <span class="tooltip-action">TREND</span>
-              <span class="tooltip-action">FOLLOW</span>
-              <span class="tooltip-action">MUTE</span>
-              <span class="tooltip-action">REFRESH</span>
-              <span class="tooltip-action">IDLE</span>
+              <span class="tooltip-action">PUBLICAÇÃO</span>
+              <span class="tooltip-action">COMENTÁRIO</span>
+              <span class="tooltip-action">CURTIDA</span>
+              <span class="tooltip-action">DESCURTIDA</span>
+              <span class="tooltip-action">BUSCA</span>
+              <span class="tooltip-action">TENDÊNCIA</span>
+              <span class="tooltip-action">SEGUIR</span>
+              <span class="tooltip-action">SILENCIAR</span>
+              <span class="tooltip-action">ATUALIZAR</span>
+              <span class="tooltip-action">INATIVO</span>
             </div>
           </div>
         </div>
@@ -170,7 +170,7 @@
                   <div v-if="action.action_args?.original_content" class="quoted-block">
                     <div class="quote-header">
                       <svg class="icon-small" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                      <span class="quote-label">@{{ action.action_args.original_author_name || 'User' }}</span>
+                      <span class="quote-label">@{{ action.action_args.original_author_name || 'Usuário' }}</span>
                     </div>
                     <div class="quote-text">
                       {{ truncateContent(action.action_args.original_content, 150) }}
@@ -273,7 +273,7 @@
     <div class="system-logs">
       <div class="log-header">
         <span class="log-title">SIMULATION MONITOR</span>
-        <span class="log-id">{{ simulationId || 'NO_SIMULATION' }}</span>
+        <span class="log-id">{{ simulationId || 'SEM_SIMULAÇÃO' }}</span>
       </div>
       <div class="log-content" ref="logContent">
         <div class="log-line" v-for="(log, idx) in systemLogs" :key="idx">
@@ -591,19 +591,19 @@ const fetchRunStatusDetail = async () => {
 // Helpers
 const getActionTypeLabel = (type) => {
   const labels = {
-    'CREATE_POST': 'POST',
-    'REPOST': 'REPOST',
-    'LIKE_POST': 'LIKE',
-    'CREATE_COMMENT': 'COMMENT',
-    'LIKE_COMMENT': 'LIKE',
-    'DO_NOTHING': 'IDLE',
-    'FOLLOW': 'FOLLOW',
-    'SEARCH_POSTS': 'SEARCH',
-    'QUOTE_POST': 'QUOTE',
-    'UPVOTE_POST': 'UPVOTE',
-    'DOWNVOTE_POST': 'DOWNVOTE'
+    'CREATE_POST': 'PUBLICAÇÃO',
+    'REPOST': 'REPOSTAGEM',
+    'LIKE_POST': 'CURTIDA',
+    'CREATE_COMMENT': 'COMENTÁRIO',
+    'LIKE_COMMENT': 'CURTIDA',
+    'DO_NOTHING': 'INATIVO',
+    'FOLLOW': 'SEGUIR',
+    'SEARCH_POSTS': 'BUSCA',
+    'QUOTE_POST': 'CITAÇÃO',
+    'UPVOTE_POST': 'VOTO+',
+    'DOWNVOTE_POST': 'VOTO-'
   }
-  return labels[type] || type || 'UNKNOWN'
+  return labels[type] || type || 'DESCONHECIDO'
 }
 
 const getActionTypeClass = (type) => {
@@ -632,7 +632,7 @@ const truncateContent = (content, maxLength = 100) => {
 const formatActionTime = (timestamp) => {
   if (!timestamp) return ''
   try {
-    return new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return new Date(timestamp).toLocaleTimeString('pt-BR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
   } catch {
     return ''
   }
