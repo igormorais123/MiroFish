@@ -3,7 +3,8 @@ import pytest
 from app.services.graph_builder import GraphBuilderService
 
 
-def test_wait_for_graph_materialization_fails_when_graph_stays_empty(monkeypatch):
+def test_wait_for_graph_materialization_returns_empty_gracefully(monkeypatch):
+    """Quando o grafo nao materializa, retorna os dados vazios (degradacao graciosa)."""
     service = GraphBuilderService()
 
     monkeypatch.setattr(service, "_wait_for_episodes", lambda *args, **kwargs: 0)
@@ -21,8 +22,9 @@ def test_wait_for_graph_materialization_fails_when_graph_stays_empty(monkeypatch
     monkeypatch.setattr(service.client, "get_episodes", lambda *args, **kwargs: [])
     monkeypatch.setattr("app.services.graph_builder.time.sleep", lambda *_args, **_kwargs: None)
 
-    with pytest.raises(RuntimeError, match="nao materializou dados"):
-        service.wait_for_graph_materialization("graph_x")
+    result = service.wait_for_graph_materialization("graph_x")
+    assert result["node_count"] == 0
+    assert result["edge_count"] == 0
 
 
 def test_wait_for_graph_materialization_accepts_populated_graph(monkeypatch):

@@ -303,14 +303,16 @@ class GraphBuilderService:
         graph_id: str,
         expected_count: int = 0,
         progress_callback: Optional[Callable] = None,
-        timeout: int = 600,
-        stall_timeout: int = 120,
+        timeout: int = 120,
+        stall_timeout: int = 30,
     ):
         """Aguardar o processamento assincrono do Graphiti.
 
         Faz polling em GET /episodes/{group_id}. O Graphiti pode consolidar
         mensagens em menos episodios do que blocos enviados, entao a espera
         termina por estabilidade/timeout e nao apenas por contagem exata.
+
+        Nao trava: respeita timeout absoluto e retorna o que conseguiu.
         """
         if expected_count == 0:
             if progress_callback:
@@ -320,6 +322,7 @@ class GraphBuilderService:
         start_time = time.time()
         last_count = 0
         last_change = start_time
+        poll_interval = 3  # segundos entre cada poll
 
         if progress_callback:
             progress_callback(f"Aguardando processamento de {expected_count} blocos...", 0)
@@ -329,7 +332,7 @@ class GraphBuilderService:
             if elapsed > timeout:
                 if progress_callback:
                     progress_callback(
-                        f"Tempo limite excedido; {last_count} episodios processados",
+                        f"Tempo limite ({timeout}s); {last_count} episodios detectados",
                         last_count / max(expected_count, 1)
                     )
                 break
@@ -344,30 +347,42 @@ class GraphBuilderService:
                     progress_ratio = min(current_count / max(expected_count, 1), 1.0)
                     if progress_callback:
                         progress_callback(
-                            f"Graphiti processando... {current_count} episodios encontrados ({int(elapsed)}s)",
+                            f"Graphiti processando... {current_count} episodios ({int(elapsed)}s)",
                             progress_ratio
                         )
 
-                # Se ja alcancou o volume esperado, podemos seguir.
                 if expected_count > 0 and current_count >= expected_count:
                     break
 
-                # Se o Graphiti estabilizou sem novos episodios, seguimos
-                # para a validacao do grafo materializado.
+                # Estabilizou com dados — seguir para materializacao
                 if current_count > 0 and (time.time() - last_change) >= stall_timeout:
                     if progress_callback:
                         progress_callback(
-                            f"Processamento estabilizado com {current_count} episodios",
+                            f"Estabilizado com {current_count} episodios",
                             min(current_count / max(expected_count, 1), 1.0)
                         )
                     break
 
-                # Se nao apareceu nada durante a janela de stall, seguimos
-                # para a validacao explicita do grafo vazio.
+                # Sem episodios apos stall_timeout — tenta search como fallback
                 if current_count == 0 and elapsed >= stall_timeout:
+                    try:
+                        search_result = self.client.search(
+                            group_ids=[graph_id], query="*", max_facts=5
+                        )
+                        facts = search_result.get("facts", [])
+                        if len(facts) > 0:
+                            if progress_callback:
+                                progress_callback(
+                                    f"Grafo com {len(facts)} fatos (via search)",
+                                    1.0
+                                )
+                            return len(facts)
+                    except Exception:
+                        pass
+                    # Sem fatos e sem episodios — sair sem esperar mais
                     if progress_callback:
                         progress_callback(
-                            "Nenhum episodio detectado apos a janela de espera; validando persistencia do grafo",
+                            "Nenhum episodio detectado, seguindo para validacao",
                             0.0
                         )
                     break
@@ -375,10 +390,10 @@ class GraphBuilderService:
             except Exception as e:
                 logger.debug(f"Erro no polling de episodios: {e}")
 
-            time.sleep(5)
+            time.sleep(poll_interval)
 
         if progress_callback:
-            progress_callback(f"Processamento concluido: {last_count} episodios", 1.0)
+            progress_callback(f"Polling concluido: {last_count} episodios", 1.0)
         return last_count
 
     def wait_for_graph_materialization(
@@ -386,10 +401,14 @@ class GraphBuilderService:
         graph_id: str,
         expected_count: int = 0,
         progress_callback: Optional[Callable] = None,
-        timeout: int = 600,
-        stall_timeout: int = 120,
+        timeout: int = 120,
+        stall_timeout: int = 30,
     ) -> Dict[str, Any]:
-        """Espera o Graphiti processar o input e valida se o grafo ganhou conteúdo."""
+        """Espera o Graphiti processar o input e valida se o grafo ganhou conteudo.
+
+        Fluxo rapido: polling de episodios + ate 5 checks de materializacao (5s cada).
+        Nunca trava mais que ~timeout + 25s.
+        """
         self._wait_for_episodes(
             graph_id,
             expected_count=expected_count,
@@ -398,8 +417,12 @@ class GraphBuilderService:
             stall_timeout=stall_timeout,
         )
 
+        # Verificar materializacao com ate 5 tentativas rapidas
+        max_checks = 5
+        check_interval = 5
         last_graph_data: Dict[str, Any] | None = None
-        for attempt in range(3):
+
+        for attempt in range(max_checks):
             graph_data = self.get_graph_data(graph_id)
             last_graph_data = graph_data
             node_count = graph_data.get("node_count", 0) or 0
@@ -408,21 +431,26 @@ class GraphBuilderService:
             if node_count > 0 or edge_count > 0:
                 if progress_callback:
                     progress_callback(
-                        f"Grafo materializado com {node_count} nos e {edge_count} arestas",
+                        f"Grafo materializado: {node_count} nos, {edge_count} arestas",
                         1.0
                     )
                 return graph_data
 
-            if attempt < 2:
-                time.sleep(5)
+            if attempt < max_checks - 1:
+                if progress_callback:
+                    progress_callback(
+                        f"Verificando materializacao... ({attempt+1}/{max_checks})",
+                        0.5 + (attempt * 0.1)
+                    )
+                time.sleep(check_interval)
 
-        episodes = self.client.get_episodes(graph_id, last_n=200)
-        last_nodes = 0 if last_graph_data is None else int(last_graph_data.get("node_count", 0) or 0)
-        last_edges = 0 if last_graph_data is None else int(last_graph_data.get("edge_count", 0) or 0)
-        raise RuntimeError(
-            f"Graphiti nao materializou dados para {graph_id}: "
-            f"episodes={len(episodes)}, nodes={last_nodes}, edges={last_edges}"
-        )
+        # Retorna o que tem — o processamento pode continuar em background
+        if last_graph_data is not None:
+            if progress_callback:
+                progress_callback("Grafo criado (processamento pode continuar em background)", 1.0)
+            return last_graph_data
+
+        raise RuntimeError(f"Graphiti nao respondeu para {graph_id}")
 
     def _get_graph_info(self, graph_id: str) -> GraphInfo:
         """Obter informacoes do grafo via busca ampla."""

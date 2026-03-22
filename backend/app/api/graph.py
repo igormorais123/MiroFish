@@ -458,7 +458,9 @@ def build_graph():
                 graph_data = builder.wait_for_graph_materialization(
                     graph_id,
                     expected_count=total_chunks,
-                    progress_callback=wait_progress_callback
+                    progress_callback=wait_progress_callback,
+                    timeout=120,
+                    stall_timeout=30,
                 )
 
                 # Obter dados do grafo

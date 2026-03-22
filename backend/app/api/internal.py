@@ -565,6 +565,8 @@ def build_internal_graph(project_id: str):
                     graph_id,
                     expected_count=len(chunks),
                     progress_callback=wait_progress_callback,
+                    timeout=120,
+                    stall_timeout=30,
                 )
 
                 project.status = ProjectStatus.GRAPH_COMPLETED
