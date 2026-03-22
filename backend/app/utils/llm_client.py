@@ -70,12 +70,8 @@ class LLMClient:
             "model": model_name,
             "messages": messages,
             "temperature": temperature,
+            "max_completion_tokens": max_tokens,
         }
-        # GPT-5.x usa max_completion_tokens em vez de max_tokens
-        if 'gpt-5' in model_name or 'o3' in model_name or 'o4' in model_name:
-            kwargs["max_completion_tokens"] = max_tokens
-        else:
-            kwargs["max_tokens"] = max_tokens
 
         if response_format:
             kwargs["response_format"] = response_format
