@@ -59,7 +59,6 @@ def create_app(config_class=Config):
         logger.debug(f"Resposta: {response.status_code}")
         # Headers de seguranca no nivel Flask (complementa nginx)
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
         return response
     
     # Blueprints
