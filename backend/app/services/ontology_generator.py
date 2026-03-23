@@ -5,6 +5,7 @@ Interface 1: Analisa conteudo textual e gera definicoes de tipos de entidades e 
 
 import json
 from typing import Dict, Any, List, Optional
+from ..config import Config
 from ..utils.llm_client import LLMClient
 
 
@@ -164,7 +165,7 @@ class OntologyGenerator:
     """
 
     def __init__(self, llm_client: Optional[LLMClient] = None):
-        self.llm_client = llm_client or LLMClient()
+        self.llm_client = llm_client or LLMClient(model=Config.LLM_PREMIUM_MODEL)
 
     def generate(
         self,

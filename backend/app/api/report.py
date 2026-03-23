@@ -188,10 +188,10 @@ def generate_report():
 
     except Exception as e:
         logger.error(f"Falha ao iniciar tarefa de geracao de relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -304,10 +304,10 @@ def get_report(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -343,10 +343,10 @@ def get_report_by_simulation(simulation_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -383,10 +383,10 @@ def list_reports():
 
     except Exception as e:
         logger.error(f"Falha ao listar relatorios: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -429,10 +429,10 @@ def download_report(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao baixar relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -455,10 +455,10 @@ def delete_report(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao excluir relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -552,10 +552,10 @@ def chat_with_report_agent():
 
     except Exception as e:
         logger.error(f"Falha na conversa: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -595,10 +595,10 @@ def get_report_progress(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter progresso do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -647,10 +647,10 @@ def get_report_sections(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter lista de secoes: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -691,10 +691,10 @@ def get_single_section(report_id: str, section_index: int):
 
     except Exception as e:
         logger.error(f"Falha ao obter conteudo da secao: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -742,10 +742,10 @@ def check_report_status(simulation_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao verificar estado do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -803,10 +803,10 @@ def get_agent_log(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter log do Agent: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -837,10 +837,10 @@ def stream_agent_log(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter log do Agent: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -885,10 +885,10 @@ def get_console_log(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter log do console: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -919,10 +919,10 @@ def stream_console_log(report_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter log do console: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -969,10 +969,10 @@ def search_graph_tool():
 
     except Exception as e:
         logger.error(f"Falha na busca do grafo: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -1009,8 +1009,8 @@ def get_graph_statistics_tool():
 
     except Exception as e:
         logger.error(f"Falha ao obter estatisticas do grafo: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500

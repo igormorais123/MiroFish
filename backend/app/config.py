@@ -110,6 +110,11 @@ class Config:
     LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '3'))
     LLM_MODEL_ALIASES = _parse_alias_map()
 
+    # Modelo para acoes de agentes na simulacao (barato, rapido)
+    LLM_AGENT_MODEL = os.environ.get('LLM_AGENT_MODEL', 'haiku-tasks')
+    # Modelo para relatorios, ontologia e analises complexas (premium)
+    LLM_PREMIUM_MODEL = os.environ.get('LLM_PREMIUM_MODEL', 'sonnet-tasks')
+
     # Gateway interno INTEIA / OmniRoute
     OMNIROUTE_URL = os.environ.get('OMNIROUTE_URL', '')
     OMNIROUTE_API_KEY = os.environ.get('OMNIROUTE_API_KEY', '')

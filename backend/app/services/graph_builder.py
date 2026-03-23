@@ -563,6 +563,15 @@ class GraphBuilderService:
                     "episodes": [],
                 })
 
+        # Pos-processamento: traduzir resumos em ingles para portugues
+        for node in nodes_data:
+            if node.get("summary"):
+                node["summary"] = self._translate_if_english(node["summary"])
+
+        for edge in edges_data:
+            if edge.get("fact"):
+                edge["fact"] = self._translate_if_english(edge["fact"])
+
         return {
             "graph_id": graph_id,
             "nodes": nodes_data,
@@ -570,6 +579,31 @@ class GraphBuilderService:
             "node_count": len(nodes_data),
             "edge_count": len(edges_data),
         }
+
+    def _translate_if_english(self, text: str) -> str:
+        """Detecta se o texto esta em ingles e traduz para pt-BR usando LLM barato."""
+        if not text or len(text) < 10:
+            return text
+        # Heuristica simples: se tem palavras comuns em ingles, traduz
+        english_markers = [
+            'the ', 'is ', 'are ', 'was ', 'has ', 'with ', 'for ', 'and ',
+            'that ', 'this ', 'supports', 'opposes', 'competes', 'represents',
+            'as part of', 'in order to',
+        ]
+        text_lower = text.lower()
+        english_count = sum(1 for m in english_markers if m in text_lower)
+        if english_count < 2:
+            return text  # Provavelmente ja esta em portugues
+        try:
+            from ..utils.llm_client import LLMClient
+            client = LLMClient()
+            result = client.chat(
+                system_prompt="Traduza o texto abaixo para português brasileiro. Retorne APENAS a tradução, sem explicações.",
+                user_message=text,
+            )
+            return result.strip() if result else text
+        except Exception:
+            return text
 
     def delete_graph(self, graph_id: str):
         """Excluir grupo (equivale a excluir grafo)."""

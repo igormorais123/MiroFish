@@ -1,13 +1,57 @@
 """
 Modulo de configuracao de logs
-Fornece gerenciamento unificado de logs, com saida simultanea para console e arquivo
+Fornece gerenciamento unificado de logs, com saida estruturada em JSON
+para console e arquivo
 """
 
+import json
 import os
 import sys
 import logging
-from datetime import datetime
+import traceback
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
+
+
+# Campos internos do LogRecord que nao devem aparecer como extras no JSON
+_BUILTIN_ATTRS = frozenset({
+    'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
+    'funcName', 'levelname', 'levelno', 'lineno', 'message', 'module',
+    'msecs', 'msg', 'name', 'pathname', 'process', 'processName',
+    'relativeCreated', 'stack_info', 'taskName', 'thread', 'threadName',
+})
+
+
+class JsonFormatter(logging.Formatter):
+    """
+    Formatter que emite cada registro de log como uma linha JSON.
+
+    Campos fixos: timestamp, level, logger, message
+    Campos extras: qualquer chave passada via extra={} no call de log
+    Em caso de exception: campo "traceback" com o stack trace completo
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_entry = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc)
+                         .isoformat(timespec='seconds'),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+
+        # Incluir campos extras passados via extra={}
+        for key, value in record.__dict__.items():
+            if key not in _BUILTIN_ATTRS and not key.startswith('_'):
+                log_entry[key] = value
+
+        # Incluir traceback se houver exception
+        if record.exc_info and record.exc_info[0] is not None:
+            log_entry["traceback"] = ''.join(
+                traceback.format_exception(*record.exc_info)
+            ).rstrip()
+
+        return json.dumps(log_entry, ensure_ascii=False, default=str)
 
 
 def _ensure_utf8_stdout():
@@ -52,16 +96,8 @@ def setup_logger(name: str = 'mirofish', level: int = logging.DEBUG) -> logging.
     if logger.handlers:
         return logger
 
-    # Formato de log
-    detailed_formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-
-    simple_formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s: %(message)s',
-        datefmt='%H:%M:%S'
-    )
+    # Formatter JSON estruturado (usado em ambos os handlers)
+    json_formatter = JsonFormatter()
 
     # 1. Handler de arquivo - log detalhado (nomeado por data, com rotacao)
     log_filename = datetime.now().strftime('%Y-%m-%d') + '.log'
@@ -72,14 +108,14 @@ def setup_logger(name: str = 'mirofish', level: int = logging.DEBUG) -> logging.
         encoding='utf-8'
     )
     file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(detailed_formatter)
+    file_handler.setFormatter(json_formatter)
 
     # 2. Handler de console - log simplificado (INFO e acima)
     # Garantir codificacao UTF-8 no Windows para evitar caracteres especiais ilegveis
     _ensure_utf8_stdout()
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(simple_formatter)
+    console_handler.setFormatter(json_formatter)
 
     # Adicionar handlers
     logger.addHandler(file_handler)

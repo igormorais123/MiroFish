@@ -277,10 +277,10 @@ def create_internal_project():
         }), 201
     except Exception as exc:
         logger.error(f"Falha ao criar projeto interno: {exc}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
         }), 500
 
 
@@ -349,11 +349,12 @@ def create_project_from_briefing():
                         result=project.to_dict(),
                     )
                 except Exception as exc:
+                    logger.error(f"Falha ao gerar projeto estruturado: {exc}")
+                    logger.error(traceback.format_exc())
                     task_manager.update_task(
                         task_id,
                         status=TaskStatus.FAILED,
                         message=f"Falha ao gerar projeto estruturado: {exc}",
-                        error=traceback.format_exc(),
                     )
 
             threading.Thread(target=run_project_generation, daemon=True).start()
@@ -388,10 +389,10 @@ def create_project_from_briefing():
         }), 201
     except Exception as exc:
         logger.error(f"Falha ao criar projeto por briefing: {exc}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
         }), 500
 
 
@@ -587,6 +588,8 @@ def build_internal_graph(project_id: str):
                     },
                 )
             except Exception as exc:
+                logger.error(f"Falha na construcao do grafo: {exc}")
+                logger.error(traceback.format_exc())
                 project.status = ProjectStatus.FAILED
                 project.error = str(exc)
                 ProjectManager.save_project(project)
@@ -594,7 +597,6 @@ def build_internal_graph(project_id: str):
                     task_id,
                     status=TaskStatus.FAILED,
                     message=f"Falha na construcao do grafo: {exc}",
-                    error=traceback.format_exc(),
                 )
 
         threading.Thread(target=build_task, daemon=True).start()
@@ -610,10 +612,10 @@ def build_internal_graph(project_id: str):
         }), 202
     except Exception as exc:
         logger.error(f"Falha ao iniciar construcao interna do grafo: {exc}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
         }), 500
 
 
@@ -651,10 +653,10 @@ def create_internal_simulation(project_id: str):
         }), 201
     except Exception as exc:
         logger.error(f"Falha ao criar simulacao interna: {exc}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
         }), 500
 
 
@@ -748,11 +750,12 @@ def prepare_internal_simulation(simulation_id: str):
                     result=result_state.to_dict(),
                 )
             except Exception as exc:
+                logger.error(f"Falha na preparacao da simulacao: {exc}")
+                logger.error(traceback.format_exc())
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.FAILED,
                     message=f"Falha na preparacao: {exc}",
-                    error=traceback.format_exc(),
                 )
 
         threading.Thread(target=run_prepare, daemon=True).start()
@@ -768,10 +771,10 @@ def prepare_internal_simulation(simulation_id: str):
         }), 202
     except Exception as exc:
         logger.error(f"Falha ao iniciar preparacao interna da simulacao: {exc}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
         }), 500
 
 
@@ -811,10 +814,10 @@ def start_internal_simulation(simulation_id: str):
         }), 400
     except Exception as exc:
         logger.error(f"Falha ao iniciar simulacao interna: {exc}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
         }), 500
 
 

@@ -247,10 +247,11 @@ def generate_ontology():
         })
 
     except Exception as e:
+        logger.error(f"Falha na geracao de ontologia: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -357,6 +358,29 @@ def build_graph():
                 "success": False,
                 "error": "Definição de ontologia não encontrada"
             }), 400
+
+        # Validar ontologia
+        entity_types = ontology.get("entity_types", [])
+        edge_types = ontology.get("edge_types", [])
+
+        if not entity_types:
+            return jsonify({
+                "success": False,
+                "error": "Ontologia inválida: nenhum tipo de entidade definido"
+            }), 400
+
+        if not edge_types:
+            return jsonify({
+                "success": False,
+                "error": "Ontologia inválida: nenhum tipo de relação definido"
+            }), 400
+
+        for et in entity_types:
+            if not et.get("name"):
+                return jsonify({
+                    "success": False,
+                    "error": "Tipo de entidade sem nome na ontologia"
+                }), 400
 
         # Criar tarefa assincrona
         task_manager = TaskManager()
@@ -505,8 +529,7 @@ def build_graph():
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.FAILED,
-                    message=f"Falha na construção: {str(e)}",
-                    error=traceback.format_exc()
+                    message=f"Falha na construção: {str(e)}"
                 )
 
         # Iniciar thread em segundo plano
@@ -523,10 +546,11 @@ def build_graph():
         })
 
     except Exception as e:
+        logger.error(f"Falha na construcao do grafo: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -582,10 +606,11 @@ def get_graph_data(graph_id: str):
         })
 
     except Exception as e:
+        logger.error(f"Falha ao obter dados do grafo: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
 
 
@@ -604,8 +629,9 @@ def delete_graph(graph_id: str):
         })
 
     except Exception as e:
+        logger.error(f"Falha ao excluir grafo: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }), 500
