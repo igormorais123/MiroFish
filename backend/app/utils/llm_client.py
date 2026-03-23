@@ -13,6 +13,9 @@ from typing import Optional, Dict, Any, List
 from openai import OpenAI
 
 from ..config import Config
+from .token_tracker import TokenTracker
+
+_tracker = TokenTracker()
 
 
 class LLMClient:
@@ -62,7 +65,8 @@ class LLMClient:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        response_format: Optional[Dict] = None
+        response_format: Optional[Dict] = None,
+        session_id: Optional[str] = None,
     ) -> str:
         """Envia uma requisicao de chat e retorna o texto final limpo."""
         model_name = Config.resolve_model_name(self.model)
@@ -76,7 +80,21 @@ class LLMClient:
         if response_format:
             kwargs["response_format"] = response_format
 
-        response, _, _ = self._request_with_retry(**kwargs)
+        try:
+            response, _, _ = self._request_with_retry(**kwargs)
+        except Exception:
+            _tracker.track_error(session_id=session_id)
+            raise
+
+        # Extrair usage de tokens da resposta
+        usage = getattr(response, 'usage', None)
+        if usage:
+            _tracker.track(
+                prompt_tokens=getattr(usage, 'prompt_tokens', 0) or 0,
+                completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
+                session_id=session_id,
+            )
+
         content = response.choices[0].message.content
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         return content
@@ -85,14 +103,16 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.3,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Envia requisicao em modo JSON e retorna o objeto desserializado."""
         response = self.chat(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            session_id=session_id,
         )
         cleaned_response = response.strip()
         cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)

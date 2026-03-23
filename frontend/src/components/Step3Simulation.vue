@@ -273,6 +273,7 @@
     <div class="system-logs">
       <div class="log-header">
         <span class="log-title">MONITOR DA SIMULAÇÃO</span>
+        <span v-if="estimatedMinutesLeft > 0 && phase === 1" class="log-estimate">~{{ estimatedMinutesLeft }} min restantes</span>
         <span class="log-id">{{ simulationId || 'SEM_SIMULAÇÃO' }}</span>
       </div>
       <div class="log-content" ref="logContent">
@@ -370,6 +371,8 @@ const resetAllState = () => {
   actionIds.value = new Set()
   prevTwitterRound.value = 0
   prevRedditRound.value = 0
+  roundTimes.value = []
+  lastRoundTime.value = Date.now()
   startError.value = null
   isStarting.value = false
   isStopping.value = false
@@ -486,6 +489,34 @@ const stopPolling = () => {
 const prevTwitterRound = ref(0)
 const prevRedditRound = ref(0)
 
+// Estimativa de tempo restante baseada na média das últimas 5 rodadas
+const roundTimes = ref([])
+const lastRoundTime = ref(Date.now())
+
+const onRoundChange = (newRound) => {
+  const now = Date.now()
+  const elapsed = (now - lastRoundTime.value) / 1000
+  lastRoundTime.value = now
+  // Ignora a primeira medição (pode ser artificialmente curta ou longa)
+  if (roundTimes.value.length > 0 || elapsed > 1) {
+    roundTimes.value.push(elapsed)
+    if (roundTimes.value.length > 5) roundTimes.value.shift()
+  }
+}
+
+const avgSecondsPerRound = computed(() => {
+  if (roundTimes.value.length === 0) return 0
+  return roundTimes.value.reduce((a, b) => a + b, 0) / roundTimes.value.length
+})
+
+const estimatedMinutesLeft = computed(() => {
+  const totalRounds = runStatus.value.total_rounds || props.maxRounds || 0
+  const currentRound = Math.max(runStatus.value.twitter_current_round || 0, runStatus.value.reddit_current_round || 0)
+  const remaining = totalRounds - currentRound
+  if (remaining <= 0 || avgSecondsPerRound.value <= 0) return 0
+  return Math.ceil((remaining * avgSecondsPerRound.value) / 60)
+})
+
 const fetchRunStatus = async () => {
   if (!props.simulationId) return
   
@@ -498,14 +529,22 @@ const fetchRunStatus = async () => {
       runStatus.value = data
       
       // Detectar mudanças de rodada de cada plataforma e emitir logs separadamente
+      const maxPrevRound = Math.max(prevTwitterRound.value, prevRedditRound.value)
+
       if (data.twitter_current_round > prevTwitterRound.value) {
       addLog(`[Feed aberto] R${data.twitter_current_round}/${data.total_rounds} | T:${data.twitter_simulated_hours || 0}h | A:${data.twitter_actions_count}`)
         prevTwitterRound.value = data.twitter_current_round
       }
-      
+
       if (data.reddit_current_round > prevRedditRound.value) {
         addLog(`[Comunidade] R${data.reddit_current_round}/${data.total_rounds} | T:${data.reddit_simulated_hours || 0}h | A:${data.reddit_actions_count}`)
         prevRedditRound.value = data.reddit_current_round
+      }
+
+      // Detectar mudança de rodada global para estimativa de tempo
+      const maxCurrentRound = Math.max(data.twitter_current_round || 0, data.reddit_current_round || 0)
+      if (maxCurrentRound > maxPrevRound) {
+        onRoundChange(maxCurrentRound)
       }
       
       // Detectar se a simulação términou (via runner_status ou status de conclusão da plataforma)
@@ -1252,6 +1291,16 @@ onUnmounted(() => {
   margin-bottom: 8px;
   font-size: 10px;
   color: rgba(255, 255, 255, 0.5);
+}
+
+.log-estimate {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d4a017;
+  background: rgba(212, 160, 23, 0.15);
+  padding: 2px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
 }
 
 .log-content {

@@ -523,6 +523,8 @@ class SimulationRunner:
                 state.runner_status = RunnerStatus.COMPLETED
                 state.completed_at = datetime.now().isoformat()
                 logger.info(f"Simulacao concluida: {simulation_id}")
+                # Dispara geracao automatica de relatorio em background
+                cls._auto_generate_report(simulation_id)
             else:
                 state.runner_status = RunnerStatus.FAILED
                 # Le informacoes de erro do arquivo de log principal
@@ -633,6 +635,8 @@ class SimulationRunner:
                                         state.runner_status = RunnerStatus.COMPLETED
                                         state.completed_at = datetime.now().isoformat()
                                         logger.info(f"Simulacao de todas as plataformas concluida: {state.simulation_id}")
+                                        # Dispara geracao automatica de relatorio em background
+                                        cls._auto_generate_report(state.simulation_id)
                                 
                                 # Atualiza informacoes de rodada (do evento round_end)
                                 elif event_type == "round_end":
@@ -711,7 +715,114 @@ class SimulationRunner:
         
         # Pelo menos uma plataforma habilitada e concluida
         return twitter_enabled or reddit_enabled
-    
+
+    @classmethod
+    def _auto_generate_report(cls, simulation_id: str):
+        """
+        Gera relatorio automaticamente ao fim da simulacao em background thread.
+        Nao bloqueia o fluxo principal. Erros sao registrados no log.
+        """
+        def _run():
+            try:
+                from .report_agent import ReportAgent, ReportManager, ReportStatus
+                from ..services.simulation_manager import SimulationManager
+                from ..models.project import ProjectManager
+                from ..models.task import TaskManager, TaskStatus
+                import uuid
+
+                logger.info(f"Geracao automatica de relatorio iniciada: {simulation_id}")
+
+                # Verificar se ja existe relatorio concluido
+                existing = ReportManager.get_report_by_simulation(simulation_id)
+                if existing and existing.status == ReportStatus.COMPLETED:
+                    logger.info(f"Relatorio ja existe para {simulation_id}, pulando geracao automatica")
+                    return
+
+                # Obter dados da simulacao e do projeto
+                manager = SimulationManager()
+                state = manager.get_simulation(simulation_id)
+                if not state:
+                    logger.warning(f"Simulacao nao encontrada para geracao automatica de relatorio: {simulation_id}")
+                    return
+
+                project = ProjectManager.get_project(state.project_id)
+                if not project:
+                    logger.warning(f"Projeto nao encontrado: {state.project_id}")
+                    return
+
+                graph_id = state.graph_id or project.graph_id
+                if not graph_id:
+                    logger.warning(f"graph_id ausente para geracao automatica de relatorio: {simulation_id}")
+                    return
+
+                simulation_requirement = project.simulation_requirement
+                if not simulation_requirement:
+                    logger.warning(f"simulation_requirement ausente para geracao automatica: {simulation_id}")
+                    return
+
+                report_id = f"report_{uuid.uuid4().hex[:12]}"
+
+                # Criar tarefa assincrona
+                task_manager = TaskManager()
+                task_id = task_manager.create_task(
+                    task_type="report_generate",
+                    metadata={
+                        "simulation_id": simulation_id,
+                        "graph_id": graph_id,
+                        "report_id": report_id,
+                        "auto_generated": True
+                    }
+                )
+
+                task_manager.update_task(
+                    task_id,
+                    status=TaskStatus.PROCESSING,
+                    progress=0,
+                    message="Geracao automatica: inicializando agente de relatorio..."
+                )
+
+                agent = ReportAgent(
+                    graph_id=graph_id,
+                    simulation_id=simulation_id,
+                    simulation_requirement=simulation_requirement
+                )
+
+                def progress_callback(stage, progress, message):
+                    task_manager.update_task(
+                        task_id,
+                        progress=progress,
+                        message=f"[{stage}] {message}"
+                    )
+
+                report = agent.generate_report(
+                    progress_callback=progress_callback,
+                    report_id=report_id
+                )
+
+                ReportManager.save_report(report)
+
+                if report.status == ReportStatus.COMPLETED:
+                    task_manager.complete_task(
+                        task_id,
+                        result={
+                            "report_id": report.report_id,
+                            "simulation_id": simulation_id,
+                            "status": "completed",
+                            "auto_generated": True
+                        }
+                    )
+                    logger.info(f"Relatorio gerado automaticamente com sucesso: {report_id} para simulacao {simulation_id}")
+                else:
+                    task_manager.fail_task(task_id, report.error or "Falha na geracao automatica do relatorio")
+                    logger.warning(f"Falha na geracao automatica do relatorio: {simulation_id}")
+
+            except Exception as e:
+                logger.error(f"Falha na geracao automatica do relatorio para {simulation_id}: {e}")
+
+        thread = threading.Thread(target=_run, daemon=True, name=f"auto-report-{simulation_id}")
+        thread.start()
+        logger.info(f"Thread de geracao automatica de relatorio iniciada para: {simulation_id}")
+
     @classmethod
     def _terminate_process(cls, process: subprocess.Popen, simulation_id: str, timeout: int = 10):
         """

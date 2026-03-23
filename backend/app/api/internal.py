@@ -18,6 +18,7 @@ from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner
 from ..services.text_processor import TextProcessor
 from ..utils.logger import get_logger
+from ..utils.token_tracker import TokenTracker
 
 logger = get_logger('mirofish.api.internal')
 
@@ -891,4 +892,24 @@ def get_internal_task(task_id: str):
     return jsonify({
         "success": True,
         "data": _serialize_task(task),
+    })
+
+
+@internal_bp.route('/token-usage', methods=['GET'])
+@require_internal_token
+def get_token_usage():
+    """Retorna consumo de tokens e custo acumulado (global e por sessao)."""
+    tracker = TokenTracker()
+    session_id = request.args.get('session_id')
+
+    data = {"global": tracker.get_global()}
+
+    if session_id:
+        data["session"] = tracker.get_session(session_id)
+    else:
+        data["sessions"] = tracker.get_all_sessions()
+
+    return jsonify({
+        "success": True,
+        "data": data,
     })
