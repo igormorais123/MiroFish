@@ -861,6 +861,59 @@ Condicoes de previsao: {simulation_requirement}
 
 CHAT_OBSERVATION_SUFFIX = "\n\nPor favor, responda a pergunta de forma concisa."
 
+# ═══════════════════════════════════════════════════════════════
+# Prompt Helena Strategos — Análise Estratégica Final
+# ═══════════════════════════════════════════════════════════════
+
+HELENA_SYSTEM_PROMPT = """\
+Voce e Helena Inteia Vasconcelos, Cientista-Chefe da INTEIA. Sua funcao e produzir \
+a analise estrategica final de um relatorio de previsao por simulacao social.
+
+IMPORTANTE: Todas as respostas devem ser em portugues brasileiro.
+
+[Quem voce e]
+- Consultora estrategica de alto nivel, nao enciclopedia
+- Sempre toma posicao — nunca senta no muro
+- Quantifica quando possivel (numeros > adjetivos)
+- Sinceridade brutal > conforto diplomatico
+- Dados antes de opiniao, recomendacao antes de analise
+
+[Sua Tarefa]
+Com base no relatorio de previsao completo gerado pela simulacao, produza uma \
+secao final intitulada "Analise Estrategica" que contenha:
+
+1. **Sintese Executiva** (3-5 linhas): o que esta simulacao revelou que NAO era obvio antes
+2. **Riscos Criticos**: riscos concretos identificados, com probabilidade estimada (0-100%)
+3. **Oportunidades**: janelas de acao que a simulacao revelou
+4. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
+5. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
+   (considerar: tamanho da amostra de agentes, numero de rodadas, diversidade de perfis)
+
+[Regras Absolutas]
+- Lidere com a recomendacao, fundamente depois
+- Zero linguagem de esquiva ("depende", "e complexo", "ha muitas variaveis")
+- Cada risco com probabilidade numerica
+- Cada recomendacao com prazo e responsavel quando aplicavel
+- Termine com uma frase de assinatura pessoal — acida, inteligente, memoravel
+
+[Formato]
+Responda em Markdown. Use **negrito** para destaques. NAO use titulos com # — \
+use **negrito** como subtitulos. Maximo 800 palavras."""
+
+HELENA_USER_PROMPT_TEMPLATE = """\
+[Cenario da Simulacao]
+Demanda: {simulation_requirement}
+
+[Escala]
+- Agentes: {total_agents}
+- Rodadas executadas: {total_rounds}
+- Plataformas: {platforms}
+
+[Relatorio Completo da Simulacao]
+{report_content}
+
+Produza sua analise estrategica final."""
+
 
 # ═══════════════════════════════════════════════════════════════
 # Classe principal do ReportAgent
@@ -1737,7 +1790,38 @@ class ReportAgent:
             )
             
             # Usa o ReportManager para montar o relatorio completo
-            report.markdown_content = ReportManager.assemble_full_report(report_id, outline)
+            assembled_content = ReportManager.assemble_full_report(report_id, outline)
+
+            # Fase 4: Analise Estrategica Helena Strategos
+            if progress_callback:
+                progress_callback("generating", 96, "Helena Strategos analisando...")
+
+            ReportManager.update_progress(
+                report_id, "generating", 96,
+                "Analise estrategica Helena Strategos em andamento...",
+                completed_sections=completed_section_titles
+            )
+
+            try:
+                helena_analysis = self._generate_helena_analysis(
+                    assembled_content, outline
+                )
+                if helena_analysis:
+                    assembled_content += "\n\n---\n\n## Analise Estrategica\n\n" + helena_analysis
+                    # Salva como secao adicional
+                    helena_section = ReportSection(
+                        title="Analise Estrategica",
+                        content=helena_analysis
+                    )
+                    ReportManager.save_section(
+                        report_id, total_sections + 1, helena_section
+                    )
+                    completed_section_titles.append("Analise Estrategica")
+                    logger.info(f"Analise Helena concluida para relatorio {report_id}")
+            except Exception as e:
+                logger.warning(f"Analise Helena falhou (nao-bloqueante): {e}")
+
+            report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.now().isoformat()
             
@@ -1795,7 +1879,73 @@ class ReportAgent:
                 self.console_logger = None
             
             return report
-    
+
+    def _generate_helena_analysis(
+        self,
+        report_content: str,
+        outline: ReportOutline,
+    ) -> Optional[str]:
+        """Gera analise estrategica final usando Helena Strategos com o melhor modelo disponivel.
+
+        Tenta opus-tasks primeiro (Claude Opus 4.6). Se falhar, tenta gpt-5.4-thinking.
+        Se falhar, tenta gemini-4.1. Se todos falharem, usa o modelo premium padrao.
+        A analise e nao-bloqueante — se falhar completamente, o relatorio segue sem ela.
+        """
+        # Modelos em ordem de preferencia (melhor → fallback)
+        helena_models = [
+            Config.LLM_HELENA_MODEL,   # opus-tasks (default)
+            'gpt-5.4-thinking',        # GPT-5.4 com thinking
+            'gemini-4.1',              # Gemini 4.1
+            Config.LLM_PREMIUM_MODEL,  # sonnet-tasks (fallback seguro)
+        ]
+
+        # Obter metadados da simulacao
+        total_agents = 0
+        total_rounds = 0
+        platforms = ""
+        try:
+            from .simulation_manager import SimulationManager
+            sim_data = SimulationManager.get_simulation(self.simulation_id)
+            if sim_data:
+                sim_dict = sim_data if isinstance(sim_data, dict) else sim_data.to_dict()
+                total_agents = sim_dict.get("total_agents", 0) or sim_dict.get("agent_count", 0) or 0
+                total_rounds = sim_dict.get("total_rounds", 0) or sim_dict.get("max_rounds", 0) or 0
+                platforms = ", ".join(sim_dict.get("platforms", [])) or "Twitter/Reddit"
+        except Exception:
+            pass
+
+        user_prompt = HELENA_USER_PROMPT_TEMPLATE.format(
+            simulation_requirement=self.simulation_requirement,
+            total_agents=total_agents or "desconhecido",
+            total_rounds=total_rounds or "desconhecido",
+            platforms=platforms or "desconhecido",
+            report_content=report_content[:12000],  # Truncar para caber no contexto
+        )
+
+        last_error = None
+        for model_name in helena_models:
+            resolved = Config.resolve_model_name(model_name)
+            try:
+                logger.info(f"Helena Strategos: tentando modelo {resolved}")
+                helena_llm = LLMClient(model=model_name)
+                result = helena_llm.chat(
+                    system_prompt=HELENA_SYSTEM_PROMPT,
+                    user_message=user_prompt,
+                )
+                if result and len(result.strip()) > 100:
+                    logger.info(f"Helena Strategos: analise gerada com {resolved} ({len(result)} chars)")
+                    return result.strip()
+                else:
+                    logger.warning(f"Helena Strategos: resposta vazia ou curta com {resolved}")
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Helena Strategos: modelo {resolved} falhou: {e}")
+                continue
+
+        if last_error:
+            logger.error(f"Helena Strategos: todos os modelos falharam. Ultimo erro: {last_error}")
+        return None
+
     def chat(
         self,
         message: str,

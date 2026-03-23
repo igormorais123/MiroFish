@@ -114,6 +114,8 @@ class Config:
     LLM_AGENT_MODEL = os.environ.get('LLM_AGENT_MODEL', 'haiku-tasks')
     # Modelo para relatorios, ontologia e analises complexas (premium)
     LLM_PREMIUM_MODEL = os.environ.get('LLM_PREMIUM_MODEL', 'sonnet-tasks')
+    # Modelo Helena Strategos — maximo poder analitico (opus-4.6, gpt-5.4-thinking, gemini-4.1)
+    LLM_HELENA_MODEL = os.environ.get('LLM_HELENA_MODEL', 'opus-tasks')
 
     # Gateway interno INTEIA / OmniRoute
     OMNIROUTE_URL = os.environ.get('OMNIROUTE_URL', '')
