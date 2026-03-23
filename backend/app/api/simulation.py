@@ -575,6 +575,7 @@ def prepare_simulation():
 
             except Exception as e:
                 logger.error(f"Falha ao preparar simulacao: {str(e)}")
+                logger.error(traceback.format_exc())
                 task_manager.fail_task(task_id, str(e))
 
                 # Atualiza estado para falha
@@ -1534,6 +1535,7 @@ def start_simulation():
                                 SimulationRunner.stop_simulation(simulation_id)
                             except Exception as e:
                                 logger.warning(f"Aviso ao parar simulacao: {str(e)}")
+                                logger.error(traceback.format_exc())
                         else:
                             return jsonify({
                                 "success": False,

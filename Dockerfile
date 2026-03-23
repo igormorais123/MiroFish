@@ -24,10 +24,24 @@ server {
     listen 80;
     root /app/frontend/dist;
     index index.html;
+
+    # Headers de seguranca
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Ocultar versao do servidor
+    server_tokens off;
+
     location / { try_files $uri $uri/ /index.html; }
     location /api/ {
         proxy_pass http://127.0.0.1:5001;
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         client_max_body_size 50M;
         proxy_read_timeout 300s;
     }

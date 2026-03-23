@@ -28,7 +28,7 @@ service.interceptors.response.use(
     // Se o codigo de status retornado nao e success, lancar erro
     if (!res.success && res.success !== undefined) {
       console.error('Erro da API:', res.error || res.message || 'Erro desconhecido')
-      return Promise.reject(new Error(res.error || res.message || 'Error'))
+      return Promise.reject(new Error(res.error || res.message || 'Erro desconhecido'))
     }
     
     return res
@@ -42,7 +42,7 @@ service.interceptors.response.use(
     }
     
     // Tratar erro de rede
-    if (error.message === 'Network Error') {
+    if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
       console.error('Erro de rede - verifique sua conexao')
     }
     

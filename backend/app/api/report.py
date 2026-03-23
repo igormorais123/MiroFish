@@ -168,6 +168,7 @@ def generate_report():
 
             except Exception as e:
                 logger.error(f"Falha na geracao do relatorio: {str(e)}")
+                logger.error(traceback.format_exc())
                 task_manager.fail_task(task_id, str(e))
 
         # Iniciar thread em segundo plano
@@ -261,6 +262,7 @@ def get_generate_status():
 
     except Exception as e:
         logger.error(f"Falha ao consultar estado da tarefa: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(e)

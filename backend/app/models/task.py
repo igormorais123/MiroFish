@@ -1,14 +1,19 @@
 """
 Gerenciamento de estado de tarefas
 Usado para rastrear tarefas de longa duracao (como construcao de grafos)
+Persistencia em disco via JSON para sobreviver a reinícios do servidor.
 """
 
+import json
+import os
 import uuid
 import threading
 from datetime import datetime
 from enum import Enum
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
+
+from ..config import Config
 
 
 class TaskStatus(str, Enum):
@@ -50,11 +55,32 @@ class Task:
             "metadata": self.metadata,
         }
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Task':
+        """Reconstruir Task a partir de dicionario"""
+        return cls(
+            task_id=data["task_id"],
+            task_type=data["task_type"],
+            status=TaskStatus(data["status"]),
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+            progress=data.get("progress", 0),
+            message=data.get("message", ""),
+            result=data.get("result"),
+            error=data.get("error"),
+            metadata=data.get("metadata", {}),
+            progress_detail=data.get("progress_detail", {}),
+        )
+
+
+# Caminho do arquivo de persistencia
+_TASKS_FILE = os.path.join(Config.UPLOAD_FOLDER, 'tasks_state.json')
+
 
 class TaskManager:
     """
     Gerenciador de tarefas
-    Gerenciamento de estado de tarefas com seguranca de thread
+    Gerenciamento de estado de tarefas com seguranca de thread e persistencia em disco.
     """
 
     _instance = None
@@ -68,7 +94,36 @@ class TaskManager:
                     cls._instance = super().__new__(cls)
                     cls._instance._tasks: Dict[str, Task] = {}
                     cls._instance._task_lock = threading.Lock()
+                    cls._instance._load_from_disk()
         return cls._instance
+
+    def _load_from_disk(self):
+        """Carrega tarefas salvas do disco ao inicializar"""
+        if not os.path.exists(_TASKS_FILE):
+            return
+        try:
+            with open(_TASKS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            for task_data in data:
+                task = Task.from_dict(task_data)
+                # Tarefas que estavam em processamento quando o servidor caiu sao marcadas como falhas
+                if task.status == TaskStatus.PROCESSING:
+                    task.status = TaskStatus.FAILED
+                    task.error = "Tarefa interrompida por reinicio do servidor"
+                    task.updated_at = datetime.now()
+                self._tasks[task.task_id] = task
+        except Exception:
+            pass  # Arquivo corrompido — começa limpo
+
+    def _save_to_disk(self):
+        """Salva estado das tarefas em disco (chamado dentro do _task_lock)"""
+        try:
+            os.makedirs(os.path.dirname(_TASKS_FILE), exist_ok=True)
+            tasks_data = [t.to_dict() for t in self._tasks.values()]
+            with open(_TASKS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(tasks_data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass  # Falha silenciosa — nao bloqueia operacao principal
 
     def create_task(self, task_type: str, metadata: Optional[Dict] = None) -> str:
         """
@@ -95,6 +150,7 @@ class TaskManager:
 
         with self._task_lock:
             self._tasks[task_id] = task
+            self._save_to_disk()
 
         return task_id
 
@@ -141,6 +197,9 @@ class TaskManager:
                     task.error = error
                 if progress_detail is not None:
                     task.progress_detail = progress_detail
+                # Persiste em transicoes de estado importantes
+                if status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.PROCESSING):
+                    self._save_to_disk()
 
     def complete_task(self, task_id: str, result: Dict):
         """Marcar tarefa como concluida"""
@@ -181,3 +240,5 @@ class TaskManager:
             ]
             for tid in old_ids:
                 del self._tasks[tid]
+            if old_ids:
+                self._save_to_disk()

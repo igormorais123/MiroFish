@@ -1299,4 +1299,56 @@ const startSimulation = () => {
     margin-bottom: 20px;
   }
 }
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 30px 16px;
+  }
+
+  .main-title {
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+  }
+
+  .hero-desc {
+    font-size: 0.95rem;
+  }
+
+  .tag-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .metrics-row {
+    flex-direction: column;
+  }
+
+  .graph-preview {
+    display: none;
+  }
+
+  .navbar {
+    padding: 12px 16px;
+  }
+
+  .nav-brand-sub {
+    display: none;
+  }
+
+  .logo-container {
+    max-width: 100%;
+  }
+
+  .hero-logo {
+    max-width: 160px;
+  }
+
+  .slogan-text {
+    font-size: 1rem;
+  }
+
+  .home-container {
+    overflow-x: hidden;
+  }
+}
 </style>

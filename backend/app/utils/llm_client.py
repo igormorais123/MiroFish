@@ -80,10 +80,16 @@ class LLMClient:
         if response_format:
             kwargs["response_format"] = response_format
 
+        from .logger import get_logger
+        _logger = get_logger('mirofish.llm')
+
         try:
-            response, _, _ = self._request_with_retry(**kwargs)
-        except Exception:
+            response, elapsed_ms, attempt = self._request_with_retry(**kwargs)
+            if attempt > 1:
+                _logger.info(f"LLM respondeu apos {attempt} tentativas ({elapsed_ms}ms)")
+        except Exception as exc:
             _tracker.track_error(session_id=session_id)
+            _logger.error(f"LLM falhou apos {self.max_retries} tentativas: {str(exc)}")
             raise
 
         # Extrair usage de tokens da resposta

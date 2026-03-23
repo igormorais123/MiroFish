@@ -1012,18 +1012,33 @@ class ReportAgent:
             
             elif tool_name == "interview_agents":
                 # Entrevista aprofundada - chama a API real de entrevista OASIS para obter respostas dos Agents simulados (duas plataformas)
+                import concurrent.futures
                 interview_topic = parameters.get("interview_topic", parameters.get("query", ""))
                 max_agents = parameters.get("max_agents", 5)
                 if isinstance(max_agents, str):
                     max_agents = int(max_agents)
                 max_agents = min(max_agents, 10)
-                result = self.zep_tools.interview_agents(
-                    simulation_id=self.simulation_id,
-                    interview_requirement=interview_topic,
-                    simulation_requirement=self.simulation_requirement,
-                    max_agents=max_agents
-                )
-                return result.to_text()
+
+                # Timeout de 120s para evitar travamento; fallback para quick_search se falhar
+                try:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(
+                            self.zep_tools.interview_agents,
+                            simulation_id=self.simulation_id,
+                            interview_requirement=interview_topic,
+                            simulation_requirement=self.simulation_requirement,
+                            max_agents=max_agents
+                        )
+                        result = future.result(timeout=120)
+                    return result.to_text()
+                except (concurrent.futures.TimeoutError, Exception) as interview_err:
+                    logger.warning(f"interview_agents falhou ({str(interview_err)}), usando quick_search como fallback")
+                    fallback_result = self.zep_tools.quick_search(
+                        graph_id=self.graph_id,
+                        query=interview_topic,
+                        limit=10
+                    )
+                    return f"(Entrevista nao disponivel neste momento, dados obtidos via busca no grafo)\n\n{fallback_result.to_text()}"
             
             # ========== Ferramentas antigas para compatibilidade (redirecionamento interno para novas ferramentas) ==========
 
@@ -1305,12 +1320,20 @@ class ReportAgent:
                     f"Busca profunda e redacao em andamento ({tool_calls_count}/{self.MAX_TOOL_CALLS_PER_SECTION})"
                 )
             
-            # Chama o LLM
-            response = self.llm.chat(
-                messages=messages,
-                temperature=0.5,
-                max_tokens=4096
-            )
+            # Chama o LLM com tratamento de timeout
+            try:
+                response = self.llm.chat(
+                    messages=messages,
+                    temperature=0.5,
+                    max_tokens=4096
+                )
+            except Exception as llm_err:
+                logger.warning(f"Secao {section.title} iteracao {iteration + 1}: erro no LLM: {str(llm_err)}")
+                if iteration < max_iterations - 1:
+                    messages.append({"role": "assistant", "content": "(erro na chamada ao LLM)"})
+                    messages.append({"role": "user", "content": "Houve um erro temporario. Continue gerando o conteudo com base nas informacoes ja coletadas."})
+                    continue
+                break
 
             # Verifica se o retorno do LLM e None (excecao da API ou conteudo vazio)
             if response is None:
@@ -1508,12 +1531,16 @@ class ReportAgent:
         # Atingiu o maximo de iteracoes, forca geracao do conteudo
         logger.warning(f"Secao {section.title} atingiu o maximo de iteracoes, forcando geracao")
         messages.append({"role": "user", "content": REACT_FORCE_FINAL_MSG})
-        
-        response = self.llm.chat(
-            messages=messages,
-            temperature=0.5,
-            max_tokens=4096
-        )
+
+        try:
+            response = self.llm.chat(
+                messages=messages,
+                temperature=0.5,
+                max_tokens=4096
+            )
+        except Exception as llm_err:
+            logger.error(f"Secao {section.title}: erro no LLM durante finalizacao forcada: {str(llm_err)}")
+            response = None
 
         # Verifica se o LLM retornou None durante a finalizacao forcada
         if response is None:

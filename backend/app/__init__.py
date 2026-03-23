@@ -35,8 +35,9 @@ def create_app(config_class=Config):
         logger.info(f"{Config.APP_NAME} backend iniciando...")
         logger.info("=" * 50)
     
-    # CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # CORS — restringe origens em producao
+    allowed_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
     
     # Garante limpeza dos processos de simulacao em desligamentos.
     from .services.simulation_runner import SimulationRunner
@@ -56,6 +57,9 @@ def create_app(config_class=Config):
     def log_response(response):
         logger = get_logger('mirofish.request')
         logger.debug(f"Resposta: {response.status_code}")
+        # Headers de seguranca no nivel Flask (complementa nginx)
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
         return response
     
     # Blueprints
