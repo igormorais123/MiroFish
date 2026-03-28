@@ -59,5 +59,12 @@ backend/logs/
 # 上传文件
 backend/uploads/
 
+# Deploy secrets
+deploy/.env.*
+!deploy/.env.*.example
+*.err
+backend/run.err
+backend/run.log
+
 # Docker 数据
 data/

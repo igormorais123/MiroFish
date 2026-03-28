@@ -4,12 +4,13 @@ Resolve incompatibilidade httpx↔OmniRouter.
 Roda em http://127.0.0.1:11435/v1
 """
 import json
+import os
 import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
 
-UPSTREAM = "http://72.62.108.24:20128/v1"
-API_KEY = "OMNIROUTE_KEY_REMOVED"
+UPSTREAM = os.environ.get("OMNIROUTE_URL", "http://localhost:20128/v1")
+API_KEY = os.environ.get("OMNIROUTE_API_KEY", "")
 
 
 class ProxyHandler(BaseHTTPRequestHandler):

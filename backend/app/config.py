@@ -122,7 +122,7 @@ class Config:
     OMNIROUTE_API_KEY = os.environ.get('OMNIROUTE_API_KEY', '')
 
     # Graphiti Server (substitui Zep como backend de grafo de memoria)
-    GRAPHITI_BASE_URL = os.environ.get('GRAPHITI_BASE_URL', 'http://72.62.108.24:8003')
+    GRAPHITI_BASE_URL = os.environ.get('GRAPHITI_BASE_URL', 'http://localhost:8003')
     GRAPHITI_TIMEOUT = int(os.environ.get('GRAPHITI_TIMEOUT', '60'))
 
     # Zep (mantido para compatibilidade retroativa, nao mais utilizado ativamente)
