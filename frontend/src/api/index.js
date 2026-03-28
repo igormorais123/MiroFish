@@ -1,8 +1,16 @@
 import axios from 'axios'
 
+// Detecta subpath automaticamente (ex: /mirofish em inteia.com.br/mirofish)
+const detectBaseURL = () => {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL
+  const path = window.location.pathname
+  if (path.startsWith('/mirofish')) return '/mirofish'
+  return ''
+}
+
 // Criar instancia axios
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: detectBaseURL(),
   timeout: 300000, // Timeout de 5 minutos (geracao de ontologia pode demorar)
   headers: {
     'Content-Type': 'application/json'

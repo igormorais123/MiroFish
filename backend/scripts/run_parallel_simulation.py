@@ -76,6 +76,21 @@ import warnings
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 
+# ============================================================
+# Fix: Python 3.13 no Windows trava em platform._wmi_query()
+# quando o SDK OpenAI chama platform.system() para o header X-Stainless-OS
+# e camel-ai chama platform.processor() para get_system_information().
+# Bypass da query WMI que causa deadlock.
+# ============================================================
+import platform as _platform
+_wmi_responses = {
+    'OS': ('10.0.26200', 1, '', 0, 0),
+    'CPU': ('AMD', 'AMD Ryzen 9 7900'),
+}
+def _safe_wmi_query(table, *fields):
+    return _wmi_responses.get(table, tuple('' for _ in fields))
+_platform._wmi_query = _safe_wmi_query
+
 
 # Variaveis globais: usadas para tratamento de sinais
 _shutdown_event = None

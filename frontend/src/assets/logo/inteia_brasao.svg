@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
+  <defs>
+    <linearGradient id="gOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8D48A"/>
+      <stop offset="25%" stop-color="#C9A227"/>
+      <stop offset="50%" stop-color="#B8912A"/>
+      <stop offset="75%" stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#A67C1A"/>
+    </linearGradient>
+    <linearGradient id="gInner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4B84A"/>
+      <stop offset="50%" stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#8B6914"/>
+    </linearGradient>
+    <linearGradient id="gShield" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="40%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+    <linearGradient id="gShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gBrain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8D48A"/>
+      <stop offset="50%" stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#A67C1A"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="nodeGlow">
+      <feGaussianBlur stdDeviation="1" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Escudo externo -->
+    <path id="shieldOuter" d="M100,8 C100,8 178,38 178,38 C178,38 182,140 182,155 C182,185 145,218 100,235 C55,218 18,185 18,155 C18,140 22,38 22,38 C22,38 100,8 100,8 Z"/>
+    <!-- Escudo interno -->
+    <path id="shieldInner" d="M100,22 C100,22 168,48 168,48 C168,48 172,142 172,155 C172,180 140,208 100,223 C60,208 28,180 28,155 C28,142 32,48 32,48 C32,48 100,22 100,22 Z"/>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <!-- Borda dourada externa -->
+    <use href="#shieldOuter" fill="url(#gOuter)"/>
+    <!-- Linha dourada interna -->
+    <use href="#shieldInner" fill="none" stroke="url(#gInner)" stroke-width="2"/>
+    <!-- Fundo preto do escudo -->
+    <path d="M100,26 C100,26 165,50 165,50 C165,50 169,142 169,155 C169,178 138,206 100,220 C62,206 31,178 31,155 C31,142 35,50 35,50 C35,50 100,26 100,26 Z" fill="url(#gShield)"/>
+    <!-- Brilho de reflexo -->
+    <path d="M100,26 C100,26 165,50 165,50 C165,50 169,142 169,155 C169,178 138,206 100,220 C62,206 31,178 31,155 C31,142 35,50 35,50 C35,50 100,26 100,26 Z" fill="url(#gShine)"/>
+
+    <!-- Cerebro/rede neural dourada -->
+    <g transform="translate(100,120)" filter="url(#nodeGlow)">
+      <!-- Forma do cerebro: nos e conexoes -->
+      <!-- Camada externa esquerda -->
+      <circle cx="-42" cy="-8" r="3" fill="url(#gBrain)"/>
+      <circle cx="-38" cy="-25" r="3" fill="url(#gBrain)"/>
+      <circle cx="-28" cy="-38" r="3" fill="url(#gBrain)"/>
+      <circle cx="-15" cy="-44" r="3" fill="url(#gBrain)"/>
+      <circle cx="-42" cy="10" r="3" fill="url(#gBrain)"/>
+      <circle cx="-35" cy="24" r="3" fill="url(#gBrain)"/>
+      <circle cx="-22" cy="32" r="3" fill="url(#gBrain)"/>
+      <!-- Camada externa direita -->
+      <circle cx="42" cy="-8" r="3" fill="url(#gBrain)"/>
+      <circle cx="38" cy="-25" r="3" fill="url(#gBrain)"/>
+      <circle cx="28" cy="-38" r="3" fill="url(#gBrain)"/>
+      <circle cx="15" cy="-44" r="3" fill="url(#gBrain)"/>
+      <circle cx="42" cy="10" r="3" fill="url(#gBrain)"/>
+      <circle cx="35" cy="24" r="3" fill="url(#gBrain)"/>
+      <circle cx="22" cy="32" r="3" fill="url(#gBrain)"/>
+      <!-- Camada interna -->
+      <circle cx="-20" cy="-18" r="3" fill="url(#gBrain)"/>
+      <circle cx="-8" cy="-30" r="3" fill="url(#gBrain)"/>
+      <circle cx="8" cy="-30" r="3" fill="url(#gBrain)"/>
+      <circle cx="20" cy="-18" r="3" fill="url(#gBrain)"/>
+      <circle cx="-20" cy="8" r="3" fill="url(#gBrain)"/>
+      <circle cx="-8" cy="18" r="3" fill="url(#gBrain)"/>
+      <circle cx="8" cy="18" r="3" fill="url(#gBrain)"/>
+      <circle cx="20" cy="8" r="3" fill="url(#gBrain)"/>
+      <!-- Centro -->
+      <circle cx="0" cy="-10" r="3.5" fill="url(#gBrain)"/>
+      <circle cx="0" cy="5" r="3.5" fill="url(#gBrain)"/>
+      <circle cx="-12" cy="-5" r="3" fill="url(#gBrain)"/>
+      <circle cx="12" cy="-5" r="3" fill="url(#gBrain)"/>
+
+      <!-- Conexoes -->
+      <g stroke="url(#gBrain)" stroke-width="1.2" fill="none" opacity="0.7">
+        <!-- Hemisferio esquerdo -->
+        <line x1="-42" y1="-8" x2="-38" y2="-25"/><line x1="-38" y1="-25" x2="-28" y2="-38"/>
+        <line x1="-28" y1="-38" x2="-15" y2="-44"/><line x1="-42" y1="-8" x2="-42" y2="10"/>
+        <line x1="-42" y1="10" x2="-35" y2="24"/><line x1="-35" y1="24" x2="-22" y2="32"/>
+        <line x1="-42" y1="-8" x2="-20" y2="-18"/><line x1="-38" y1="-25" x2="-20" y2="-18"/>
+        <line x1="-28" y1="-38" x2="-8" y2="-30"/><line x1="-15" y1="-44" x2="-8" y2="-30"/>
+        <line x1="-42" y1="10" x2="-20" y2="8"/><line x1="-35" y1="24" x2="-20" y2="8"/>
+        <line x1="-35" y1="24" x2="-8" y2="18"/><line x1="-22" y1="32" x2="-8" y2="18"/>
+        <line x1="-20" y1="-18" x2="-12" y2="-5"/><line x1="-20" y1="-18" x2="-8" y2="-30"/>
+        <line x1="-20" y1="8" x2="-12" y2="-5"/><line x1="-20" y1="8" x2="-8" y2="18"/>
+        <line x1="-12" y1="-5" x2="0" y2="-10"/><line x1="-12" y1="-5" x2="0" y2="5"/>
+        <line x1="-8" y1="-30" x2="0" y2="-10"/>
+        <!-- Hemisferio direito -->
+        <line x1="42" y1="-8" x2="38" y2="-25"/><line x1="38" y1="-25" x2="28" y2="-38"/>
+        <line x1="28" y1="-38" x2="15" y2="-44"/><line x1="42" y1="-8" x2="42" y2="10"/>
+        <line x1="42" y1="10" x2="35" y2="24"/><line x1="35" y1="24" x2="22" y2="32"/>
+        <line x1="42" y1="-8" x2="20" y2="-18"/><line x1="38" y1="-25" x2="20" y2="-18"/>
+        <line x1="28" y1="-38" x2="8" y2="-30"/><line x1="15" y1="-44" x2="8" y2="-30"/>
+        <line x1="42" y1="10" x2="20" y2="8"/><line x1="35" y1="24" x2="20" y2="8"/>
+        <line x1="35" y1="24" x2="8" y2="18"/><line x1="22" y1="32" x2="8" y2="18"/>
+        <line x1="20" y1="-18" x2="12" y2="-5"/><line x1="20" y1="-18" x2="8" y2="-30"/>
+        <line x1="20" y1="8" x2="12" y2="-5"/><line x1="20" y1="8" x2="8" y2="18"/>
+        <line x1="12" y1="-5" x2="0" y2="-10"/><line x1="12" y1="-5" x2="0" y2="5"/>
+        <line x1="8" y1="-30" x2="0" y2="-10"/>
+        <!-- Ponte entre hemisferios -->
+        <line x1="-8" y1="-30" x2="8" y2="-30"/>
+        <line x1="0" y1="-10" x2="0" y2="5"/>
+        <line x1="-8" y1="18" x2="8" y2="18"/>
+        <line x1="-15" y1="-44" x2="15" y2="-44"/>
+      </g>
+    </g>
+  </g>
+</svg>

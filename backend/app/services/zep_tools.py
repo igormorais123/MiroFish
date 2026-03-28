@@ -502,7 +502,28 @@ class ZepToolsService:
             )
 
         except Exception as e:
-            logger.warning(f"Falha na busca Graphiti; retornando resultado vazio: {str(e)}")
+            logger.warning(f"Falha na busca Graphiti; tentando dados locais: {str(e)}")
+
+            # Fallback: buscar nos dados locais da simulacao
+            try:
+                from .simulation_data_reader import SimulationDataReader
+                sim_id = self._find_simulation_for_graph(graph_id)
+                logger.info(f"Fallback: graph_id={graph_id} -> sim_id={sim_id}")
+                if sim_id:
+                    reader = SimulationDataReader(sim_id)
+                    local_facts = reader.get_facts_for_report(query=query, limit=limit)
+                    if local_facts:
+                        logger.info(f"Fallback local: {len(local_facts)} fatos encontrados")
+                        return SearchResult(
+                            facts=local_facts,
+                            edges=[],
+                            nodes=[],
+                            query=query,
+                            total_count=len(local_facts)
+                        )
+            except Exception as fallback_err:
+                logger.warning(f"Fallback local tambem falhou: {fallback_err}")
+
             return SearchResult(
                 facts=[],
                 edges=[],
@@ -693,33 +714,81 @@ class ZepToolsService:
         """Monta um contexto consolidado a partir do objetivo da simulacao."""
         logger.info(f"Montando contexto da simulacao: {simulation_requirement[:50]}...")
 
-        search_result = self.search_graph(
-            graph_id=graph_id,
-            query=simulation_requirement,
-            limit=limit
-        )
-
-        stats = self.get_graph_statistics(graph_id)
-
-        all_nodes = self.get_all_nodes(graph_id)
-
+        # Fallback seguro: se Graphiti falhar, retorna contexto vazio
+        related_facts = []
+        stats = {"total_nodes": 0, "total_edges": 0, "entity_types": {}}
         entities = []
-        for node in all_nodes:
-            custom_labels = [l for l in node.labels if l not in ["Entity", "Node"]]
-            if custom_labels:
-                entities.append({
-                    "name": node.name,
-                    "type": custom_labels[0],
-                    "summary": node.summary
-                })
+
+        try:
+            search_result = self.search_graph(
+                graph_id=graph_id,
+                query=simulation_requirement,
+                limit=limit
+            )
+            related_facts = search_result.facts
+        except Exception as e:
+            logger.warning(f"Falha na busca Graphiti; retornando resultado vazio: {e}")
+
+        try:
+            stats = self.get_graph_statistics(graph_id)
+        except Exception as e:
+            logger.warning(f"Falha ao obter estatisticas do grafo: {e}")
+
+        try:
+            all_nodes = self.get_all_nodes(graph_id)
+            for node in all_nodes:
+                custom_labels = [l for l in node.labels if l not in ["Entity", "Node"]]
+                if custom_labels:
+                    entities.append({
+                        "name": node.name,
+                        "type": custom_labels[0],
+                        "summary": node.summary
+                    })
+        except Exception as e:
+            logger.warning(f"Falha ao obter nos do grafo: {e}")
+
+        # Fallback: se Graphiti nao retornou dados, usar dados locais da simulacao
+        if not related_facts and not entities:
+            try:
+                from .simulation_data_reader import SimulationDataReader
+                # Tentar encontrar simulation_id associado ao graph_id
+                sim_id = self._find_simulation_for_graph(graph_id)
+                if sim_id:
+                    reader = SimulationDataReader(sim_id)
+                    local_facts = reader.get_facts_for_report(query=simulation_requirement, limit=limit)
+                    local_stats = reader.get_statistics()
+                    if local_facts:
+                        related_facts = local_facts
+                        stats = local_stats
+                        logger.info(f"Fallback: {len(local_facts)} fatos carregados dos dados locais da simulacao {sim_id}")
+            except Exception as e:
+                logger.warning(f"Fallback de dados locais falhou: {e}")
 
         return {
             "simulation_requirement": simulation_requirement,
-            "related_facts": search_result.facts,
+            "related_facts": related_facts,
             "graph_statistics": stats,
             "entities": entities[:limit],
             "total_entities": len(entities)
         }
+
+    def _find_simulation_for_graph(self, graph_id: str) -> Optional[str]:
+        """Encontra simulation_id associado a um graph_id."""
+        import os, json
+        sims_dir = os.path.join(Config.UPLOAD_FOLDER, 'simulations')
+        if not os.path.exists(sims_dir):
+            return None
+        for sim_folder in os.listdir(sims_dir):
+            state_path = os.path.join(sims_dir, sim_folder, 'state.json')
+            if os.path.exists(state_path):
+                try:
+                    with open(state_path, 'r', encoding='utf-8') as f:
+                        state = json.load(f)
+                    if state.get('graph_id') == graph_id:
+                        return sim_folder
+                except Exception:
+                    continue
+        return None
 
     # Ferramentas analiticas principais.
 

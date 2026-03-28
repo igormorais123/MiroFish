@@ -14,9 +14,10 @@ from enum import Enum
 
 from ..config import Config
 from ..utils.logger import get_logger
-from .zep_entity_reader import ZepEntityReader, FilteredEntities
+from .zep_entity_reader import ZepEntityReader, FilteredEntities, EntityNode
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
 from .simulation_config_generator import SimulationConfigGenerator, SimulationParameters
+from .llm_entity_extractor import LLMEntityExtractor
 
 logger = get_logger('mirofish.simulation')
 
@@ -271,29 +272,57 @@ class SimulationManager:
             # ========== Etapa 1: Ler e filtrar entidades ==========
             if progress_callback:
                 progress_callback("reading", 0, "Conectando ao grafo Zep...")
-            
+
             reader = ZepEntityReader()
-            
+            filtered = None
+
             if progress_callback:
                 progress_callback("reading", 30, "Lendo dados dos nos...")
-            
-            filtered = reader.filter_defined_entities(
-                graph_id=state.graph_id,
-                defined_entity_types=defined_entity_types,
-                enrich_with_edges=True
-            )
-            
+
+            try:
+                filtered = reader.filter_defined_entities(
+                    graph_id=state.graph_id,
+                    defined_entity_types=defined_entity_types,
+                    enrich_with_edges=True
+                )
+            except Exception as graphiti_err:
+                logger.warning(f"Graphiti falhou: {str(graphiti_err)[:200]}. Usando fallback LLM.")
+                filtered = None
+
+            # Fallback LLM: se Graphiti falhou ou retornou 0 entidades, extrair via LLM
+            if (filtered is None or filtered.filtered_count == 0) and document_text:
+                logger.warning("Graphiti retornou 0 entidades. Usando fallback LLM para extracao.")
+                if progress_callback:
+                    progress_callback("reading", 50, "Graphiti vazio, extraindo entidades via LLM...")
+
+                # Carregar ontologia do projeto para guiar a extracao
+                from ..models.project import ProjectManager
+                project = ProjectManager.get_project(state.project_id)
+                ontology = project.ontology if project else None
+
+                extractor = LLMEntityExtractor()
+                filtered = extractor.extract_entities(
+                    text=document_text,
+                    ontology=ontology,
+                    defined_entity_types=defined_entity_types,
+                )
+                logger.info(f"Fallback LLM extraiu {filtered.filtered_count} entidades")
+
+            # Se nem Graphiti nem LLM produziram resultado
+            if filtered is None:
+                filtered = FilteredEntities(entities=[], entity_types=set(), total_count=0, filtered_count=0)
+
             state.entities_count = filtered.filtered_count
             state.entity_types = list(filtered.entity_types)
-            
+
             if progress_callback:
                 progress_callback(
-                    "reading", 100, 
+                    "reading", 100,
                     f"Concluido, total de {filtered.filtered_count}  entidades",
                     current=filtered.filtered_count,
                     total=filtered.filtered_count
                 )
-            
+
             if filtered.filtered_count == 0:
                 state.status = SimulationStatus.FAILED
                 state.error = "Nenhuma entidade encontrada, verifique se o grafo foi construido corretamente"

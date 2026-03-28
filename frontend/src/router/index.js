@@ -44,8 +44,11 @@ const routes = [
   }
 ]
 
+// Detecta subpath automaticamente
+const base = window.location.pathname.startsWith('/mirofish') ? '/mirofish/' : '/'
+
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(base),
   routes
 })
 

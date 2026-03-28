@@ -1,197 +1,183 @@
 <div align="center">
 
-<img src="./static/image/MiroFish_logo_compressed.jpeg" alt="Logo do MiroFish" width="75%"/>
+# 🐟 MiroFish INTEIA
 
-<a href="https://trendshift.io/repositories/16144" target="_blank"><img src="https://trendshift.io/api/badge/repositories/16144" alt="666ghj%2FMiroFish | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+### Motor de Simulação Social Multiagente para Cenários Complexos
 
-Motor simples e versátil de inteligência coletiva para simulação e previsão
-</br>
-<em>A Simple and Universal Swarm Intelligence Engine, Predicting Anything</em>
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![Fork](https://img.shields.io/badge/Fork%20de-666ghj%2FMiroFish-DAA520?style=flat-square)](https://github.com/666ghj/MiroFish)
 
-<a href="https://www.shanda.com/" target="_blank"><img src="./static/image/shanda_logo.png" alt="666ghj%2MiroFish | Shanda" height="40"/></a>
+*Fork adaptado para o contexto brasileiro: simulação político-eleitoral, jurídico-institucional e análise de crise.*
 
-[![GitHub Stars](https://img.shields.io/github/stars/666ghj/MiroFish?style=flat-square&color=DAA520)](https://github.com/666ghj/MiroFish/stargazers)
-[![GitHub Watchers](https://img.shields.io/github/watchers/666ghj/MiroFish?style=flat-square)](https://github.com/666ghj/MiroFish/watchers)
-[![GitHub Forks](https://img.shields.io/github/forks/666ghj/MiroFish?style=flat-square)](https://github.com/666ghj/MiroFish/network)
-[![Docker](https://img.shields.io/badge/Docker-Build-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/666ghj/MiroFish)
-
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com/channels/1469200078932545606/1469201282077163739)
-[![X](https://img.shields.io/badge/X-Follow-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/mirofish_ai)
-[![Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?style=flat-square&logo=instagram&logoColor=white)](https://www.instagram.com/mirofish_ai/)
-
-[English](./README-EN.md) | [Documentação em português](./README.md)
+[Sobre](#sobre) · [O que mudou no fork](#o-que-mudou-no-fork-inteia) · [Como Rodar](#como-rodar) · [Deploy](#deploy-com-docker) · [Documentação](#documentação)
 
 </div>
 
-## Visão geral
+---
 
-**MiroFish** é um motor de previsão baseado em múltiplos agentes. A ideia central é transformar sinais do mundo real, como notícias, relatórios, políticas, tendências ou até narrativas ficcionais, em um ambiente digital de alta fidelidade. Dentro desse ambiente, agentes com memória, personalidade e lógica de ação próprias interagem entre si para produzir dinâmicas sociais emergentes.
+## Sobre
 
-Fluxo esperado:
+**MiroFish** é um motor de previsão baseado em múltiplos agentes, originalmente criado por [666ghj](https://github.com/666ghj/MiroFish). Transforma sinais do mundo real — notícias, relatórios, políticas, narrativas — em um ambiente digital onde agentes com memória, personalidade e lógica de ação próprias interagem para produzir dinâmicas sociais emergentes.
 
-1. Você envia os materiais-base.
-2. O sistema extrai conhecimento e constrói o grafo.
-3. O ambiente da simulação é configurado automaticamente.
-4. A simulação roda em paralelo nas plataformas suportadas.
-5. Um agente de relatório sintetiza os resultados.
-6. Você pode conversar com os agentes simulados e com o agente analítico.
+### Fluxo de trabalho
 
-## Demonstração online
+```
+Material-base → Extração de conhecimento → Grafo de entidades
+     ↓
+Configuração do ambiente → Perfis dos agentes → Relações
+     ↓
+Simulação paralela → Interações multiagente → Memória temporal
+     ↓
+Relatório analítico → Conversa com agentes → Insights
+```
 
-Demo pública:
-[mirofish-live-demo](https://666ghj.github.io/mirofish-demo/)
+## O que mudou no fork INTEIA
 
-## Capturas do sistema
+| Aspecto | MiroFish Original | Fork INTEIA |
+|---------|------------------|-------------|
+| **Idioma** | Chinês/Inglês | Português brasileiro completo |
+| **Contexto** | Acadêmico genérico | Político-eleitoral, jurídico, crise |
+| **LLM Gateway** | OpenAI direto | OmniRoute (custo zero) + fallback Anthropic |
+| **Memória** | Zep Cloud obrigatório | Zep opcional, fallback keyword |
+| **Segurança** | Básica | Headers CSP, CORS, iframe policy |
+| **Deploy** | Local | Docker multi-stage + nginx em VPS |
+| **Relatório** | ReportAgent padrão | Helena Strategos (analista-chefe INTEIA) |
+| **Tradução** | — | i18n completo, conteúdo forçado em PT-BR |
+| **Performance** | — | Timeout LLM 90s, fallback strategies |
+| **Persistência** | — | State em disco (tasks_state.json) |
+| **Mobile** | — | Responsivo (breakpoints 480px) |
 
-<div align="center">
-<table>
-<tr>
-<td><img src="./static/image/Screenshot/运行截图1.png" alt="Captura 1" width="100%"/></td>
-<td><img src="./static/image/Screenshot/运行截图2.png" alt="Captura 2" width="100%"/></td>
-</tr>
-<tr>
-<td><img src="./static/image/Screenshot/运行截图3.png" alt="Captura 3" width="100%"/></td>
-<td><img src="./static/image/Screenshot/运行截图4.png" alt="Captura 4" width="100%"/></td>
-</tr>
-<tr>
-<td><img src="./static/image/Screenshot/运行截图5.png" alt="Captura 5" width="100%"/></td>
-<td><img src="./static/image/Screenshot/运行截图6.png" alt="Captura 6" width="100%"/></td>
-</tr>
-</table>
-</div>
+### Aplicações
 
-## Vídeos de referência do projeto original
+- **Simulação eleitoral** — cenários de campanha, repercussão de narrativa
+- **Análise jurídico-institucional** — dinâmicas entre atores do sistema de justiça
+- **Crise reputacional** — evolução de narrativa e opinião pública
+- **Testes de narrativa** — impacto de diferentes abordagens comunicacionais
+- **Pesquisa sintética** — integração com FlockVote (MAE 4.4pp no DF 2022)
 
-### 1. Simulação acadêmica de repercussão pública + apresentação do projeto
+## Arquitetura
 
-<div align="center">
-<a href="https://www.bilibili.com/video/BV1VYBsBHEMY/" target="_blank"><img src="./static/image/武大模拟演示封面.png" alt="Vídeo de demonstração do MiroFish" width="75%"/></a>
+```
+mirofish-inteia/
+├── backend/                   # Python 3.12 + FastAPI
+│   ├── app/
+│   │   ├── services/          # Gerenciador de simulação, ontologia, LLM
+│   │   └── utils/             # Cliente LLM, Graphiti, Zep
+│   ├── scripts/               # Simulação paralela, proxy LLM
+│   └── tests/
+│
+├── frontend/                  # Vue.js 3 + Vite
+│   ├── src/
+│   │   ├── views/             # Home, simulação, relatório
+│   │   └── api/               # Cliente da API
+│   └── public/
+│
+├── deploy/                    # Configurações de deploy
+├── docker-compose.yml         # Orquestração de containers
+├── Dockerfile                 # Build multi-stage
+│
+├── PRD_MIROFISH_INTEIA_V2.md  # Product Requirements Document
+├── BACKLOG_TECNICO_*.md       # Backlog técnico
+├── PLANO_ADAPTACAO_*.md       # Plano de adaptação do fork
+└── MAPEAMENTO_PT-BR.md        # Mapeamento de tradução
+```
 
-Clique na imagem para assistir à demonstração completa. O vídeo está hospedado no Bilibili porque faz parte do material original do projeto.
-</div>
+## Como Rodar
 
-### 2. Simulação narrativa e previsão de desfecho ficcional
+### Requisitos
 
-<div align="center">
-<a href="https://www.bilibili.com/video/BV1cPk3BBExq" target="_blank"><img src="./static/image/红楼梦模拟推演封面.jpg" alt="Vídeo de demonstração do MiroFish" width="75%"/></a>
+| Ferramenta | Versão | Verificação |
+|------------|--------|-------------|
+| Node.js | 18+ | `node -v` |
+| Python | 3.11–3.12 | `python --version` |
+| uv | atual | `uv --version` |
 
-Clique na imagem para ver outro exemplo histórico do projeto original. O vídeo também está hospedado no Bilibili.
-</div>
-
-## Fluxo de trabalho
-
-1. **Construção do grafo**: extração do material-base, injeção de memória individual e coletiva, e construção do GraphRAG.
-2. **Configuração do ambiente**: extração de entidades e relações, geração de perfis e definição dos parâmetros de simulação.
-3. **Execução da simulação**: simulação paralela em múltiplas plataformas, interpretação automática do objetivo e atualização dinâmica da memória temporal.
-4. **Geração do relatório**: o `ReportAgent` utiliza ferramentas internas para analisar profundamente o ambiente após a simulação.
-5. **Interação profunda**: conversa com agentes simulados ou diretamente com o agente de relatório.
-
-## Início rápido
-
-### 1. Requisitos
-
-| Ferramenta | Versão | Observação | Verificação |
-|------|------|------|------|
-| **Node.js** | 18+ | Necessário para o frontend e `npm` | `node -v` |
-| **Python** | >= 3.11 e <= 3.12 | Necessário para o backend | `python --version` |
-| **uv** | versão atual | Gerenciador de dependências Python | `uv --version` |
-
-### 2. Configuração de ambiente
+### Instalação
 
 ```bash
-# Copie o arquivo de exemplo
+# Clone o fork
+git clone https://github.com/igormorais123/MiroFish.git
+cd MiroFish
+
+# Configure variáveis de ambiente
 cp .env.example .env
+# Edite .env com suas chaves
 
-# Edite o arquivo .env com suas chaves
-```
-
-Variáveis obrigatórias:
-
-```env
-# Configuração do modelo LLM
-# Padrão recomendado: OpenAI
-# Também funciona com provedores compatíveis com o formato OpenAI
-# Exemplos úteis no Brasil/ocidente: OpenRouter, Azure OpenAI e Groq via gateway compatível
-LLM_API_KEY=your_api_key
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL_NAME=gpt-4o-mini
-
-# Configuração da Zep Cloud
-ZEP_API_KEY=your_zep_api_key
-```
-
-### 3. Instalação
-
-Instalação completa:
-
-```bash
+# Instale tudo
 npm run setup:all
-```
 
-Instalação por etapa:
-
-```bash
-# Dependências Node.js
-npm run setup
-
-# Dependências Python
-npm run setup:backend
-```
-
-### 4. Execução
-
-Subir frontend e backend juntos:
-
-```bash
+# Rode
 npm run dev
 ```
 
-Endereços padrão:
-
+**Endereços padrão:**
 - Frontend: `http://localhost:3000`
-- API backend: `http://localhost:5001`
+- Backend API: `http://localhost:5001`
 
-Execução separada:
+### Variáveis de ambiente
 
-```bash
-npm run backend
-npm run frontend
+```env
+# LLM (via OmniRoute ou OpenAI-compatible)
+LLM_API_KEY=sua_chave
+LLM_BASE_URL=http://localhost:20128    # OmniRoute local
+LLM_MODEL_NAME=BestFREE
+
+# Zep Cloud (opcional)
+ZEP_API_KEY=sua_chave_zep
 ```
 
-## Execução com Docker
+## Deploy com Docker
 
 ```bash
-# Copie as variáveis de ambiente
 cp .env.example .env
-
-# Suba os serviços
 docker compose up -d
 ```
 
-O `docker compose` lê o `.env` na raiz do projeto e expõe, por padrão, as portas `3000` e `5001`.
+O compose expõe as portas `3000` (frontend) e `5001` (API) por padrão.
 
-## Contato
+### Deploy em VPS
 
-Use preferencialmente os canais mais acessíveis no ocidente:
+O fork inclui configuração para deploy em VPS com nginx como reverse proxy:
 
-- Discord: https://discord.com/channels/1469200078932545606/1469201282077163739
-- X: https://x.com/mirofish_ai
-- Instagram: https://www.instagram.com/mirofish_ai/
-- E-mail: **mirofish@shanda.com**
+```bash
+# Build e deploy
+docker compose -f docker-compose.yml up -d --build
 
-## Agradecimentos
+# Verificar
+curl http://seu-ip:4000/api/health
+```
 
-**O MiroFish conta com suporte estratégico e incubação do grupo Shanda.**
+## Documentação
 
-O motor de simulação é impulsionado por **[OASIS](https://github.com/camel-ai/oasis)**. O projeto reconhece e agradece a contribuição open source da equipe CAMEL-AI.
+| Documento | Descrição |
+|-----------|-----------|
+| [PRD v2](PRD_MIROFISH_INTEIA_V2.md) | Requisitos do produto |
+| [Backlog Técnico](BACKLOG_TECNICO_MIROFISH_INTEIA_V2.md) | Tasks técnicas pendentes |
+| [Plano de Adaptação](PLANO_ADAPTACAO_MIROFISH_INTEIA_V2.md) | Roadmap do fork |
+| [Mapeamento PT-BR](MAPEAMENTO_PT-BR.md) | Referência de tradução |
+| [Integração Lenia](LENIA_MIROFISH_INTEGRACAO.md) | Ponte com sistema eleitoral |
 
-## Estatísticas do projeto
+## Projeto Original
 
-<a href="https://www.star-history.com/#666ghj/MiroFish&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=666ghj/MiroFish&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=666ghj/MiroFish&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=666ghj/MiroFish&type=date&legend=top-left" />
- </picture>
-</a>
+Fork de [MiroFish](https://github.com/666ghj/MiroFish) por 666ghj, baseado no framework [OASIS](https://github.com/camel-ai/oasis) (CAMEL-AI). O motor de simulação é impulsionado pelo grupo Shanda.
+
+- [Demo original](https://666ghj.github.io/mirofish-demo/)
+- [DeepWiki](https://deepwiki.com/666ghj/MiroFish)
+
+## Projetos Relacionados
+
+- **[Vila INTEIA](https://github.com/igormorais123/vila-inteia)** — Campus 3D com 144 consultores lendários simulados
+- **[OmniRoute](https://github.com/igormorais123/omniroute)** — Gateway LLM inteligente (custo zero)
+
+---
+
+<div align="center">
+
+**Fork mantido por [Igor Morais Vasconcelos](https://github.com/igormorais123)**
+
+*[INTEIA](https://inteia.com.br) — Inteligência Artificial Estratégica*
+
+</div>

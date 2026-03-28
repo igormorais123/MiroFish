@@ -3,19 +3,43 @@ Cliente unificado de LLM.
 
 Opera sobre provedores compativeis com a API OpenAI e prioriza a configuracao
 OmniRoute-first definida no backend INTEIA.
+
+Usa requests em vez do SDK OpenAI/httpx para compatibilidade com OmniRouter
+(httpx trava com SSE streaming quando stream nao esta no body).
 """
 
 import json
 import re
 import time
 from typing import Optional, Dict, Any, List
+from dataclasses import dataclass
 
-from openai import OpenAI
+import requests as http_requests
 
 from ..config import Config
 from .token_tracker import TokenTracker
 
 _tracker = TokenTracker()
+
+
+@dataclass
+class _ChatMessage:
+    content: str = ""
+    role: str = "assistant"
+
+@dataclass
+class _ChatChoice:
+    message: Any = None
+
+@dataclass
+class _ChatUsage:
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+@dataclass
+class _ChatResponse:
+    choices: List[Any] = None
+    usage: Any = None
 
 
 class LLMClient:
@@ -28,7 +52,7 @@ class LLMClient:
         model: Optional[str] = None
     ):
         self.api_key = api_key or Config.LLM_API_KEY
-        self.base_url = base_url or Config.LLM_BASE_URL
+        self.base_url = (base_url or Config.LLM_BASE_URL).rstrip("/")
         self.model = Config.resolve_model_name(model or Config.LLM_MODEL_NAME)
         self.timeout = Config.LLM_TIMEOUT_SECONDS
         self.max_retries = Config.LLM_MAX_RETRIES
@@ -36,27 +60,59 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("LLM_API_KEY ou OMNIROUTE_API_KEY nao configurada")
 
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            timeout=self.timeout,
-        )
-
     def _request_with_retry(self, **kwargs):
-        """Executa a chamada ao provider com retry simples e observabilidade minima."""
-        last_error = None
+        """Executa chamada ao provider via requests (compativel com OmniRouter)."""
+        kwargs["stream"] = False
 
+        url = f"{self.base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Connection": "close",
+        }
+
+        last_error = None
         for attempt in range(1, self.max_retries + 1):
             started_at = time.perf_counter()
             try:
-                response = self.client.chat.completions.create(**kwargs)
+                resp = http_requests.post(url, headers=headers, json=kwargs, timeout=self.timeout)
                 elapsed_ms = round((time.perf_counter() - started_at) * 1000, 1)
-                return response, elapsed_ms, attempt
+
+                if resp.status_code != 200:
+                    raise RuntimeError(f"LLM retornou status {resp.status_code}: {resp.text[:300]}")
+
+                data = resp.json()
+
+                # Parse OpenAI-format response
+                choices = []
+                for c in data.get("choices", []):
+                    msg = c.get("message", {})
+                    choices.append(_ChatChoice(message=_ChatMessage(
+                        content=msg.get("content", ""),
+                        role=msg.get("role", "assistant"),
+                    )))
+
+                # Parse Anthropic-format response (content array)
+                if not choices and data.get("content"):
+                    text = "".join(
+                        p.get("text", "") for p in data["content"]
+                        if isinstance(p, dict) and p.get("type") == "text"
+                    )
+                    choices = [_ChatChoice(message=_ChatMessage(content=text))]
+
+                usage_data = data.get("usage", {})
+                usage = _ChatUsage(
+                    prompt_tokens=usage_data.get("prompt_tokens", 0) or usage_data.get("input_tokens", 0) or 0,
+                    completion_tokens=usage_data.get("completion_tokens", 0) or usage_data.get("output_tokens", 0) or 0,
+                )
+
+                return _ChatResponse(choices=choices, usage=usage), elapsed_ms, attempt
+
             except Exception as exc:
                 last_error = exc
                 if attempt >= self.max_retries:
                     break
-                time.sleep(min(1 * attempt, 3))  # Backoff: 1s, 2s, 3s
+                time.sleep(min(1 * attempt, 3))
 
         raise last_error
 
@@ -68,15 +124,16 @@ class LLMClient:
         response_format: Optional[Dict] = None,
         session_id: Optional[str] = None,
     ) -> str:
-        """Envia uma requisicao de chat e retorna o texto final limpo."""
+        """Envia requisicao de chat e retorna texto limpo."""
         model_name = Config.resolve_model_name(self.model)
+        # GPT-5.4+ exige max_completion_tokens em vez de max_tokens
+        token_key = "max_completion_tokens" if "gpt-5" in model_name or "o1" in model_name or "o3" in model_name or "o4" in model_name else "max_tokens"
         kwargs = {
             "model": model_name,
             "messages": messages,
             "temperature": temperature,
-            "max_completion_tokens": max_tokens,
+            token_key: max_tokens,
         }
-
         if response_format:
             kwargs["response_format"] = response_format
 
@@ -92,7 +149,6 @@ class LLMClient:
             _logger.error(f"LLM falhou apos {self.max_retries} tentativas: {str(exc)}")
             raise
 
-        # Extrair usage de tokens da resposta
         usage = getattr(response, 'usage', None)
         if usage:
             _tracker.track(
@@ -112,7 +168,7 @@ class LLMClient:
         max_tokens: int = 4096,
         session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Envia requisicao em modo JSON e retorna o objeto desserializado."""
+        """Envia requisicao em modo JSON e retorna objeto desserializado."""
         response = self.chat(
             messages=messages,
             temperature=temperature,
@@ -120,12 +176,12 @@ class LLMClient:
             response_format={"type": "json_object"},
             session_id=session_id,
         )
-        cleaned_response = response.strip()
-        cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
-        cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
-        cleaned_response = cleaned_response.strip()
+        cleaned = response.strip()
+        cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+        cleaned = cleaned.strip()
 
         try:
-            return json.loads(cleaned_response)
+            return json.loads(cleaned)
         except json.JSONDecodeError:
-            raise ValueError(f"LLM retornou JSON invalido: {cleaned_response}")
+            raise ValueError(f"LLM retornou JSON invalido: {cleaned}")

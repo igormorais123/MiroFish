@@ -47,7 +47,7 @@ Gere o resultado em formato JSON com a seguinte estrutura:
 {
     "entity_types": [
         {
-            "name": "Nome do tipo de entidade (portugues, PascalCase, ex: Estudante, Professor, OrgaoGovernamental)",
+            "name": "Nome do tipo em PORTUGUES BRASILEIRO (PascalCase, ex: CandidatoPolitico, OrgaoGovernamental, VeiculoDeMidia, InstituicaoJudiciaria, GrupoSociedadeCivil, AgenciaReguladora, PlataformaMidiaSocial, Pessoa, Organizacao). PROIBIDO usar ingles como PoliticalCandidate ou GovernmentOfficial.",
             "description": "Descricao breve (portugues, no maximo 100 caracteres)",
             "attributes": [
                 {
@@ -61,7 +61,7 @@ Gere o resultado em formato JSON com a seguinte estrutura:
     ],
     "edge_types": [
         {
-            "name": "NOME_TIPO_RELACAO (portugues, UPPER_SNAKE_CASE, ex: APOIA, TRABALHA_EM, COMPETE_COM)",
+            "name": "NOME_RELACAO em PORTUGUES (UPPER_SNAKE_CASE, ex: APOIA, SE_OPOE_A, COMPETE_COM, COLABORA_COM, TRABALHA_PARA, AFILIADO_A, REPRESENTA, REGULAMENTA, REPORTA_SOBRE, COMENTA_SOBRE, RESPONDE_A). PROIBIDO ingles como SUPPORTS ou OPPOSES.",
             "description": "Descricao breve (portugues, no maximo 100 caracteres)",
             "source_targets": [
                 {"source": "TipoEntidadeOrigem", "target": "TipoEntidadeDestino"}

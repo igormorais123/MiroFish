@@ -3,8 +3,11 @@
     <!-- Barra de navegação superior -->
     <nav class="navbar">
       <div class="nav-brand">
-        <span class="nav-brand-main">INTEIA</span>
-        <span class="nav-brand-sub">MiroFish Lab</span>
+        <img src="../assets/logo/inteia_brasao.png" alt="INTEIA" class="nav-brasao" />
+        <div class="nav-brand-text">
+          <span class="nav-brand-main">INTEIA</span>
+          <span class="nav-brand-sub">MIROFISH LAB</span>
+        </div>
       </div>
       <div class="nav-links">
         <a href="https://github.com/igormorais123/MiroFish" target="_blank" class="github-link">
@@ -43,7 +46,7 @@
           <!-- Área do Logo -->
           <div class="logo-container">
             <div class="inteia-mark">
-              <div class="inteia-badge">IA</div>
+              <img src="../assets/logo/inteia_brasao.png" alt="INTEIA" class="inteia-badge-img" />
               <div class="inteia-mark-copy">
                 <div class="inteia-mark-title">INTEIA</div>
                 <div class="inteia-mark-sub">Simulação estratégica com núcleo MiroFish</div>
@@ -620,6 +623,18 @@ const startSimulation = () => {
 
 .nav-brand {
   display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-brasao {
+  width: 81px;
+  height: auto;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+}
+
+.nav-brand-text {
+  display: flex;
   flex-direction: column;
   gap: 2px;
 }
@@ -818,19 +833,10 @@ const startSimulation = () => {
   box-shadow: 0 24px 60px rgba(8, 17, 31, 0.18);
 }
 
-.inteia-badge {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+.inteia-badge-img {
+  width: 117px;
+  height: auto;
+  filter: drop-shadow(0 2px 6px rgba(201, 162, 39, 0.3));
 }
 
 .inteia-mark-copy {

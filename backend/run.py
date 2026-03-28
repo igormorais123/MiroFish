@@ -4,6 +4,16 @@ Ponto de entrada do backend MiroFish
 
 import os
 import sys
+import platform
+
+# Fix: Python 3.13 no Windows trava em platform._wmi_query() — deadlock WMI
+# Afeta SDK OpenAI (X-Stainless-OS header) e camel-ai (get_system_information)
+if hasattr(platform, '_wmi_query'):
+    _wmi_responses = {
+        'OS': ('10.0.26200', 1, '', 0, 0),
+        'CPU': ('AMD', 'AMD Ryzen 9 7900'),
+    }
+    platform._wmi_query = lambda table, *fields: _wmi_responses.get(table, tuple('' for _ in fields))
 
 # Corrigir encoding no console Windows: configurar UTF-8 antes de qualquer import
 if sys.platform == 'win32':

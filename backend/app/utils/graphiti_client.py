@@ -16,8 +16,8 @@ from .logger import get_logger
 
 logger = get_logger('mirofish.graphiti_client')
 
-_DEFAULT_MAX_RETRIES = 3
-_DEFAULT_RETRY_DELAY = 2.0  # segundos, dobra a cada tentativa
+_DEFAULT_MAX_RETRIES = 1
+_DEFAULT_RETRY_DELAY = 0.5  # segundos — fail fast quando Graphiti indisponivel
 
 
 class GraphitiClient:
