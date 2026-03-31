@@ -1,0 +1,2 @@
+- [AutoResearch Framework](project_autoresearch.md) — Framework de otimizacao autonoma (Karpathy) adaptado para INTEIA, 4 alvos, hookify F1=0.9705
+- [AutoResearch v2 Plan](project_autoresearch_v2_plan.md) — Plano 7 fases para sistema evolucionario autonomo com memoria persistente

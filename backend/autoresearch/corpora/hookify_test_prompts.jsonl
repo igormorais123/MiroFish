@@ -1,0 +1,116 @@
+{"prompt": "preciso fazer uma petição de tutela antecipada para o caso da Melissa", "labels": ["juridico"]}
+{"prompt": "como funciona o recurso de agravo de instrumento no TJDFT?", "labels": ["juridico"]}
+{"prompt": "redigir contestação contra a reconvenção da Thalia", "labels": ["juridico"]}
+{"prompt": "preciso de jurisprudência sobre alienação parental no DF", "labels": ["juridico"]}
+{"prompt": "qual o prazo para impugnação da sentença de guarda?", "labels": ["juridico"]}
+{"prompt": "montar embargos de declaração apontando omissão do juiz", "labels": ["juridico"]}
+{"prompt": "preparar habeas corpus preventivo", "labels": ["juridico"]}
+{"prompt": "analisar a liminar concedida na vara de família", "labels": ["juridico"]}
+{"prompt": "preciso regulamentar as visitas conforme o acordo", "labels": ["juridico"]}
+{"prompt": "fazer contrarazões ao recurso de apelação", "labels": ["juridico"]}
+{"prompt": "preciso de uma estratégia para a campanha da Celina no DF", "labels": ["estrategia"]}
+{"prompt": "rodar simulação eleitoral com Monte Carlo para o cenário de 2026", "labels": ["estrategia"]}
+{"prompt": "fazer análise SWOT do posicionamento do adversário", "labels": ["estrategia"]}
+{"prompt": "criar cenários de risco político para o segundo turno", "labels": ["estrategia"]}
+{"prompt": "pesquisa eleitoral com agentes sintéticos no Mirofish", "labels": ["estrategia"]}
+{"prompt": "mapear inteligência competitiva sobre candidatos do DF", "labels": ["estrategia"]}
+{"prompt": "planejamento estratégico para entrada no mercado público", "labels": ["estrategia"]}
+{"prompt": "simulação de eleição com 1001 eleitores do banco de personas", "labels": ["estrategia"]}
+{"prompt": "analisar cenário se candidato desistir antes do prazo", "labels": ["estrategia"]}
+{"prompt": "qual o posicionamento ideal para diferenciação no pleito", "labels": ["estrategia"]}
+{"prompt": "escrever um pitch de venda para apresentar a INTEIA", "labels": ["comunicacao"]}
+{"prompt": "montar copy persuasiva para email comercial do Paixão Cortes", "labels": ["comunicacao"]}
+{"prompt": "criar roteiro de storytelling para o LinkedIn", "labels": ["comunicacao"]}
+{"prompt": "preciso de um CTA forte para a landing page", "labels": ["comunicacao"]}
+{"prompt": "como convencer o gestor público a contratar nossos serviços", "labels": ["comunicacao"]}
+{"prompt": "escrever texto de marketing para rede social", "labels": ["comunicacao"]}
+{"prompt": "montar apresentação persuasiva para reunião com cliente", "labels": ["comunicacao"]}
+{"prompt": "criar narrativa de objeção para quando perguntarem o preço", "labels": ["comunicacao"]}
+{"prompt": "WhatsApp campanha de nutrição para leads frios", "labels": ["comunicacao", "estrategia", "receita"]}
+{"prompt": "redigir discurso de abertura para evento da INTEIA", "labels": ["comunicacao"]}
+{"prompt": "quanto cobrar pelo pacote de consultoria para o Paixão Cortes?", "labels": ["receita"]}
+{"prompt": "montar proposta comercial para novo cliente de 60 advogados", "labels": ["receita"]}
+{"prompt": "calcular break even da INTEIA considerando custos fixos", "labels": ["receita"]}
+{"prompt": "qual o ticket médio ideal para serviço de IA jurídica?", "labels": ["receita"]}
+{"prompt": "prospecção de leads para pipeline de vendas", "labels": ["receita"]}
+{"prompt": "precificar o produto de simulação eleitoral", "labels": ["receita"]}
+{"prompt": "como aumentar o faturamento mensal da INTEIA para 30K", "labels": ["receita"]}
+{"prompt": "montar pipeline de vendas com etapas claras", "labels": ["receita"]}
+{"prompt": "negociar contrato com o escritório Paixão Cortes", "labels": ["receita"]}
+{"prompt": "receita mensal do projeto está abaixo do projetado", "labels": ["receita"]}
+{"prompt": "buscar artigos sobre IA em Psicologia Organizacional para o doutorado", "labels": ["pesquisa"]}
+{"prompt": "como formatar referências no padrão ABNT?", "labels": ["pesquisa"]}
+{"prompt": "preciso de revisão de literatura sobre perfis latentes", "labels": ["pesquisa"]}
+{"prompt": "montar metodologia para análise fatorial da tese", "labels": ["pesquisa"]}
+{"prompt": "qual a melhor regressão para painel de dados longitudinais?", "labels": ["pesquisa"]}
+{"prompt": "IDP exige abstract em inglês, me ajuda a traduzir", "labels": ["pesquisa"]}
+{"prompt": "buscar papers sobre adoção de servidores públicos a tecnologia IA", "labels": ["pesquisa"]}
+{"prompt": "como citar corretamente um artigo no padrão APA 7?", "labels": ["pesquisa"]}
+{"prompt": "dissertação precisa de seção de discussão dos resultados", "labels": ["pesquisa"]}
+{"prompt": "pesquisa acadêmica sobre burnout em servidores públicos", "labels": ["pesquisa"]}
+{"prompt": "deploy do Mirofish na VPS Hostinger via Docker", "labels": ["infra"]}
+{"prompt": "configurar nginx como reverse proxy para o backend Flask", "labels": ["infra"]}
+{"prompt": "criar pipeline CI com GitHub Actions para testes automatizados", "labels": ["infra"]}
+{"prompt": "setup de banco de dados PostgreSQL no servidor", "labels": ["infra"]}
+{"prompt": "monitorar heartbeat do daemon da Colmeia", "labels": ["infra"]}
+{"prompt": "configurar SSL/TLS com Certbot para o domínio inteia.com.br", "labels": ["infra"]}
+{"prompt": "backup automático do banco de dados via cron", "labels": ["infra"]}
+{"prompt": "migração de schema do Graphiti para nova versão", "labels": ["infra"]}
+{"prompt": "Docker compose não sobe o serviço do backend", "labels": ["infra"]}
+{"prompt": "setup projeto novo com dependências e .env", "labels": ["infra"]}
+{"prompt": "gerar relatório estratégico sobre cenário eleitoral do DF", "labels": ["relatorio"]}
+{"prompt": "formatar análise do Helena em documento profissional", "labels": ["relatorio"]}
+{"prompt": "output do Helena precisa virar relatório bonito", "labels": ["relatorio"]}
+{"prompt": "criar gráfico de convergência da simulação", "labels": ["relatorio"]}
+{"prompt": "montar infográfico com dados da pesquisa eleitoral", "labels": ["relatorio", "estrategia"]}
+{"prompt": "transformar esses dados em relatório executivo", "labels": ["relatorio"]}
+{"prompt": "preciso de uma apresentação PPTX com a marca INTEIA", "labels": ["relatorio"]}
+{"prompt": "formatar relatório em LaTeX para o congresso", "labels": ["relatorio"]}
+{"prompt": "gerar SVG com gráfico de barras dos resultados", "labels": ["relatorio"]}
+{"prompt": "report final com métricas da campanha para o cliente", "labels": ["relatorio", "estrategia"]}
+{"prompt": "enviar email para a Alice avisando que chego tarde", "labels": ["google"]}
+{"prompt": "criar evento no Google Calendar para reunião de quinta", "labels": ["google"]}
+{"prompt": "buscar documento no Google Drive sobre o contrato INTEIA", "labels": ["google", "receita"]}
+{"prompt": "ler emails não lidos do Gmail de hoje", "labels": ["google"]}
+{"prompt": "upload do relatório para o Google Drive", "labels": ["google"]}
+{"prompt": "criar planilha no Google Sheets com dados financeiros", "labels": ["google"]}
+{"prompt": "agenda do Google Calendar para a semana", "labels": ["google"]}
+{"prompt": "download do arquivo do GDrive que a Alice compartilhou", "labels": ["google"]}
+{"prompt": "configurar triagem automática de email no Gmail", "labels": ["google"]}
+{"prompt": "buscar arquivo no drive sobre a Melissa", "labels": ["google"]}
+{"prompt": "por que a consciência artificial é diferente da biológica?", "labels": ["depth"]}
+{"prompt": "qual a relação entre fractais e auto-organização em sistemas complexos?", "labels": ["depth"]}
+{"prompt": "o paradoxo de Fermi tem implicações para IA?", "labels": ["depth"]}
+{"prompt": "qual o princípio fundamental por trás do aprendizado por reforço?", "labels": ["depth"]}
+{"prompt": "como funciona realmente a emergência em redes neurais?", "labels": ["depth"]}
+{"prompt": "qual é a raiz do problema da alucinação em LLMs?", "labels": ["depth"]}
+{"prompt": "dilema ético: IA deve tomar decisões judiciais?", "labels": ["depth"]}
+{"prompt": "consequência sistêmica de automatizar o judiciário", "labels": ["depth"]}
+{"prompt": "to muito cansado, não consigo focar no trabalho", "labels": ["energy"]}
+{"prompt": "dor na coluna depois de 4 horas sentado", "labels": ["energy"]}
+{"prompt": "estou exausto, nada rende hoje", "labels": ["energy"]}
+{"prompt": "travado num bug há 2 horas, sem foco", "labels": ["energy"]}
+{"prompt": "insônia noite passada, dificuldade de concentração", "labels": ["energy"]}
+{"prompt": "como está o tempo em Brasília hoje?", "labels": ["none"]}
+{"prompt": "me conta uma piada sobre programadores", "labels": ["none"]}
+{"prompt": "qual a população do Brasil em 2025?", "labels": ["none"]}
+{"prompt": "lista os arquivos nessa pasta", "labels": ["none"]}
+{"prompt": "me explica o que é TypeScript", "labels": ["none"]}
+{"prompt": "quanto custa um café na padaria?", "labels": ["none"]}
+{"prompt": "traduz isso para inglês", "labels": ["none"]}
+{"prompt": "quero ouvir música enquanto trabalho", "labels": ["none"]}
+{"prompt": "qual o melhor restaurante japonês de Brasília?", "labels": ["none"]}
+{"prompt": "me ajuda a resolver essa equação de segundo grau", "labels": ["none"]}
+{"prompt": "instalar pacotes pip no ambiente virtual", "labels": ["none"]}
+{"prompt": "como funciona o Git rebase?", "labels": ["none"]}
+{"prompt": "refatorar essa função para usar async/await", "labels": ["none"]}
+{"prompt": "criar um componente Vue para exibir dados tabulares", "labels": ["none"]}
+{"prompt": "explicar a diferença entre let e const em JavaScript", "labels": ["none"]}
+{"prompt": "montar petição e enviar por email para a advogada", "labels": ["juridico", "google"]}
+{"prompt": "gerar relatório da simulação eleitoral em LaTeX", "labels": ["relatorio", "estrategia"]}
+{"prompt": "proposta comercial e pitch para apresentação no cliente", "labels": ["receita", "comunicacao"]}
+{"prompt": "deploy do projeto e notificar equipe por email", "labels": ["infra", "google"]}
+{"prompt": "pesquisa acadêmica com dados do Google Drive", "labels": ["pesquisa", "google"]}
+{"prompt": "estou cansado mas preciso terminar a petição", "labels": ["energy", "juridico"]}
+{"prompt": "fazer análise estratégica e gerar gráfico SWOT", "labels": ["estrategia", "relatorio"]}
+{"prompt": "copy para campanha digital do candidato", "labels": ["comunicacao", "estrategia"]}
