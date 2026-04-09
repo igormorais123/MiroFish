@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirante News — Proposta de Investimento | O Jornal que Pensa com IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan: #00D4FF;
+  --cyan-light: #33DDFF;
+  --cyan-dark: #009FBF;
+  --cyan-glow: rgba(0,212,255,0.15);
+  --bg-primary: #060D18;
+  --bg-secondary: #0A1628;
+  --bg-card: #0F1D32;
+  --bg-card-hover: #142640;
+  --text-primary: #E8ECF1;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --border: #1E293B;
+  --border-cyan: rgba(0,212,255,0.25);
+  --accent-green: #00CC66;
+  --accent-red: #FF3B3B;
+  --accent-blue: #3B82F6;
+  --accent-purple: #B366FF;
+  --accent-orange: #FB923C;
+  --accent-yellow: #FBBF24;
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  --shadow-cyan: 0 0 40px rgba(0,212,255,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, #060D18 0%, #0A1628 40%, #0D1A2D 60%, #060D18 100%);
+  border-bottom: 1px solid var(--border-cyan);
+  padding: 3rem 0;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(0,212,255,0.06) 0%, transparent 50%);
+  animation: headerGlow 8s ease-in-out infinite;
+}
+@keyframes headerGlow {
+  0%,100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.header-content { position: relative; z-index: 1; }
+.header-badge {
+  display: inline-block;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid var(--border-cyan);
+  color: var(--cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.3rem 1rem;
+  border-radius: 20px;
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.header-logo {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+.header-logo .white { color: #fff; }
+.header-logo .cyan { color: var(--cyan); }
+.header h1 {
+  font-family: 'Crimson Pro', serif;
+  font-size: 3.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+  margin-bottom: 0.5rem;
+}
+.header h1 span { color: var(--cyan); }
+.header h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  max-width: 700px;
+}
+.header-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.header-meta span { display: flex; align-items: center; gap: 0.4rem; }
+
+/* SECTION */
+section { padding: 3rem 0; }
+section + section { border-top: 1px solid var(--border); }
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+.section-title {
+  font-family: 'Crimson Pro', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+.section-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  max-width: 800px;
+}
+
+/* CARDS */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+.card:hover {
+  border-color: var(--border-cyan);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-cyan);
+}
+.card-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--cyan);
+  margin-bottom: 0.5rem;
+}
+.card h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.card-highlight {
+  border-color: var(--cyan);
+  background: linear-gradient(135deg, rgba(0,212,255,0.06) 0%, var(--bg-card) 100%);
+}
+
+/* STATS */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+.stat-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--cyan);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+.stat-box.green .stat-value { color: var(--accent-green); }
+.stat-box.blue .stat-value { color: var(--accent-blue); }
+.stat-box.purple .stat-value { color: var(--accent-purple); }
+.stat-box.orange .stat-value { color: var(--accent-orange); }
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+th {
+  background: var(--bg-card);
+  color: var(--cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--cyan-dark);
+}
+td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+tr:hover td { background: rgba(0,212,255,0.02); }
+.td-cyan { color: var(--cyan); font-weight: 600; }
+.td-green { color: var(--accent-green); }
+.td-red { color: var(--accent-red); }
+
+/* PROGRESS BARS */
+.progress-bar {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin: 0.3rem 0;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--cyan-dark), var(--cyan));
+  transition: width 0.5s ease;
+}
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--cyan), var(--border));
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 2rem;
+  padding-left: 1.5rem;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -2.35rem;
+  top: 0.5rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cyan);
+  border: 3px solid var(--bg-primary);
+}
+.timeline-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--cyan);
+  margin-bottom: 0.3rem;
+}
+.timeline-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+}
+.timeline-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* CALLOUT */
+.callout {
+  background: linear-gradient(135deg, rgba(0,212,255,0.08) 0%, rgba(0,212,255,0.02) 100%);
+  border-left: 3px solid var(--cyan);
+  border-radius: 0 8px 8px 0;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+.callout-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+.callout p { font-size: 0.95rem; color: var(--text-secondary); }
+
+/* SPECIALIST BLOCK */
+.specialist {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+}
+.specialist-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.specialist-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--bg-primary);
+}
+.specialist-icon.editorial { background: var(--cyan); }
+.specialist-icon.financeiro { background: var(--accent-green); }
+.specialist-icon.tech { background: var(--accent-blue); }
+.specialist-icon.operacao { background: var(--accent-purple); }
+.specialist-name {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.specialist-role {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* FOOTER */
+.footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-cyan);
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.footer a { color: var(--cyan); text-decoration: none; }
+
+/* CHARTS (CSS only) */
+.bar-chart { display: flex; align-items: flex-end; gap: 0.5rem; height: 200px; margin: 1.5rem 0; }
+.bar {
+  flex: 1;
+  background: linear-gradient(to top, var(--cyan-dark), var(--cyan));
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  min-width: 40px;
+  transition: height 0.5s ease;
+}
+.bar-label {
+  position: absolute;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+}
+.bar-value {
+  position: absolute;
+  top: -1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .header h1 { font-size: 2.2rem; }
+  .section-title { font-size: 1.6rem; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .card-grid { grid-template-columns: 1fr; }
+  .header-meta { flex-direction: column; gap: 0.5rem; }
+}
+
+@media print {
+  body { background: #fff; color: #1a1a1a; }
+  .card, .stat-box, .specialist { border-color: #ddd; background: #f8f8f8; }
+  .stat-value, .section-label, .card-number, .callout-title { color: #009FBF; }
+  td, .card p, .callout p { color: #444; }
+  th { background: #f0f0f0; color: #009FBF; }
+}
+
+/* PILL TAGS */
+.pill {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+.pill-cyan { background: rgba(0,212,255,0.15); color: var(--cyan); }
+.pill-green { background: rgba(0,204,102,0.15); color: var(--accent-green); }
+.pill-red { background: rgba(255,59,59,0.15); color: var(--accent-red); }
+.pill-blue { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.pill-purple { background: rgba(179,102,255,0.15); color: var(--accent-purple); }
+.pill-orange { background: rgba(251,146,60,0.15); color: var(--accent-orange); }
+
+/* TWO COLUMN */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+@media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+/* SEPARATOR */
+.cyan-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  margin: 3rem 0;
+}
+
+/* IA BADGE */
+.ia-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid var(--border-cyan);
+  border-radius: 6px;
+  padding: 0.3rem 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--cyan);
+}
+.ia-badge::before {
+  content: '◆';
+  font-size: 0.5rem;
+}
+
+/* FEATURE BOX */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+.feature-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem;
+}
+.feature-box h4 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+.feature-box p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+</style>
+</head>
+<body>
+
+<!-- ======================= HEADER ======================= -->
+<header class="header">
+  <div class="container header-content">
+    <div class="header-badge">Documento Confidencial — Proposta de Investimento</div>
+    <div class="header-logo">
+      <span class="white">M</span><span class="cyan">I</span><span class="white">R</span><span class="cyan">A</span><span class="white">NTE NEWS</span>
+    </div>
+    <h1>O Jornal que <span>Pensa com IA</span></h1>
+    <h2>Proposta de investimento para construir o maior portal de jornalismo com inteligência artificial do Brasil — a tempo das eleições de outubro de 2026.</h2>
+    <div class="header-meta">
+      <span>Data: 05 de abril de 2026</span>
+      <span>Investimento: R$ 50.000/mês (R$ 600K/ano)</span>
+      <span>Portal: mirantenews.com.br</span>
+      <span>Versão: 1.0</span>
+    </div>
+  </div>
+</header>
+
+<!-- ======================= RESUMO EXECUTIVO ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 01</div>
+    <div class="section-title">Resumo Executivo</div>
+
+    <div class="callout">
+      <div class="callout-title">Tese Central</div>
+      <p>O <strong>Mirante News</strong> é o primeiro portal de jornalismo do Brasil operado integralmente por inteligência artificial — com transparência radical. Um pipeline de <strong>6 agentes especializados</strong> produz 60+ matérias por dia, pesquisas sintéticas diárias com <strong>50.000+ personas digitais</strong> calibradas pelo Censo IBGE, e colunistas lendários que reinterpretam o noticiário com profundidade histórica. Com as <strong>eleições gerais de outubro de 2026</strong> a 6 meses de distância, o Mirante está posicionado para capturar a maior onda de tráfego político da década. <strong>O investimento de R$ 50K/mês</strong> transforma um portal funcional em referência nacional de jornalismo inteligente.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">6</div>
+        <div class="stat-label">Agentes de IA na redação</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">50K+</div>
+        <div class="stat-label">Personas sintéticas (IBGE)</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-value">60+</div>
+        <div class="stat-label">Matérias/dia (capacidade)</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">13</div>
+        <div class="stat-label">Editorias cobertas</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">R$ 600K</div>
+        <div class="stat-label">Investimento total 12 meses</div>
+      </div>
+      <div class="stat-box orange">
+        <div class="stat-value">6 meses</div>
+        <div class="stat-label">Até as eleições 2026</div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">O que este documento contém</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-number">01</div>
+        <h3>O que é o Mirante News</h3>
+        <p>Pipeline editorial com IA, pesquisa sintética, colunistas lendários, evolução genética de conteúdo e transparência radical.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">02</div>
+        <h3>Oportunidade de mercado</h3>
+        <p>Jornalismo digital no Brasil, eleições 2026, crise de credibilidade da mídia, IA como diferencial.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">03</div>
+        <h3>Modelo de receita</h3>
+        <p>7 fontes de receita: publicidade, assinaturas, pesquisa sintética, branded content, relatórios, eventos, licenciamento.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">04</div>
+        <h3>Plano financeiro R$ 50K/mês</h3>
+        <p>Alocação mensal, projeção de receita, ROI, breakeven e cenários de escala trimestre a trimestre.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">05</div>
+        <h3>Infraestrutura e tecnologia</h3>
+        <p>Stack técnica, custos de IA, arquitetura de escala, roadmap de evolução.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">06</div>
+        <h3>Proposta para investidores</h3>
+        <p>Estrutura de deal, valuation, perfil ideal, comparáveis de mercado e próximos passos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= O QUE É O MIRANTE ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 02</div>
+    <div class="section-title">O que é o Mirante News</div>
+    <div class="section-subtitle">O primeiro portal de notícias do Brasil com uma redação inteira de inteligência artificial — e transparência total sobre isso.</div>
+
+    <div class="callout">
+      <div class="callout-title">Posicionamento</div>
+      <p><strong>"O jornal que combina inteligência artificial com voz popular — todos os dias."</strong> O Mirante News não esconde a IA: exibe um selo de transparência em cada matéria, publica a pesquisa sintética diária como ferramenta pública e transforma o uso ético de IA em marca registrada.</p>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Pipeline Editorial — 6 Agentes de IA</h3>
+    <p style="color:var(--text-secondary); margin-bottom:1.5rem;">Cada matéria passa por uma cadeia de 6 agentes especializados antes de ser publicada. O processo inteiro leva entre 3 e 8 minutos por artigo.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-number">AGENTE 01</div>
+        <h3>Curador</h3>
+        <p>Monitora RSS de 50+ fontes, identifica pautas relevantes para Brasília e Brasil, prioriza por urgência e relevância editorial.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">AGENTE 02</div>
+        <h3>Pesquisador</h3>
+        <p>Busca fontes primárias, dados oficiais, documentos do Diário Oficial, legislação e jurisprudência relacionada ao tema.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">AGENTE 03</div>
+        <h3>Redator</h3>
+        <p>Escreve a matéria seguindo o manual editorial: BLUF (Bottom Line Up Front), parágrafos curtos, linguagem direta, mínimo de 500 palavras.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">AGENTE 04</div>
+        <h3>Fact-Checker</h3>
+        <p>Verifica cada afirmação factual contra fontes primárias. Score abaixo de 60 = matéria rejeitada automaticamente.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">AGENTE 05</div>
+        <h3>Editor</h3>
+        <p>Revisão final: coerência, tom editorial, acentuação, hierarquia de informação, chamada e subtítulo otimizados.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">AGENTE 06</div>
+        <h3>Otimizador de Distribuição</h3>
+        <p>SEO genético (evolução de títulos em 5 variantes × 3 gerações), GEO para buscadores de IA, schema markup, Open Graph.</p>
+      </div>
+    </div>
+
+    <div class="cyan-line"></div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:1rem 0 1rem; color:var(--cyan);">Diferenciais Únicos</h3>
+
+    <div class="two-col">
+      <div>
+        <div class="feature-grid" style="grid-template-columns: 1fr;">
+          <div class="feature-box">
+            <h4>Pesquisa Sintética Diária</h4>
+            <p>Simula a opinião pública com 50.000+ personas digitais calibradas pelo Censo IBGE. Cada persona tem perfil socioeconômico, geográfico e político. Resultado publicado diariamente — sempre com o selo <span class="ia-badge">Pesquisa Sintética por IA</span></p>
+          </div>
+          <div class="feature-box">
+            <h4>Colunistas Lendários</h4>
+            <p>Personas históricas (Machado de Assis, Euclides da Cunha, Nikola Tesla, Dom Pedro II) reinterpretam notícias atuais com a técnica "Long Zoom" — do detalhe ao contexto civilizacional.</p>
+          </div>
+          <div class="feature-box">
+            <h4>Evolução Genética de Conteúdo</h4>
+            <p>Algoritmo genético (inspirado em AutoResearch de Andrej Karpathy) evolui títulos, metas e leads contra personas sintéticas. Cada geração compete; vence o mais engajador.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="feature-grid" style="grid-template-columns: 1fr;">
+          <div class="feature-box">
+            <h4>Transparência Radical</h4>
+            <p>Cada matéria exibe badge "Produzido por IA", score de qualidade (0-100), fontes verificadas, e nível de confiança. Pesquisa sintética nunca é apresentada como pesquisa com pessoas reais.</p>
+          </div>
+          <div class="feature-box">
+            <h4>Jornalismo Preditivo</h4>
+            <p>Simulações que antecipam reação pública a eventos, legislações e crises. O Mirante não só reporta o que aconteceu — projeta o que vem a seguir.</p>
+          </div>
+          <div class="feature-box">
+            <h4>Custo Operacional Próximo de Zero</h4>
+            <p>Motor de IA próprio (OmniRoute) roteia chamadas para provedores otimizados. Custo por artigo: ~R$ 0,50. Uma redação humana equivalente custaria R$ 200K+/mês.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Editorias</h3>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+      <span class="pill pill-orange">Política</span>
+      <span class="pill pill-purple">Jurídico</span>
+      <span class="pill pill-cyan">Tecnologia</span>
+      <span class="pill pill-green">Economia</span>
+      <span class="pill" style="background:rgba(251,191,36,0.15); color:#FBBF24;">DF</span>
+      <span class="pill pill-blue">Brasil</span>
+      <span class="pill" style="background:rgba(99,102,241,0.15); color:#6366F1;">Mundo</span>
+      <span class="pill pill-red">Esportes</span>
+      <span class="pill" style="background:rgba(236,72,153,0.15); color:#EC4899;">Cultura</span>
+      <span class="pill" style="background:rgba(20,184,166,0.15); color:#14B8A6;">Educação</span>
+      <span class="pill" style="background:rgba(34,211,238,0.15); color:#22D3EE;">Saúde</span>
+      <span class="pill pill-green">Meio Ambiente</span>
+      <span class="pill" style="background:rgba(251,191,36,0.15); color:#FBBF24;">Opinião</span>
+      <span class="pill pill-purple">Pesquisa IA</span>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Stack Técnica</h3>
+    <div class="two-col">
+      <div>
+        <table>
+          <thead><tr><th>Componente</th><th>Tecnologia</th></tr></thead>
+          <tbody>
+            <tr><td>Frontend</td><td>Next.js 16, React, TypeScript, MDX</td></tr>
+            <tr><td>Backend/Pipeline</td><td>FastAPI, Python 3.12, LangGraph</td></tr>
+            <tr><td>Banco de dados</td><td>Supabase PostgreSQL + PGMQ</td></tr>
+            <tr><td>Deploy frontend</td><td>Vercel (auto-deploy main branch)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <thead><tr><th>Componente</th><th>Tecnologia</th></tr></thead>
+          <tbody>
+            <tr><td>Gateway LLM</td><td>OmniRoute (Claude, GPT, Gemini, Sabiá-3)</td></tr>
+            <tr><td>SEO genético</td><td>Algoritmo evolutivo proprietário</td></tr>
+            <tr><td>Newsletter</td><td>Resend (em configuração)</td></tr>
+            <tr><td>Backend API</td><td>VPS dedicada (Docker)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MERCADO ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 03</div>
+    <div class="section-title">Oportunidade de Mercado</div>
+    <div class="section-subtitle">O jornalismo digital brasileiro está em crise de credibilidade e modelo de negócio. O Mirante News entra com uma proposta radicalmente diferente.</div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">160M</div>
+        <div class="stat-label">Brasileiros conectados à internet</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-value">R$ 35B</div>
+        <div class="stat-label">Publicidade digital Brasil 2026</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">73%</div>
+        <div class="stat-label">Desconfiança na mídia tradicional</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">156M</div>
+        <div class="stat-label">Eleitores em outubro 2026</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">A tempestade perfeita</div>
+      <p>Três forças convergem em 2026: (1) <strong>Crise de credibilidade</strong> — 73% dos brasileiros desconfiam da mídia tradicional segundo o Reuters Digital News Report; (2) <strong>Eleições gerais</strong> — o maior evento de tráfego político em 4 anos, com 27 governadores, 513 deputados federais e 1 presidente em disputa; (3) <strong>Explosão da IA</strong> — o público quer entender IA e está receptivo a veículos que a usam com transparência. O Mirante News está na interseção dessas três ondas.</p>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Mercado Endereçável</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Segmento</th>
+          <th>TAM (Total)</th>
+          <th>SAM (Alcançável)</th>
+          <th>SOM (12 meses)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-cyan">Publicidade digital (portais de notícia)</td>
+          <td>R$ 12B</td>
+          <td>R$ 500M (portais regionais/nicho)</td>
+          <td>R$ 1,2M</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Assinaturas digitais de notícias</td>
+          <td>R$ 3B</td>
+          <td>R$ 200M (premium/nicho)</td>
+          <td>R$ 600K</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Inteligência eleitoral (pesquisa + relatórios)</td>
+          <td>R$ 2,5B (campanhas 2026)</td>
+          <td>R$ 150M (pesquisa/dados)</td>
+          <td>R$ 1,8M</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Branded content / native advertising</td>
+          <td>R$ 5B</td>
+          <td>R$ 300M (portais médios)</td>
+          <td>R$ 480K</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Licenciamento de conteúdo para IA</td>
+          <td>R$ 1B (emergente)</td>
+          <td>R$ 100M</td>
+          <td>R$ 240K</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Concorrência</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Concorrente</th>
+          <th>Modelo</th>
+          <th>IA</th>
+          <th>Diferença vs Mirante</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Poder360</td>
+          <td>Assinatura + publicidade</td>
+          <td>Uso básico</td>
+          <td>Sem pipeline de IA, sem pesquisa sintética, sem transparência de IA</td>
+        </tr>
+        <tr>
+          <td>Metrópoles</td>
+          <td>Publicidade</td>
+          <td>Nenhuma visível</td>
+          <td>Portal grande, mas jornalismo convencional. Zero inovação em IA</td>
+        </tr>
+        <tr>
+          <td>Congresso em Foco</td>
+          <td>Assinatura B2B</td>
+          <td>Nenhuma</td>
+          <td>Foco legislativo restrito. Sem simulação nem pesquisa sintética</td>
+        </tr>
+        <tr>
+          <td>JOTA</td>
+          <td>Assinatura premium</td>
+          <td>Básica</td>
+          <td>Jurídico-regulatório. Modelo robusto, mas sem IA editorial</td>
+        </tr>
+        <tr>
+          <td>The News</td>
+          <td>Newsletter</td>
+          <td>Curadoria</td>
+          <td>Newsletter diária, não portal. Sem conteúdo proprietário com IA</td>
+        </tr>
+        <tr>
+          <td>Semafor / The Messenger (EUA)</td>
+          <td>Publicidade</td>
+          <td>Ferramentas internas</td>
+          <td>Referências internacionais, mas nenhuma opera com pipeline de 6 agentes público</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="callout-title">Vantagem competitiva</div>
+      <p><strong>Nenhum portal brasileiro opera com um pipeline editorial de IA pública e transparente.</strong> O Mirante não compete com a Folha pelo mesmo leitor — compete pela atenção de quem quer informação rápida, verificada e inteligente, com pesquisa sintética que nenhum concorrente consegue replicar sem 50.000 personas calibradas por Censo. O moat é operacional e de dados, não editorial.</p>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Janela Eleitoral — Outubro 2026</h3>
+    <p style="color:var(--text-secondary); margin-bottom:1rem;">As eleições são o catalisador. Cada ciclo eleitoral concentra a maior onda de busca por informação política em 4 anos. O Mirante precisa estar consolidado até julho para capturar o pico de tráfego de agosto a outubro.</p>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">5.570</div>
+        <div class="stat-label">Municípios com eleições</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-value">27</div>
+        <div class="stat-label">Governadores em disputa</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">513</div>
+        <div class="stat-label">Vagas na Câmara</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">81</div>
+        <div class="stat-label">Senadores (⅓ renova)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MODELO DE RECEITA ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 04</div>
+    <div class="section-title">Modelo de Receita — 7 Fontes</div>
+
+    <div class="specialist">
+      <div class="specialist-header">
+        <div class="specialist-icon financeiro">$</div>
+        <div>
+          <div class="specialist-name">Projeção Financeira</div>
+          <div class="specialist-role">Modelo de receita diversificado — não depende de uma única fonte</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Fonte de Receita</th>
+            <th>Modelo</th>
+            <th>Ticket/CPM</th>
+            <th>Projeção Mês 12</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-cyan">Publicidade Programática</td>
+            <td>Google AdSense + Ad Manager</td>
+            <td>CPM R$ 8–15</td>
+            <td class="td-green">R$ 80K–120K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Publicidade Direta</td>
+            <td>Campanhas, partidos, governo</td>
+            <td>R$ 15K–50K/campanha</td>
+            <td class="td-green">R$ 60K–100K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Assinaturas Premium</td>
+            <td>Conteúdo exclusivo + pesquisa sintética completa</td>
+            <td>R$ 29–99/mês</td>
+            <td class="td-green">R$ 50K–80K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Pesquisa Sintética (B2B)</td>
+            <td>Relatórios personalizados para campanhas e empresas</td>
+            <td>R$ 5K–30K/pesquisa</td>
+            <td class="td-green">R$ 80K–150K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Branded Content</td>
+            <td>Matérias patrocinadas, conteúdo nativo</td>
+            <td>R$ 5K–20K/matéria</td>
+            <td class="td-green">R$ 40K–60K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Relatórios de Inteligência</td>
+            <td>Análise política, cenários, risk assessment</td>
+            <td>R$ 10K–50K/relatório</td>
+            <td class="td-green">R$ 30K–60K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Licenciamento + Sindicalização</td>
+            <td>Conteúdo para outros veículos, feed para IA</td>
+            <td>R$ 2K–10K/mês</td>
+            <td class="td-green">R$ 20K–40K</td>
+          </tr>
+          <tr style="font-weight:700;">
+            <td class="td-cyan">TOTAL PROJETADO (mês 12)</td>
+            <td></td>
+            <td></td>
+            <td class="td-green" style="font-size:1.1rem;">R$ 360K–610K</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="callout-title">Vantagem estrutural de custo</div>
+        <p>O Mirante produz conteúdo a custo marginal próximo de zero (~R$ 0,50/artigo via OmniRoute). Uma redação tradicional de 10 jornalistas custa R$ 80K+/mês. O Mirante opera com 1-2 editores humanos + pipeline de IA, resultando em <strong>margem bruta de 80-90%</strong> — incomparável com qualquer veículo tradicional.</p>
+      </div>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Crimson Pro',serif; font-size:1.3rem;">Projeção de Receita 12 Meses</h3>
+
+      <div class="bar-chart" style="margin-bottom: 4rem;">
+        <div class="bar" style="height:3%"><div class="bar-value">5K</div><div class="bar-label">Mês 1</div></div>
+        <div class="bar" style="height:5%"><div class="bar-value">10K</div><div class="bar-label">Mês 2</div></div>
+        <div class="bar" style="height:8%"><div class="bar-value">20K</div><div class="bar-label">Mês 3</div></div>
+        <div class="bar" style="height:13%"><div class="bar-value">35K</div><div class="bar-label">Mês 4</div></div>
+        <div class="bar" style="height:20%"><div class="bar-value">55K</div><div class="bar-label">Mês 5</div></div>
+        <div class="bar" style="height:30%"><div class="bar-value">85K</div><div class="bar-label">Mês 6</div></div>
+        <div class="bar" style="height:40%"><div class="bar-value">120K</div><div class="bar-label">Mês 7</div></div>
+        <div class="bar" style="height:52%"><div class="bar-value">160K</div><div class="bar-label">Mês 8</div></div>
+        <div class="bar" style="height:65%"><div class="bar-value">220K</div><div class="bar-label">Mês 9</div></div>
+        <div class="bar" style="height:78%"><div class="bar-value">300K</div><div class="bar-label">Mês 10</div></div>
+        <div class="bar" style="height:88%"><div class="bar-value">380K</div><div class="bar-label">Mês 11</div></div>
+        <div class="bar" style="height:100%"><div class="bar-value">480K</div><div class="bar-label">Mês 12</div></div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box green">
+          <div class="stat-value">Mês 7</div>
+          <div class="stat-label">Breakeven projetado (cenário moderado)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">R$ 1,87M</div>
+          <div class="stat-label">Receita acumulada 12 meses</div>
+        </div>
+        <div class="stat-box blue">
+          <div class="stat-value">3,1x</div>
+          <div class="stat-label">Múltiplo sobre R$ 600K</div>
+        </div>
+        <div class="stat-box purple">
+          <div class="stat-value">R$ 1,27M</div>
+          <div class="stat-label">Lucro acumulado 12 meses</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Crimson Pro',serif; font-size:1.3rem;">Métricas de Audiência Projetadas</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th>Mês 3</th>
+            <th>Mês 6</th>
+            <th>Mês 9 (eleições)</th>
+            <th>Mês 12</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-cyan">Visitantes únicos/mês</td>
+            <td>50K</td>
+            <td>250K</td>
+            <td class="td-green">1,5M</td>
+            <td>800K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Pageviews/mês</td>
+            <td>150K</td>
+            <td>750K</td>
+            <td class="td-green">6M</td>
+            <td>3M</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Assinantes newsletter</td>
+            <td>2K</td>
+            <td>15K</td>
+            <td>50K</td>
+            <td>70K</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Assinantes premium</td>
+            <td>50</td>
+            <td>500</td>
+            <td>1.500</td>
+            <td>2.000</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Matérias publicadas (total)</td>
+            <td>2.700</td>
+            <td>8.000</td>
+            <td>15.000</td>
+            <td>22.000</td>
+          </tr>
+          <tr>
+            <td class="td-cyan">Domain Authority (Moz)</td>
+            <td>15</td>
+            <td>30</td>
+            <td>45</td>
+            <td>50</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= ALOCAÇÃO DO INVESTIMENTO ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 05</div>
+    <div class="section-title">Alocação do Investimento — R$ 50K/mês</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th>Q1 (% do total)</th>
+          <th>Q2</th>
+          <th>Q3 (eleições)</th>
+          <th>Q4</th>
+          <th>Total 12m</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-cyan">Equipe Editorial + Comercial</td>
+          <td>R$ 15K (30%)</td>
+          <td>R$ 18K (36%)</td>
+          <td>R$ 22K (44%)</td>
+          <td>R$ 22K (44%)</td>
+          <td class="td-cyan">R$ 231K</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Marketing e Aquisição</td>
+          <td>R$ 15K (30%)</td>
+          <td>R$ 14K (28%)</td>
+          <td>R$ 12K (24%)</td>
+          <td>R$ 10K (20%)</td>
+          <td class="td-cyan">R$ 153K</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Infraestrutura e IA</td>
+          <td>R$ 10K (20%)</td>
+          <td>R$ 10K (20%)</td>
+          <td>R$ 10K (20%)</td>
+          <td>R$ 10K (20%)</td>
+          <td class="td-cyan">R$ 120K</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Produto (features + design)</td>
+          <td>R$ 7K (14%)</td>
+          <td>R$ 5K (10%)</td>
+          <td>R$ 3K (6%)</td>
+          <td>R$ 5K (10%)</td>
+          <td class="td-cyan">R$ 60K</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Operação e Overhead</td>
+          <td>R$ 3K (6%)</td>
+          <td>R$ 3K (6%)</td>
+          <td>R$ 3K (6%)</td>
+          <td>R$ 3K (6%)</td>
+          <td class="td-cyan">R$ 36K</td>
+        </tr>
+        <tr style="font-weight:700;">
+          <td>TOTAL</td>
+          <td>R$ 50K/mês</td>
+          <td>R$ 50K/mês</td>
+          <td>R$ 50K/mês</td>
+          <td>R$ 50K/mês</td>
+          <td class="td-cyan">R$ 600K</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Estratégia por Trimestre</h3>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-date">Trimestre 1 — Fundação e Tráfego (R$ 150K)</div>
+        <div class="timeline-title">Meta: 50K visitantes/mês, 10 matérias/dia, 2K newsletter</div>
+        <div class="timeline-desc">SEO agressivo (22.000 matérias em 12 meses criam autoridade massiva). Google News indexado. Contratar editor-chefe humano + vendedor de publicidade. Lançar newsletter diária. Fechar 3 anunciantes diretos. Publicar pesquisa sintética diária para Brasília.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">Trimestre 2 — Escala e Monetização (R$ 150K)</div>
+        <div class="timeline-title">Meta: 250K visitantes, 30 matérias/dia, R$ 85K MRR</div>
+        <div class="timeline-desc">Google AdSense + Ad Manager otimizados. Lançar assinatura premium (R$ 29/mês). Pesquisa sintética como produto B2B para campanhas. Abrir branded content. Ampliar para cobertura nacional. Contratar CS + analista de dados.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">Trimestre 3 — Eleições 2026 (R$ 150K)</div>
+        <div class="timeline-title">Meta: 1,5M visitantes, cobertura eleitoral completa, visibilidade nacional</div>
+        <div class="timeline-desc">Cobertura eleitoral ao vivo com pesquisa sintética diária em todos os estados. Projeções de resultado. Simulação de cenários pós-eleição. War rooms para campanhas clientes. Pico de publicidade eleitoral. Colunistas lendários analisando candidatos. Case público de alto impacto.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">Trimestre 4 — Consolidação (R$ 150K)</div>
+        <div class="timeline-title">Meta: 800K visitantes recorrentes, R$ 480K MRR, autossustentável</div>
+        <div class="timeline-desc">Publicar resultados vs. projeções (validação pública). Licenciamento de conteúdo para outros veículos. Expandir verticais (Economia, Tecnologia). Preparar rodada de investimento. Newsletter premium lançada.</div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Plano de Contratação</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Fase</th>
+          <th>Cargo</th>
+          <th>Perfil</th>
+          <th>Salário est.</th>
+          <th>Prioridade</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="2"><span class="pill pill-cyan">Meses 1–3</span></td>
+          <td class="td-cyan">Editor-Chefe</td>
+          <td>Jornalista experiente, curadoria editorial, revisão humana final</td>
+          <td>R$ 8K</td>
+          <td><span class="pill pill-red">Crítico</span></td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Vendedor de Publicidade</td>
+          <td>Experiência em mídia digital, rede em Brasília, comissão sobre vendas</td>
+          <td>R$ 5K + comissão</td>
+          <td><span class="pill pill-red">Crítico</span></td>
+        </tr>
+        <tr>
+          <td rowspan="2"><span class="pill pill-cyan">Meses 4–6</span></td>
+          <td class="td-cyan">Analista de Dados/SEO</td>
+          <td>Google Analytics, Search Console, otimização de conteúdo</td>
+          <td>R$ 5K</td>
+          <td><span class="pill pill-cyan">Alto</span></td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Executivo Comercial (B2B)</td>
+          <td>Venda de pesquisa sintética e relatórios para campanhas</td>
+          <td>R$ 5K + comissão</td>
+          <td><span class="pill pill-cyan">Alto</span></td>
+        </tr>
+        <tr>
+          <td rowspan="2"><span class="pill pill-cyan">Meses 7–12</span></td>
+          <td class="td-cyan">Desenvolvedor Full-Stack</td>
+          <td>Next.js + Python, evolução do portal e pipeline</td>
+          <td>R$ 10K</td>
+          <td>Médio</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Community Manager</td>
+          <td>Redes sociais, engajamento, distribuição de conteúdo</td>
+          <td>R$ 4K</td>
+          <td>Médio</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= INFRAESTRUTURA ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 06</div>
+    <div class="section-title">Infraestrutura e Custos Operacionais</div>
+
+    <div class="specialist">
+      <div class="specialist-header">
+        <div class="specialist-icon tech">T</div>
+        <div>
+          <div class="specialist-name">Arquitetura de Escala</div>
+          <div class="specialist-role">Infraestrutura projetada para crescer de 50K a 1,5M visitantes/mês</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-blue); margin:1.5rem 0 1rem; font-family:'Crimson Pro',serif; font-size:1.3rem;">Custos de Infraestrutura Mensais</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Atual</th>
+            <th>Escala (mês 6)</th>
+            <th>Pico Eleições (mês 9)</th>
+            <th>Produção (mês 12)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>VPS / Cloud (backend API)</td>
+            <td>R$ 300</td>
+            <td>R$ 1.500</td>
+            <td>R$ 3.000</td>
+            <td>R$ 2.000</td>
+          </tr>
+          <tr>
+            <td>Vercel (frontend)</td>
+            <td>R$ 0 (free)</td>
+            <td>R$ 400</td>
+            <td>R$ 800</td>
+            <td>R$ 600</td>
+          </tr>
+          <tr>
+            <td>Supabase (banco de dados)</td>
+            <td>R$ 0 (free)</td>
+            <td>R$ 200</td>
+            <td>R$ 500</td>
+            <td>R$ 400</td>
+          </tr>
+          <tr>
+            <td>CDN (Cloudflare)</td>
+            <td>R$ 0 (free)</td>
+            <td>R$ 200</td>
+            <td>R$ 500</td>
+            <td>R$ 300</td>
+          </tr>
+          <tr>
+            <td>APIs de IA (OmniRoute)</td>
+            <td>R$ 100</td>
+            <td>R$ 1.500</td>
+            <td>R$ 3.000</td>
+            <td>R$ 2.000</td>
+          </tr>
+          <tr>
+            <td>Resend (newsletter)</td>
+            <td>R$ 0</td>
+            <td>R$ 100</td>
+            <td>R$ 300</td>
+            <td>R$ 200</td>
+          </tr>
+          <tr>
+            <td>Monitoramento (Sentry/Analytics)</td>
+            <td>R$ 0</td>
+            <td>R$ 200</td>
+            <td>R$ 400</td>
+            <td>R$ 300</td>
+          </tr>
+          <tr>
+            <td>Domínio + SSL + Email</td>
+            <td>R$ 30</td>
+            <td>R$ 50</td>
+            <td>R$ 50</td>
+            <td>R$ 50</td>
+          </tr>
+          <tr style="font-weight:700;">
+            <td>TOTAL INFRA</td>
+            <td>~R$ 430</td>
+            <td>~R$ 4.150</td>
+            <td>~R$ 8.550</td>
+            <td>~R$ 5.850</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="callout-title">OmniRoute — custo de IA quase zero</div>
+        <p>O gateway OmniRoute (tecnologia INTEIA) roteia chamadas de IA para provedores de custo otimizado. Custo por artigo: ~R$ 0,50 (vs. R$ 5-10 usando APIs diretamente). Para 60 artigos/dia = <strong>~R$ 900/mês de IA</strong> — uma fração do que qualquer concorrente pagaria.</p>
+      </div>
+
+      <h3 style="color:var(--accent-blue); margin:1.5rem 0 1rem; font-family:'Crimson Pro',serif; font-size:1.3rem;">Roadmap Técnico</h3>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-number">Q1 — ESTABILIZAR</div>
+          <h3>Base para escala</h3>
+          <p>CI/CD com GitHub Actions. Google News indexação. Sitemap dinâmico. Schema markup em todas as matérias. Newsletter automatizada. PWA básico. Core Web Vitals otimizados.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">Q2 — MONETIZAR</div>
+          <h3>Receita funcional</h3>
+          <p>Ad Manager integrado. Paywall para premium. Dashboard de pesquisa sintética B2B. API de sindicalização. Push notifications. AMP pages.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">Q3 — ESCALAR</div>
+          <h3>Pico eleitoral</h3>
+          <p>Auto-scaling para picos de tráfego. Cache agressivo. Edge functions. Cobertura ao vivo (SSE/WebSocket). Dashboard eleitoral público. App mobile (PWA).</p>
+        </div>
+        <div class="card">
+          <div class="card-number">Q4 — CONSOLIDAR</div>
+          <h3>Sustentabilidade</h3>
+          <p>Otimização de custos pós-pico. Integrações com redes sociais. Vídeo AI (Remotion). Podcast gerado por IA. Arquivo completo indexado. API pública.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RISCOS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 07</div>
+    <div class="section-title">Riscos e Mitigações</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Risco</th>
+          <th>Probabilidade</th>
+          <th>Impacto</th>
+          <th>Mitigação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Regulação de IA em jornalismo</td>
+          <td><span class="pill pill-cyan">Média</span></td>
+          <td><span class="pill pill-cyan">Alto</span></td>
+          <td>Transparência radical desde o dia 1. Selo de IA em cada matéria. Compliance proativo com TSE e Marco Legal da IA.</td>
+        </tr>
+        <tr>
+          <td>Rejeição do público à "IA no jornalismo"</td>
+          <td><span class="pill pill-cyan">Média</span></td>
+          <td><span class="pill pill-cyan">Alto</span></td>
+          <td>Posicionar como ferramenta de transparência, não substituição humana. Editor-chefe humano como garantia. Fact-check automatizado visível.</td>
+        </tr>
+        <tr>
+          <td>Dependência de pessoa única (Igor)</td>
+          <td><span class="pill pill-red">Alta</span></td>
+          <td><span class="pill pill-red">Crítico</span></td>
+          <td>Contratar editor-chefe nos primeiros 30 dias. Documentação completa do pipeline. Automação máxima.</td>
+        </tr>
+        <tr>
+          <td>Alucinação / erro factual publicado</td>
+          <td><span class="pill pill-cyan">Média</span></td>
+          <td><span class="pill pill-red">Crítico</span></td>
+          <td>Fact-checker obrigatório (score < 60 = rejeição automática). Revisão humana em matérias sensíveis. Política de correção rápida.</td>
+        </tr>
+        <tr>
+          <td>Tráfego eleitoral não se sustenta pós-outubro</td>
+          <td><span class="pill pill-green">Esperado</span></td>
+          <td><span class="pill pill-cyan">Médio</span></td>
+          <td>Modelo contempla queda de 50% pós-eleição. Diversificação para verticais perenes (Economia, Tecnologia, Jurídico). Base de assinantes como receita recorrente.</td>
+        </tr>
+        <tr>
+          <td>Custo de IA escala mais rápido que receita</td>
+          <td><span class="pill pill-green">Baixa</span></td>
+          <td><span class="pill pill-cyan">Médio</span></td>
+          <td>OmniRoute já reduz custos em 80%. Modelos open-source como fallback. Custo por artigo monitorado diariamente.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= PESQUISA SINTÉTICA ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 08</div>
+    <div class="section-title">Pesquisa Sintética — O Diferencial Premium</div>
+    <div class="section-subtitle">A pesquisa sintética diária é o ativo mais valioso do Mirante — simultaneamente conteúdo editorial e produto B2B monetizável.</div>
+
+    <div class="two-col">
+      <div>
+        <h3 style="color:var(--cyan); margin-bottom:1rem; font-family:'Crimson Pro',serif;">Como funciona</h3>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 1</div>
+          <h3>50.000+ Personas Calibradas</h3>
+          <p>Cada persona digital possui perfil socioeconômico, geográfico e político extraído do Censo IBGE. Distribuição demográfica fiel à população real.</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 2</div>
+          <h3>Simulação de Opinião</h3>
+          <p>Cada persona "reage" ao tema do dia com base em seu perfil. Algoritmo agrega respostas em métricas de aprovação, rejeição e indiferença.</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 3</div>
+          <h3>Segmentação Profunda</h3>
+          <p>Resultados cruzados por região, faixa etária, renda, escolaridade, gênero e posição política. Clusters de opinião identificados.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">ETAPA 4</div>
+          <h3>Publicação Transparente</h3>
+          <p>Sempre com selo "Pesquisa Sintética por IA — não substitui pesquisa com pessoas reais". Metodologia aberta e replicável.</p>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--cyan); margin-bottom:1rem; font-family:'Crimson Pro',serif;">Monetização</h3>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Publicação diária gratuita (tráfego)</h3>
+          <p>Resultado geral publicado diariamente no portal. Gera tráfego massivo — pesquisa eleitoral é o conteúdo mais buscado em ano de eleição.</p>
+          <p style="color:var(--cyan); font-size:0.8rem; margin-top:0.5rem;">Valor: tráfego + credibilidade + SEO</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Dashboard Premium (assinantes)</h3>
+          <p>Segmentação completa, séries históricas, comparativos, exportação de dados. Disponível para assinantes R$ 99/mês.</p>
+          <p style="color:var(--cyan); font-size:0.8rem; margin-top:0.5rem;">Ticket: R$ 99/mês × 2.000 assinantes = R$ 198K/mês</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Relatórios B2B para Campanhas</h3>
+          <p>Pesquisa personalizada para candidatos: simulação de cenários, impacto de narrativa, teste de discurso com personas específicas do eleitorado.</p>
+          <p style="color:var(--cyan); font-size:0.8rem; margin-top:0.5rem;">Ticket: R$ 5K–30K por pesquisa customizada</p>
+        </div>
+        <div class="card">
+          <h3>Relatórios de Inteligência Política</h3>
+          <p>Análise semanal/mensal com cenários, projeções e recomendações. Para empresas, escritórios de advocacia e consultorias políticas.</p>
+          <p style="color:var(--cyan); font-size:0.8rem; margin-top:0.5rem;">Ticket: R$ 10K–50K por relatório</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PROJEÇÃO CONSOLIDADA ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 09</div>
+    <div class="section-title">Projeção Consolidada — Receita vs. Investimento</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th>Investimento (acum.)</th>
+          <th>Receita mensal</th>
+          <th>Receita (acum.)</th>
+          <th>Visitantes/mês</th>
+          <th>Equipe</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>R$ 50K</td><td>R$ 5K</td><td>R$ 5K</td><td>10K</td><td>3</td><td><span class="pill pill-red">Investimento</span></td></tr>
+        <tr><td>2</td><td>R$ 100K</td><td>R$ 10K</td><td>R$ 15K</td><td>25K</td><td>3</td><td><span class="pill pill-red">Investimento</span></td></tr>
+        <tr><td>3</td><td>R$ 150K</td><td>R$ 20K</td><td>R$ 35K</td><td>50K</td><td>4</td><td><span class="pill pill-red">Investimento</span></td></tr>
+        <tr><td>4</td><td>R$ 200K</td><td>R$ 35K</td><td>R$ 70K</td><td>100K</td><td>4</td><td><span class="pill pill-cyan">Acelerando</span></td></tr>
+        <tr><td>5</td><td>R$ 250K</td><td>R$ 55K</td><td>R$ 125K</td><td>180K</td><td>5</td><td><span class="pill pill-cyan">Acelerando</span></td></tr>
+        <tr><td>6</td><td>R$ 300K</td><td>R$ 85K</td><td>R$ 210K</td><td>250K</td><td>6</td><td><span class="pill pill-cyan">Acelerando</span></td></tr>
+        <tr style="background:rgba(0,212,255,0.04);"><td><strong>7</strong></td><td>R$ 350K</td><td><strong>R$ 120K</strong></td><td>R$ 330K</td><td>500K</td><td>6</td><td><span class="pill pill-green">BREAKEVEN</span></td></tr>
+        <tr><td>8</td><td>R$ 400K</td><td>R$ 160K</td><td>R$ 490K</td><td>800K</td><td>7</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr style="background:rgba(0,212,255,0.04);"><td><strong>9</strong></td><td>R$ 450K</td><td><strong class="td-green">R$ 220K</strong></td><td>R$ 710K</td><td><strong>1,5M</strong></td><td>7</td><td><span class="pill pill-green">Pico eleitoral</span></td></tr>
+        <tr><td>10</td><td>R$ 500K</td><td>R$ 300K</td><td>R$ 1,01M</td><td>1,2M</td><td>7</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr><td>11</td><td>R$ 550K</td><td>R$ 380K</td><td>R$ 1,39M</td><td>900K</td><td>8</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr style="background:rgba(0,212,255,0.06);"><td><strong>12</strong></td><td><strong>R$ 600K</strong></td><td><strong class="td-green">R$ 480K</strong></td><td><strong>R$ 1,87M</strong></td><td><strong>800K</strong></td><td><strong>8</strong></td><td><span class="pill pill-green">Consolidação</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="stats-row">
+      <div class="stat-box green">
+        <div class="stat-value">R$ 1,87M</div>
+        <div class="stat-label">Receita total acumulada 12 meses</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">R$ 600K</div>
+        <div class="stat-label">Investimento total</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">3,1x</div>
+        <div class="stat-label">Retorno sobre investimento</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">R$ 10M–18M</div>
+        <div class="stat-label">Valuation projetado (mês 12)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PROPOSTA DE INVESTIMENTO ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 10</div>
+    <div class="section-title">Proposta de Investimento — R$ 50.000/mês</div>
+    <div class="section-subtitle">Documento para apresentação a investidores, grupos de mídia, e fundos interessados em IA + jornalismo.</div>
+
+    <div class="callout">
+      <div class="callout-title">Tese do investimento</div>
+      <p>O Mirante News construiu, em operação, o que nenhum portal brasileiro possui: <strong>uma redação de 6 agentes de IA com pesquisa sintética de 50.000+ personas calibradas e evolução genética de conteúdo</strong>. Com R$ 50K/mês de investimento durante 12 meses, o portal captura as eleições de outubro de 2026 como catalisador de audiência e fecha o ano com <strong>R$ 480K de receita mensal</strong> e <strong>800K visitantes recorrentes</strong>.</p>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Por que investir agora</h3>
+
+    <div class="card-grid">
+      <div class="card card-highlight">
+        <div class="card-number">01 — TIMING</div>
+        <h3>Eleições 2026 em 6 meses</h3>
+        <p>O maior evento de tráfego político em 4 anos. Portais de notícia registram 3-5x mais tráfego em ano eleitoral. Quem não investir agora perde a onda inteira.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">02 — MOAT DE DADOS</div>
+        <h3>50.000+ personas calibradas</h3>
+        <p>Nenhum concorrente brasileiro tem pesquisa sintética com personas calibradas por Censo IBGE. Levar 12+ meses para replicar sem a infraestrutura INTEIA.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">03 — MARGEM BRUTAL</div>
+        <h3>80-90% de margem bruta</h3>
+        <p>Custo de produção de ~R$ 0,50/artigo vs. R$ 500+ em redação tradicional. Escala sem contratar proporcionalmente. Modelo SaaS aplicado a jornalismo.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">04 — FIRST MOVER</div>
+        <h3>Primeiro portal de IA do Brasil</h3>
+        <p>Não existe outro portal brasileiro operando com pipeline de 6 agentes + pesquisa sintética + evolução genética de SEO + colunistas IA. O Mirante está 12-18 meses à frente.</p>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Uso detalhado dos recursos</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th>Valor Total</th>
+          <th>% do Total</th>
+          <th>O que financia</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-cyan">Equipe</td>
+          <td>R$ 231.000</td>
+          <td>38,5%</td>
+          <td>Editor-chefe, vendedor de publicidade, analista SEO, executivo B2B, dev, community manager</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Marketing e Aquisição</td>
+          <td>R$ 153.000</td>
+          <td>25,5%</td>
+          <td>Google Ads, Facebook Ads, LinkedIn (B2B), PR, eventos, parcerias de mídia</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Infraestrutura e IA</td>
+          <td>R$ 120.000</td>
+          <td>20%</td>
+          <td>Servidores, CDN, APIs de IA, Vercel, Supabase, monitoramento, backups</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Produto (features + design)</td>
+          <td>R$ 60.000</td>
+          <td>10%</td>
+          <td>Dashboard premium, app mobile (PWA), paywall, dashboard B2B, features eleitorais</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Operação</td>
+          <td>R$ 36.000</td>
+          <td>6%</td>
+          <td>Contabilidade, jurídico, ferramentas SaaS, contingência</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Estruturas de deal</h3>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-number">OPÇÃO A</div>
+        <h3>Equity Direto (8–12%)</h3>
+        <p>R$ 600K por 8–12% do Mirante News. Pre-money valuation de R$ 5M–7,5M. Assento no board advisory. Relatórios mensais de métricas.</p>
+        <p style="color:var(--cyan); margin-top:0.5rem;">Ideal para: investidor estratégico de mídia ou VC</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">OPÇÃO B — RECOMENDADA</div>
+        <h3>Revenue Share</h3>
+        <p>R$ 600K com retorno de 2x (R$ 1,2M) via 15% da receita bruta mensal até quitação. Sem diluição. Prazo estimado: 18–24 meses. Direito de preferência em rodada futura.</p>
+        <p style="color:var(--cyan); margin-top:0.5rem;">Ideal para: investidor conservador ou grupo de mídia</p>
+      </div>
+      <div class="card">
+        <div class="card-number">OPÇÃO C</div>
+        <h3>Parceria Estratégica</h3>
+        <p>Capital + distribuição. Investidor com canais de distribuição (rede de rádios, TV, portais regionais) entra com R$ 600K e recebe exclusividade de conteúdo na sua região.</p>
+        <p style="color:var(--cyan); margin-top:0.5rem;">Ideal para: grupo de comunicação regional</p>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Perfil de investidor ideal</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Por quê</th>
+          <th>O que traz além do capital</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-cyan">Grupo de comunicação regional</td>
+          <td>Sinergia com veículos existentes. Mirante como braço digital com IA</td>
+          <td>Audiência existente, credibilidade, equipe jornalística</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Político/ex-político com visão</td>
+          <td>Canal de influência + pesquisa sintética como ferramenta pessoal</td>
+          <td>Rede de contatos, visibilidade, legitimidade</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Fundo de VC com tese em mídia/IA</td>
+          <td>AI-first media é a próxima fronteira. Poucos ativos assim no Brasil</td>
+          <td>Mentoria, rede, follow-on, conexões com tech</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">Empresa de publicidade/agência</td>
+          <td>Canal de inventário de mídia com margem alta</td>
+          <td>Carteira de anunciantes, operação de ads</td>
+        </tr>
+        <tr>
+          <td class="td-cyan">FINEP / Governo (não-dilutivo)</td>
+          <td>Inovação em jornalismo com IA se encaixa em editais de IA + cultura</td>
+          <td>Capital sem diluição, chancela institucional</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Crimson Pro',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--cyan);">Cenários de Escala</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Cenário</th>
+          <th>R$ 50K/mês</th>
+          <th>R$ 100K/mês</th>
+          <th>R$ 200K/mês</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Equipe (mês 12)</td>
+          <td>8</td>
+          <td>15</td>
+          <td>25</td>
+        </tr>
+        <tr>
+          <td>Visitantes/mês (mês 12)</td>
+          <td>800K</td>
+          <td>2M</td>
+          <td>5M</td>
+        </tr>
+        <tr>
+          <td>MRR (mês 12)</td>
+          <td class="td-green">R$ 480K</td>
+          <td class="td-green">R$ 1,2M</td>
+          <td class="td-green">R$ 3M</td>
+        </tr>
+        <tr>
+          <td>Valuation projetado</td>
+          <td>R$ 10M–18M</td>
+          <td>R$ 30M–50M</td>
+          <td>R$ 80M+</td>
+        </tr>
+        <tr>
+          <td>Breakeven</td>
+          <td>Mês 7</td>
+          <td>Mês 6</td>
+          <td>Mês 5</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= NEXT STEPS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 11</div>
+    <div class="section-title">Próximos Passos</div>
+
+    <div class="callout">
+      <div class="callout-title">Urgência</div>
+      <p>As eleições de outubro de 2026 são uma janela que não se repete por 4 anos. Cada semana sem investimento é uma semana de indexação, audiência e posicionamento perdida. Os próximos 30 dias definem se o Mirante News captura a onda eleitoral ou assiste de fora.</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card card-highlight">
+        <div class="card-number">SEMANA 1–2</div>
+        <h3>Validar proposta com investidores</h3>
+        <p>Apresentar este documento a 5 potenciais investidores. Coletar feedback. Ajustar termos e estrutura de deal.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">SEMANA 2–3</div>
+        <h3>Contratar editor-chefe</h3>
+        <p>Jornalista com experiência em Brasília. Curadoria editorial e revisão humana. Credibilidade do portal depende dessa contratação.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">SEMANA 3–4</div>
+        <h3>Indexar no Google News</h3>
+        <p>Publicar 30+ matérias de qualidade. Submeter ao Google News. Iniciar pipeline de 10 matérias/dia. Ativar newsletter.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">MÊS 2</div>
+        <h3>Monetização inicial</h3>
+        <p>Google AdSense ativado. 3 anunciantes diretos fechados. Pesquisa sintética diária publicada. 25K visitantes.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">MÊS 3</div>
+        <h3>Tração e case público</h3>
+        <p>50K visitantes. Primeira pesquisa sintética com repercussão. Matéria citada por outro veículo. Assinatura premium lançada.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">MÊS 3</div>
+        <h3>Fechar captação</h3>
+        <p>Term sheet assinada. Capital entrando. Equipe ampliada. Máquina de conteúdo e monetização operacional.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= O QUE JÁ EXISTE vs O QUE FALTA ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 12</div>
+    <div class="section-title">O que Existe vs. O que Falta</div>
+
+    <div class="two-col">
+      <div>
+        <h4 style="color:var(--accent-green); margin-bottom:1rem;">O que JÁ existe (ativo construído)</h4>
+        <table>
+          <tbody>
+            <tr><td>Pipeline editorial de 6 agentes de IA</td><td class="td-green">Operacional</td></tr>
+            <tr><td>50.000+ personas sintéticas (IBGE)</td><td class="td-green">Calibradas</td></tr>
+            <tr><td>Evolução genética de SEO (5×3)</td><td class="td-green">Operacional</td></tr>
+            <tr><td>Colunistas lendários (Machado, Tesla, etc.)</td><td class="td-green">Operacional</td></tr>
+            <tr><td>Domínio mirantenews.com.br ativo</td><td class="td-green">No ar</td></tr>
+            <tr><td>Frontend Next.js 16 em produção</td><td class="td-green">Deploy Vercel</td></tr>
+            <tr><td>Backend FastAPI + pipeline LangGraph</td><td class="td-green">Operacional</td></tr>
+            <tr><td>OmniRoute (custo IA ~zero)</td><td class="td-green">Produção</td></tr>
+            <tr><td>13 editorias definidas</td><td class="td-green">Configuradas</td></tr>
+            <tr><td>Design system completo (Figma-ready)</td><td class="td-green">Implementado</td></tr>
+            <tr><td>Manual editorial + forbidden patterns</td><td class="td-green">Documentado</td></tr>
+            <tr><td>Fact-checker automático (score 0-100)</td><td class="td-green">Ativo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="color:var(--accent-red); margin-bottom:1rem;">O que FALTA (o investimento resolve)</h4>
+        <table>
+          <tbody>
+            <tr><td>Editor-chefe humano</td><td class="td-red">Inexistente</td></tr>
+            <tr><td>Equipe comercial</td><td class="td-red">Zero</td></tr>
+            <tr><td>Audiência (tráfego orgânico)</td><td class="td-red">Inicial</td></tr>
+            <tr><td>Indexação Google News</td><td class="td-red">Pendente</td></tr>
+            <tr><td>Monetização (ads, assinaturas)</td><td class="td-red">Não ativada</td></tr>
+            <tr><td>Newsletter automatizada</td><td class="td-cyan">Em configuração</td></tr>
+            <tr><td>Dashboard premium B2B</td><td class="td-red">Não construído</td></tr>
+            <tr><td>Marketing/SEO estruturado</td><td class="td-red">Ausente</td></tr>
+            <tr><td>Vídeo/podcast com IA</td><td class="td-red">Planejado</td></tr>
+            <tr><td>PWA / app mobile</td><td class="td-red">Planejado</td></tr>
+            <tr><td>Case público de repercussão</td><td class="td-red">Nenhum</td></tr>
+            <tr><td>Compliance TSE (eleições)</td><td class="td-cyan">Parcial</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= FOOTER ======================= -->
+<footer class="footer">
+  <div class="container">
+    <div style="margin-bottom:0.5rem;">
+      <span style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.1rem; letter-spacing:0.2em;">
+        <span style="color:#fff;">M</span><span style="color:var(--cyan);">I</span><span style="color:#fff;">R</span><span style="color:var(--cyan);">A</span><span style="color:#fff;">NTE NEWS</span>
+      </span>
+    </div>
+    <p style="color:var(--cyan); font-family:'Crimson Pro',serif; font-size:1.2rem; margin-bottom:0.5rem;">O jornal que pensa com inteligência artificial</p>
+    <p>Dr. Igor Morais Vasconcelos — Fundador e Diretor</p>
+    <p style="margin-top:0.5rem;"><a href="mailto:contato@mirantenews.com.br">contato@mirantenews.com.br</a> · <a href="https://mirantenews.com.br">mirantenews.com.br</a> · Brasília/DF</p>
+    <p style="margin-top:0.5rem; font-size:0.75rem; color:var(--text-muted);">Tecnologia: <a href="https://inteia.com.br" style="color:var(--text-muted);">INTEIA — Inteligência Artificial Estratégica</a></p>
+    <p style="font-size:0.7rem; margin-top:0.5rem;">Projeções baseadas em cenário moderado. Resultados não garantidos. Dados de mercado: abril/2026.</p>
+    <p style="font-size:0.7rem;">CNPJ: 63.918.490/0001-20 · Brasília-DF</p>
+  </div>
+</footer>
+
+</body>
+</html>

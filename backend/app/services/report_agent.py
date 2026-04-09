@@ -1572,6 +1572,12 @@ class ReportAgent:
             logger.info(f"Secao {section.title}: prefixo 'Final Answer:' nao detectado, aceitando saida do LLM como conteudo final (chamadas de ferramenta: {tool_calls_count})")
             final_answer = response.strip()
 
+            # Sanitiza: remove marcas XML de chamadas de ferramenta e pensamento do agente
+            final_answer = re.sub(r'<tool_call>.*?</tool_call>', '', final_answer, flags=re.DOTALL)
+            final_answer = re.sub(r'<thinking>.*?</thinking>', '', final_answer, flags=re.DOTALL)
+            final_answer = re.sub(r'\[TOOL_CALL\].*?\)', '', final_answer, flags=re.DOTALL)
+            final_answer = final_answer.strip()
+
             if self.report_logger:
                 self.report_logger.log_section_content(
                     section_title=section.title,
@@ -1603,6 +1609,12 @@ class ReportAgent:
             final_answer = response.split("Final Answer:")[-1].strip()
         else:
             final_answer = response
+        
+        # Sanitiza: remove marcas XML de chamadas de ferramenta e pensamento do agente (critico para finalizacao forcada)
+        final_answer = re.sub(r'<tool_call>.*?</tool_call>', '', final_answer, flags=re.DOTALL)
+        final_answer = re.sub(r'<thinking>.*?</thinking>', '', final_answer, flags=re.DOTALL)
+        final_answer = re.sub(r'\[TOOL_CALL\].*?\)', '', final_answer, flags=re.DOTALL)
+        final_answer = final_answer.strip()
         
         # Registra log de conclusao da geracao do conteudo da secao
         if self.report_logger:

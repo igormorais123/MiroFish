@@ -1,0 +1,134 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: IA
+      - generic [ref=e8]:
+        - generic [ref=e9]: INTEIA
+        - generic [ref=e10]: MiroFish Lab
+    - generic [ref=e12]:
+      - button "Grafo" [ref=e13] [cursor=pointer]
+      - button "Dividido" [ref=e14] [cursor=pointer]
+      - button "Painel" [ref=e15] [cursor=pointer]
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Etapa 3/5
+        - generic [ref=e19]: Início da simulação
+      - generic [ref=e21]: Concluído
+  - main [ref=e23]:
+    - generic [ref=e25]:
+      - generic:
+        - generic [ref=e26]: Visualização do grafo
+        - generic [ref=e27]:
+          - button "↻ Atualizar" [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: ↻
+            - generic [ref=e30]: Atualizar
+          - button "⛶" [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]: ⛶
+      - generic [ref=e34]:
+        - img [ref=e35]
+        - generic [ref=e36]:
+          - img [ref=e38]
+          - generic [ref=e40]: Ainda há conteúdo em processamento. Atualize o grafo manualmente em instantes.
+          - button "Fechar aviso" [ref=e41] [cursor=pointer]:
+            - img [ref=e42]
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - checkbox [checked]
+        - generic [ref=e48]: Mostrar rótulos das arestas
+    - generic [ref=e50]:
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - generic [ref=e58]: Feed aberto
+              - img [ref=e60]
+            - generic [ref=e62]:
+              - generic [ref=e63]:
+                - generic [ref=e64]: RODADA
+                - generic [ref=e65]: 120/120
+              - generic [ref=e66]:
+                - generic [ref=e67]: Tempo decorrido
+                - generic [ref=e68]: 120h 0m
+              - generic [ref=e69]:
+                - generic [ref=e70]: AÇÕES
+                - generic [ref=e71]: "330"
+          - generic [ref=e72] [cursor=pointer]:
+            - generic [ref=e73]:
+              - img [ref=e74]
+              - generic [ref=e76]: Comunidade
+              - img [ref=e78]
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - generic [ref=e82]: RODADA
+                - generic [ref=e83]: 120/120
+              - generic [ref=e84]:
+                - generic [ref=e85]: Tempo decorrido
+                - generic [ref=e86]: 120h 0m
+              - generic [ref=e87]:
+                - generic [ref=e88]: AÇÕES
+                - generic [ref=e89]: "217"
+        - button "Gerar relatório final →" [ref=e91] [cursor=pointer]:
+          - text: Gerar relatório final
+          - generic [ref=e92]: →
+      - generic [ref=e93]:
+        - generic [ref=e95]:
+          - generic [ref=e96]: "TOTAL DE EVENTOS: 2"
+          - generic [ref=e97]:
+            - generic [ref=e98]:
+              - img [ref=e99]
+              - generic [ref=e102]: "1"
+            - generic [ref=e103]: /
+            - generic [ref=e104]:
+              - img [ref=e105]
+              - generic [ref=e107]: "1"
+        - generic [ref=e108]:
+          - generic [ref=e113]:
+            - generic [ref=e114]:
+              - generic [ref=e116]: A
+              - generic [ref=e117]:
+                - img [ref=e119]
+                - generic [ref=e122]: DESCONHECIDO
+            - generic [ref=e124]: R •
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - generic [ref=e131]: A
+              - generic [ref=e132]:
+                - img [ref=e134]
+                - generic [ref=e136]: DESCONHECIDO
+            - generic [ref=e138]: R •
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]: MONITOR DA SIMULAÇÃO
+          - generic [ref=e142]: sim_1984673b7f44
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - generic [ref=e145]: 09:14:38.310
+            - generic [ref=e146]: Atualização automática do grafo iniciada (30s)
+          - generic [ref=e147]:
+            - generic [ref=e148]: 09:14:38.314
+            - generic [ref=e149]: Etapa 3 de execução da simulação inicializada
+          - generic [ref=e150]:
+            - generic [ref=e151]: 09:14:38.315
+            - generic [ref=e152]: Tela de execução da simulação inicializada
+          - generic [ref=e153]:
+            - generic [ref=e154]: 09:14:38.315
+            - generic [ref=e155]: "Carregando dados da simulação: sim_1984673b7f44"
+          - generic [ref=e156]:
+            - generic [ref=e157]: 09:14:38.359
+            - generic [ref=e158]: ✓ Simulação já concluída — carregando resultados...
+          - generic [ref=e159]:
+            - generic [ref=e160]: 09:14:38.389
+            - generic [ref=e161]: "Configuração de tempo: 60 minutos por rodada"
+          - generic [ref=e162]:
+            - generic [ref=e163]: 09:14:38.428
+            - generic [ref=e164]: "Projeto carregado: proj_38439a753076"
+          - generic [ref=e165]:
+            - generic [ref=e166]: 09:14:38.497
+            - generic [ref=e167]: ✓ 2 ações carregadas da simulação
+          - generic [ref=e168]:
+            - generic [ref=e169]: 09:14:38.500
+            - generic [ref=e170]: Atualização automática do grafo interrompida
+          - generic [ref=e171]:
+            - generic [ref=e172]: 09:14:38.996
+            - generic [ref=e173]: Dados do grafo carregados com sucesso

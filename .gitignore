@@ -68,3 +68,4 @@ backend/run.log
 
 # Docker 数据
 data/
+.gstack/

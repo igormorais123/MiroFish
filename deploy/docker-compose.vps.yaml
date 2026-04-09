@@ -1,11 +1,58 @@
 name: mirofish-inteia
 services:
+  # ---------- Neo4j (banco de grafos para o Graphiti) ----------
+  neo4j:
+    image: neo4j:5-community
+    container_name: mirofish-neo4j
+    restart: always
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-mirofish2026}
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-mirofish2026}", "RETURN 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------- Graphiti Server (grafo de memória temporal) ----------
+  graphiti:
+    image: zepai/graphiti:latest
+    container_name: mirofish-graphiti
+    restart: always
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-mirofish2026}
+      - OPENAI_API_KEY=${LLM_API_KEY}
+      - OPENAI_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - MODEL_NAME=${GRAPHITI_MODEL:-gpt-4o-mini}
+      - PORT=8000
+    ports:
+      - "8003:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/healthcheck"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  # ---------- Mirofish INTEIA ----------
   mirofish:
     build:
       context: ..
       dockerfile: Dockerfile
     container_name: mirofish-inteia
     restart: always
+    depends_on:
+      graphiti:
+        condition: service_healthy
     ports:
       - "4000:80"
     environment:
@@ -14,7 +61,7 @@ services:
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
       - LLM_TIMEOUT_SECONDS=120
       - LLM_MAX_RETRIES=3
-      - GRAPHITI_BASE_URL=http://172.17.0.1:8003
+      - GRAPHITI_BASE_URL=http://graphiti:8000
       - GRAPHITI_TIMEOUT=120
       - ZEP_REQUIRED=false
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-inteia-mirofish-token}
@@ -26,3 +73,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

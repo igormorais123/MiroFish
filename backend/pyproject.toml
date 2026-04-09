@@ -16,9 +16,6 @@ dependencies = [
     # Integracao com LLM
     "openai>=1.0.0",
     
-    # Zep Cloud
-    "zep-cloud==3.13.0",
-    
     # Simulacao social com OASIS
     "camel-oasis==0.2.5",
     "camel-ai==0.2.78",

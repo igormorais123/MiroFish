@@ -253,7 +253,7 @@ def internal_health():
             "code": Config.APP_CODE,
             "llm_base_url": Config.LLM_BASE_URL,
             "llm_model": Config.LLM_MODEL_NAME,
-            "zep_required": Config.ZEP_REQUIRED,
+            "graphiti_url": Config.GRAPHITI_BASE_URL,
         }
     })
 

@@ -1,0 +1,448 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - img "INTEIA" [ref=e6]
+      - generic [ref=e7]:
+        - generic [ref=e8]: INTEIA
+        - generic [ref=e9]: MIROFISH LAB
+    - link "Acessar o repositório no GitHub ↗" [ref=e11] [cursor=pointer]:
+      - /url: https://github.com/igormorais123/MiroFish
+      - text: Acessar o repositório no GitHub
+      - generic [ref=e12]: ↗
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: INTEIA SIGNAL ENGINE
+          - generic [ref=e18]: / módulo de simulação social
+        - heading "Transforme contexto bruto em cenários acionáveis da INTEIA" [level=1] [ref=e19]:
+          - text: Transforme contexto bruto em
+          - generic [ref=e20]: cenários acionáveis da INTEIA
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: O MiroFish-INTEIA opera aqui como um motor de simulação e leitura de comportamento dentro do ecossistema INTEIA. A partir de relatórios, memorandos, dossiês e sinais políticos, ele monta um ambiente sintético e testa trajetórias prováveis de reação coletiva com disciplina analítica.
+          - paragraph [ref=e23]: Menos demo genérica, mais inteligência aplicada à decisão_
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - img "INTEIA" [ref=e28]
+            - generic [ref=e29]:
+              - generic [ref=e30]: INTEIA
+              - generic [ref=e31]: Simulação estratégica com núcleo MiroFish
+          - img "INTEIA - Simulação Estratégica" [ref=e32]
+        - button "↓" [ref=e33] [cursor=pointer]
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]: ■
+          - text: Status do sistema
+        - heading "Pronto para uso" [level=2] [ref=e38]
+        - paragraph [ref=e39]: O motor de previsão está pronto. Envie múltiplos dados não estruturados para iniciar a simulação.
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - generic [ref=e42]: Baixo custo
+            - generic [ref=e43]: Simulações comuns em torno de US$ 5 por execução
+          - generic [ref=e44]:
+            - generic [ref=e45]: Escalável
+            - generic [ref=e46]: Suporte para simulações com até milhões de agentes
+        - img [ref=e48]:
+          - generic [ref=e78]: PERTENCE_A
+          - generic [ref=e79]: ATUA_EM
+          - generic [ref=e80]: INFLUENCIA
+          - generic [ref=e81]: COMPETE_COM
+          - generic [ref=e82]: TRABALHA_EM
+          - generic [ref=e83]: MONITORA
+          - generic [ref=e84]: REPORTA_A
+          - generic [ref=e85]: CITA
+          - generic [ref=e86]: GERA
+          - generic [ref=e87]: AVALIA
+          - generic [ref=e89]: Trabalho
+          - generic [ref=e90]: Remoto
+          - generic [ref=e92]: TechBrasil
+          - generic [ref=e94]: Mercado TI
+          - generic [ref=e96]: Gestão RH
+          - generic [ref=e98]: Imprensa
+          - generic [ref=e100]: Produtividade
+          - generic [ref=e102]: CEO Silva
+          - generic [ref=e104]: CTO Pereira
+          - generic [ref=e106]: Analista Mkt
+          - generic [ref=e108]: Jornalista
+          - generic [ref=e110]: Equipe DevOps
+          - generic [ref=e112]: Sprint Backlog
+          - generic [ref=e114]: LinkedIn
+          - generic [ref=e116]: Story Points
+          - generic [ref=e118]: Sindicato
+          - generic [ref=e120]: ABES
+          - generic [ref=e122]: Turnover 18%
+          - generic [ref=e124]: NPS 52
+          - generic [ref=e126]: Custo R$45k
+          - generic [ref=e128]: Reajuste 8%
+          - generic [ref=e130]: CLT
+          - generic [ref=e132]: Glassdoor
+          - generic [ref=e134]: Pesquisa Q4
+          - generic [ref=e136]: Concorrente X
+          - generic [ref=e144]: TIPOS DE ENTIDADE
+          - generic [ref=e146]: Person
+          - generic [ref=e148]: Entity
+          - generic [ref=e150]: Recurso
+          - generic [ref=e152]: Organização
+          - generic [ref=e154]: Memória de curto e longo prazo do GraphRAG atualizada em tempo real
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - generic [ref=e157]: ◇
+            - text: Fluxo de trabalho
+          - generic [ref=e158]:
+            - generic [ref=e159]:
+              - generic [ref=e160]: "01"
+              - generic [ref=e161]:
+                - generic [ref=e162]: Construção do grafo
+                - generic [ref=e163]: Extração de sinais reais, memória individual e coletiva, e montagem do GraphRAG
+            - generic [ref=e164]:
+              - generic [ref=e165]: "02"
+              - generic [ref=e166]:
+                - generic [ref=e167]: Configuração do ambiente
+                - generic [ref=e168]: Extração de entidades e relações, geração de perfis e parametrização do mundo simulado
+            - generic [ref=e169]:
+              - generic [ref=e170]: "03"
+              - generic [ref=e171]:
+                - generic [ref=e172]: Início da simulação
+                - generic [ref=e173]: Simulação paralela em duas plataformas, interpretação automática do cenário e memória temporal dinâmica
+            - generic [ref=e174]:
+              - generic [ref=e175]: "04"
+              - generic [ref=e176]:
+                - generic [ref=e177]: Geração de relatório
+                - generic [ref=e178]: O agente de relatório usa ferramentas especializadas para analisar o ambiente após a simulação
+            - generic [ref=e179]:
+              - generic [ref=e180]: "05"
+              - generic [ref=e181]:
+                - generic [ref=e182]: Interação profunda
+                - generic [ref=e183]: Converse com agentes do mundo simulado e com o agente de relatório
+      - generic [ref=e184]:
+        - img [ref=e186]:
+          - generic [ref=e189]: COMO FUNCIONA A SIMULAÇÃO
+          - generic [ref=e191]: "01"
+          - generic [ref=e192]: Envie seu
+          - generic [ref=e193]: documento
+          - generic [ref=e194]: PDF, MD, TXT
+          - generic [ref=e196]: "02"
+          - generic [ref=e197]: IA extrai
+          - generic [ref=e198]: entidades
+          - generic [ref=e199]: Pessoas, empresas...
+          - generic [ref=e201]: "03"
+          - generic [ref=e202]: Monta grafo
+          - generic [ref=e203]: de relações
+          - generic [ref=e204]: Quem se conecta a quem
+          - generic [ref=e206]: "04"
+          - generic [ref=e207]: Cria agentes
+          - generic [ref=e208]: com personalidade
+          - generic [ref=e209]: Bio, opinião, MBTI
+          - generic [ref=e211]: 05 SIMULAÇÃO
+          - generic [ref=e212]: Agentes interagem em redes sociais simuladas (posts, likes, comentários)
+          - generic [ref=e213]: Feed aberto + Comunidade • Múltiplas rodadas • Memória temporal
+          - generic [ref=e218]: RELATÓRIO DE PREVISÃO
+          - generic [ref=e219]: Análise com dados do grafo • Entrevistas com agentes • Busca de fatos
+          - generic [ref=e220]: Gerado por IA com ferramentas de investigação sobre o mundo simulado
+          - generic [ref=e223]: Seu cenário
+          - generic [ref=e224]: "\"Migrar para"
+          - generic [ref=e225]: trabalho remoto"
+          - generic [ref=e226]: Envie um documento → IA simula o futuro → Receba o relatório
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - generic [ref=e230]: 01 / Dados de origem
+              - generic [ref=e231]: "Formatos suportados: PDF, MD, TXT"
+            - generic [ref=e551] [cursor=pointer]:
+              - generic [ref=e552]:
+                - generic [ref=e553]: 📄
+                - generic [ref=e554]: Consultoria_Pesquisa_Analise_Dados.md
+                - button "×" [ref=e555]
+              - generic [ref=e556]:
+                - generic [ref=e557]: 📄
+                - generic [ref=e558]: REL-2026-008_Helena_Master.txt
+                - button "×" [ref=e559]
+          - generic [ref=e238]: Parâmetros
+          - generic [ref=e239]:
+            - generic [ref=e241]: ">_ 02 / Cenário da simulação"
+            - generic [ref=e242]:
+              - textbox "// Descreva em linguagem natural o cenário de simulação ou previsão" [ref=e243]
+              - generic [ref=e244]: "Motor: INTEIA / MiroFish"
+          - button "Iniciar motor →" [disabled] [ref=e246]:
+            - generic [ref=e247]: Iniciar motor
+            - generic [ref=e248]: →
+    - generic [ref=e249]:
+      - generic [ref=e252]: Histórico de simulações
+      - generic [ref=e254]:
+        - generic [ref=e255] [cursor=pointer]:
+          - generic [ref=e256]:
+            - generic [ref=e257]: SIM_86E290
+            - generic [ref=e258]:
+              - generic "Construção do grafo" [ref=e259]: ◇
+              - generic "Configuração do ambiente" [ref=e260]: ◈
+              - generic "Relatório analítico" [ref=e261]: ◆
+          - generic [ref=e263]:
+            - generic [ref=e264]:
+              - generic [ref=e265]: TXT
+              - generic [ref=e266]: benchmark_con....txt
+            - generic [ref=e267]:
+              - generic [ref=e268]: TXT
+              - generic [ref=e269]: benchmark_per....txt
+            - generic [ref=e270]:
+              - generic [ref=e271]: TXT
+              - generic [ref=e272]: benchmark_eco....txt
+          - heading "Benchmark eleitoral ..." [level=3] [ref=e273]
+          - paragraph [ref=e274]: Benchmark eleitoral INTEIA para Eleicao 2022 DF — Gover...
+          - generic [ref=e275]:
+            - generic [ref=e276]:
+              - generic [ref=e277]: 2026-03-27
+              - generic [ref=e278]: 03:30
+            - generic [ref=e279]:
+              - generic [ref=e280]: ●
+              - text: 0/72 rodadas
+        - generic [ref=e282] [cursor=pointer]:
+          - generic [ref=e283]:
+            - generic [ref=e284]: SIM_B25875
+            - generic [ref=e285]:
+              - generic "Construção do grafo" [ref=e286]: ◇
+              - generic "Configuração do ambiente" [ref=e287]: ◈
+              - generic "Relatório analítico" [ref=e288]: ◆
+          - generic [ref=e290]:
+            - generic [ref=e291]:
+              - generic [ref=e292]: TXT
+              - generic [ref=e293]: benchmark_con....txt
+            - generic [ref=e294]:
+              - generic [ref=e295]: TXT
+              - generic [ref=e296]: benchmark_per....txt
+            - generic [ref=e297]:
+              - generic [ref=e298]: TXT
+              - generic [ref=e299]: benchmark_eco....txt
+          - heading "Simulação sem nome" [level=3] [ref=e300]
+          - paragraph [ref=e301]
+          - generic [ref=e302]:
+            - generic [ref=e303]:
+              - generic [ref=e304]: 2026-03-20
+              - generic [ref=e305]: 02:44
+            - generic [ref=e306]:
+              - generic [ref=e307]: ●
+              - text: Não iniciado
+        - generic [ref=e309] [cursor=pointer]:
+          - generic [ref=e310]:
+            - generic [ref=e311]: SIM_D58098
+            - generic [ref=e312]:
+              - generic "Construção do grafo" [ref=e313]: ◇
+              - generic "Configuração do ambiente" [ref=e314]: ◈
+              - generic "Relatório analítico" [ref=e315]: ◆
+          - generic [ref=e318]:
+            - generic [ref=e319]: TXT
+            - generic [ref=e320]: benchmark_con....txt
+          - heading "Simulação sem nome" [level=3] [ref=e321]
+          - paragraph [ref=e322]
+          - generic [ref=e323]:
+            - generic [ref=e324]:
+              - generic [ref=e325]: 2026-03-20
+              - generic [ref=e326]: 01:25
+            - generic [ref=e327]:
+              - generic [ref=e328]: ●
+              - text: Não iniciado
+        - generic [ref=e330] [cursor=pointer]:
+          - generic [ref=e331]:
+            - generic [ref=e332]: SIM_2894C2
+            - generic [ref=e333]:
+              - generic "Construção do grafo" [ref=e334]: ◇
+              - generic "Configuração do ambiente" [ref=e335]: ◈
+              - generic "Relatório analítico" [ref=e336]: ◆
+          - generic [ref=e339]:
+            - generic [ref=e340]: TXT
+            - generic [ref=e341]: benchmark_con....txt
+          - heading "Simulação sem nome" [level=3] [ref=e342]
+          - paragraph [ref=e343]
+          - generic [ref=e344]:
+            - generic [ref=e345]:
+              - generic [ref=e346]: 2026-03-20
+              - generic [ref=e347]: 01:06
+            - generic [ref=e348]:
+              - generic [ref=e349]: ●
+              - text: Não iniciado
+        - generic [ref=e351] [cursor=pointer]:
+          - generic [ref=e352]:
+            - generic [ref=e353]: SIM_5B817B
+            - generic [ref=e354]:
+              - generic "Construção do grafo" [ref=e355]: ◇
+              - generic "Configuração do ambiente" [ref=e356]: ◈
+              - generic "Relatório analítico" [ref=e357]: ◆
+          - generic [ref=e360]:
+            - generic [ref=e361]: PDF
+            - generic [ref=e362]: Benchmarking ....pdf
+          - heading "/crie uma simulação ..." [level=3] [ref=e363]
+          - paragraph [ref=e364]: /crie uma simulação para validar o artigo via agentes s...
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: 2026-03-19
+              - generic [ref=e368]: 14:00
+            - generic [ref=e369]:
+              - generic [ref=e370]: ●
+              - text: 72/72 rodadas
+        - generic [ref=e372] [cursor=pointer]:
+          - generic [ref=e373]:
+            - generic [ref=e374]: SIM_1ECD97
+            - generic [ref=e375]:
+              - generic "Construção do grafo" [ref=e376]: ◇
+              - generic "Configuração do ambiente" [ref=e377]: ◈
+              - generic "Relatório analítico" [ref=e378]: ◆
+          - generic [ref=e381]:
+            - generic [ref=e382]: TXT
+            - generic [ref=e383]: benchmark_con....txt
+          - heading "Benchmark eleitoral ..." [level=3] [ref=e384]
+          - paragraph [ref=e385]: Benchmark eleitoral INTEIA
+          - generic [ref=e386]:
+            - generic [ref=e387]:
+              - generic [ref=e388]: 2026-03-20
+              - generic [ref=e389]: 00:39
+            - generic [ref=e390]:
+              - generic [ref=e391]: ●
+              - text: 0/1 rodadas
+        - generic [ref=e393] [cursor=pointer]:
+          - generic [ref=e394]:
+            - generic [ref=e395]: SIM_AB8A88
+            - generic [ref=e396]:
+              - generic "Construção do grafo" [ref=e397]: ◇
+              - generic "Configuração do ambiente" [ref=e398]: ◈
+              - generic "Relatório analítico" [ref=e399]: ◆
+          - generic [ref=e402]:
+            - generic [ref=e403]: TXT
+            - generic [ref=e404]: benchmark_con....txt
+          - heading "Benchmark eleitoral ..." [level=3] [ref=e405]
+          - paragraph [ref=e406]: Benchmark eleitoral INTEIA para Eleicao 2022 DF — Gover...
+          - generic [ref=e407]:
+            - generic [ref=e408]:
+              - generic [ref=e409]: 2026-03-20
+              - generic [ref=e410]: 00:52
+            - generic [ref=e411]:
+              - generic [ref=e412]: ●
+              - text: 0/1 rodadas
+        - generic [ref=e413] [cursor=pointer]:
+          - generic [ref=e414]:
+            - generic [ref=e415]: SIM_BBB3DB
+            - generic [ref=e416]:
+              - generic "Construção do grafo" [ref=e417]: ◇
+              - generic "Configuração do ambiente" [ref=e418]: ◈
+              - generic "Relatório analítico" [ref=e419]: ◆
+          - generic [ref=e422]:
+            - generic [ref=e423]: MD
+            - generic [ref=e424]: relatorio_teste.md
+          - heading "Simulação sem nome" [level=3] [ref=e425]
+          - paragraph [ref=e426]
+          - generic [ref=e427]:
+            - generic [ref=e428]:
+              - generic [ref=e429]: 2026-03-19
+              - generic [ref=e430]: 20:29
+            - generic [ref=e431]:
+              - generic [ref=e432]: ●
+              - text: Não iniciado
+        - generic [ref=e434] [cursor=pointer]:
+          - generic [ref=e435]:
+            - generic [ref=e436]: SIM_4F351C
+            - generic [ref=e437]:
+              - generic "Construção do grafo" [ref=e438]: ◇
+              - generic "Configuração do ambiente" [ref=e439]: ◈
+              - generic "Relatório analítico" [ref=e440]: ◆
+          - generic [ref=e443]:
+            - generic [ref=e444]: MD
+            - generic [ref=e445]: relatorio_teste.md
+          - heading "Simule impacto de mi..." [level=3] [ref=e446]
+          - paragraph [ref=e447]: Simule impacto de migrar 100% remoto em 12 meses.
+          - generic [ref=e448]:
+            - generic [ref=e449]:
+              - generic [ref=e450]: 2026-03-20
+              - generic [ref=e451]: 00:39
+            - generic [ref=e452]:
+              - generic [ref=e453]: ●
+              - text: 0/120 rodadas
+        - generic [ref=e455] [cursor=pointer]:
+          - generic [ref=e456]:
+            - generic [ref=e457]: SIM_D1D37E
+            - generic [ref=e458]:
+              - generic "Construção do grafo" [ref=e459]: ◇
+              - generic "Configuração do ambiente" [ref=e460]: ◈
+              - generic "Relatório analítico" [ref=e461]: ◆
+          - generic [ref=e464]:
+            - generic [ref=e465]: TXT
+            - generic [ref=e466]: benchmark_con....txt
+          - heading "Benchmark eleitoral ..." [level=3] [ref=e467]
+          - paragraph [ref=e468]: Benchmark eleitoral INTEIA para Eleicao 2022 DF — Gover...
+          - generic [ref=e469]:
+            - generic [ref=e470]:
+              - generic [ref=e471]: 2026-03-20
+              - generic [ref=e472]: 00:54
+            - generic [ref=e473]:
+              - generic [ref=e474]: ●
+              - text: 0/1 rodadas
+        - generic [ref=e476] [cursor=pointer]:
+          - generic [ref=e477]:
+            - generic [ref=e478]: SIM_9103BD
+            - generic [ref=e479]:
+              - generic "Construção do grafo" [ref=e480]: ◇
+              - generic "Configuração do ambiente" [ref=e481]: ◈
+              - generic "Relatório analítico" [ref=e482]: ◆
+          - generic [ref=e484]:
+            - generic [ref=e485]:
+              - generic [ref=e486]: TXT
+              - generic [ref=e487]: benchmark_con....txt
+            - generic [ref=e488]:
+              - generic [ref=e489]: TXT
+              - generic [ref=e490]: benchmark_per....txt
+            - generic [ref=e491]:
+              - generic [ref=e492]: TXT
+              - generic [ref=e493]: benchmark_eco....txt
+          - heading "Simulação sem nome" [level=3] [ref=e494]
+          - paragraph [ref=e495]
+          - generic [ref=e496]:
+            - generic [ref=e497]:
+              - generic [ref=e498]: 2026-03-20
+              - generic [ref=e499]: 02:48
+            - generic [ref=e500]:
+              - generic [ref=e501]: ●
+              - text: Não iniciado
+        - generic [ref=e503] [cursor=pointer]:
+          - generic [ref=e504]:
+            - generic [ref=e505]: SIM_7CD6E4
+            - generic [ref=e506]:
+              - generic "Construção do grafo" [ref=e507]: ◇
+              - generic "Configuração do ambiente" [ref=e508]: ◈
+              - generic "Relatório analítico" [ref=e509]: ◆
+          - generic [ref=e511]:
+            - generic [ref=e512]:
+              - generic [ref=e513]: TXT
+              - generic [ref=e514]: benchmark_con....txt
+            - generic [ref=e515]:
+              - generic [ref=e516]: TXT
+              - generic [ref=e517]: benchmark_per....txt
+            - generic [ref=e518]:
+              - generic [ref=e519]: TXT
+              - generic [ref=e520]: benchmark_eco....txt
+          - heading "Benchmark eleitoral ..." [level=3] [ref=e521]
+          - paragraph [ref=e522]: Benchmark eleitoral INTEIA para Eleicao 2022 DF — Gover...
+          - generic [ref=e523]:
+            - generic [ref=e524]:
+              - generic [ref=e525]: 2026-03-27
+              - generic [ref=e526]: 03:30
+            - generic [ref=e527]:
+              - generic [ref=e528]: ●
+              - text: 0/96 rodadas
+        - generic [ref=e530] [cursor=pointer]:
+          - generic [ref=e531]:
+            - generic [ref=e532]: SIM_C2D664
+            - generic [ref=e533]:
+              - generic "Construção do grafo" [ref=e534]: ◇
+              - generic "Configuração do ambiente" [ref=e535]: ◈
+              - generic "Relatório analítico" [ref=e536]: ◆
+          - generic [ref=e539]:
+            - generic [ref=e540]: MD
+            - generic [ref=e541]: relatorio_teste.md
+          - heading "Simule impacto de mi..." [level=3] [ref=e542]
+          - paragraph [ref=e543]: "Simule impacto de migrar 100% remoto em 12 meses: produ..."
+          - generic [ref=e544]:
+            - generic [ref=e545]:
+              - generic [ref=e546]: 2026-03-19
+              - generic [ref=e547]: 22:11
+            - generic [ref=e548]:
+              - generic [ref=e549]: ●
+              - text: 120/120 rodadas

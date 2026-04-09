@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INTEIA — Projeto de Potencialização e Financiamento | R$50K/mês</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #c9952a;
+  --gold-light: #e8c36a;
+  --gold-dark: #9a7420;
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #1a1a25;
+  --bg-card-hover: #222235;
+  --text-primary: #e8e6e3;
+  --text-secondary: #a09c97;
+  --text-muted: #6b6760;
+  --border: #2a2a3a;
+  --border-gold: rgba(201,149,42,0.3);
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+  --accent-blue: #60a5fa;
+  --accent-purple: #a78bfa;
+  --accent-orange: #fb923c;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-gold: 0 0 40px rgba(201,149,42,0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 400;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, #0a0a0f 0%, #1a1520 50%, #0a0a0f 100%);
+  border-bottom: 1px solid var(--border-gold);
+  padding: 3rem 0;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(201,149,42,0.08) 0%, transparent 50%);
+  animation: headerGlow 8s ease-in-out infinite;
+}
+@keyframes headerGlow {
+  0%,100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.header-content { position: relative; z-index: 1; }
+.header-badge {
+  display: inline-block;
+  background: rgba(201,149,42,0.15);
+  border: 1px solid var(--border-gold);
+  color: var(--gold);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.3rem 1rem;
+  border-radius: 20px;
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+.header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+.header-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.header-meta span { display: flex; align-items: center; gap: 0.4rem; }
+
+/* SECTION */
+section { padding: 3rem 0; }
+section + section { border-top: 1px solid var(--border); }
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+.section-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  max-width: 800px;
+}
+
+/* CARDS */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+.card:hover {
+  border-color: var(--border-gold);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-gold);
+}
+.card-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+.card h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.card-highlight {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(201,149,42,0.08) 0%, var(--bg-card) 100%);
+}
+
+/* STATS */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+.stat-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+.stat-box.green .stat-value { color: var(--accent-green); }
+.stat-box.blue .stat-value { color: var(--accent-blue); }
+.stat-box.purple .stat-value { color: var(--accent-purple); }
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+th {
+  background: var(--bg-card);
+  color: var(--gold);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--gold-dark);
+}
+td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+tr:hover td { background: rgba(201,149,42,0.03); }
+.td-gold { color: var(--gold); font-weight: 600; }
+.td-green { color: var(--accent-green); }
+.td-red { color: var(--accent-red); }
+
+/* PROGRESS BARS */
+.progress-bar {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin: 0.3rem 0;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+  transition: width 0.5s ease;
+}
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--gold), var(--border));
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 2rem;
+  padding-left: 1.5rem;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -2.35rem;
+  top: 0.5rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid var(--bg-primary);
+}
+.timeline-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--gold);
+  margin-bottom: 0.3rem;
+}
+.timeline-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+}
+.timeline-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* CALLOUT */
+.callout {
+  background: linear-gradient(135deg, rgba(201,149,42,0.1) 0%, rgba(201,149,42,0.03) 100%);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+.callout-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+.callout p { font-size: 0.95rem; color: var(--text-secondary); }
+
+/* SPECIALIST BLOCK */
+.specialist {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+}
+.specialist-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.specialist-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--bg-primary);
+}
+.specialist-icon.helena { background: var(--gold); }
+.specialist-icon.midas { background: var(--accent-green); }
+.specialist-icon.ares { background: var(--accent-blue); }
+.specialist-icon.iris { background: var(--accent-purple); }
+.specialist-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.specialist-role {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* FOOTER */
+.footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-gold);
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.footer a { color: var(--gold); text-decoration: none; }
+
+/* CHARTS (CSS only) */
+.bar-chart { display: flex; align-items: flex-end; gap: 0.5rem; height: 200px; margin: 1.5rem 0; }
+.bar {
+  flex: 1;
+  background: linear-gradient(to top, var(--gold-dark), var(--gold));
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  min-width: 40px;
+  transition: height 0.5s ease;
+}
+.bar-label {
+  position: absolute;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+}
+.bar-value {
+  position: absolute;
+  top: -1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--gold);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .header h1 { font-size: 2.2rem; }
+  .section-title { font-size: 1.6rem; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .card-grid { grid-template-columns: 1fr; }
+  .header-meta { flex-direction: column; gap: 0.5rem; }
+}
+
+@media print {
+  body { background: #fff; color: #1a1a1a; }
+  .card, .stat-box, .specialist { border-color: #ddd; background: #f8f8f8; }
+  .stat-value, .section-label, .card-number, .callout-title { color: #9a7420; }
+  td, .card p, .callout p { color: #444; }
+  th { background: #f0f0f0; color: #9a7420; }
+}
+
+/* PILL TAGS */
+.pill {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+.pill-gold { background: rgba(201,149,42,0.15); color: var(--gold); }
+.pill-green { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+.pill-red { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+.pill-blue { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+
+/* TWO COLUMN */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+@media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+/* SEPARATOR */
+.gold-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 3rem 0;
+}
+</style>
+</head>
+<body>
+
+<!-- ======================= HEADER ======================= -->
+<header class="header">
+  <div class="container header-content">
+    <div class="header-badge">DOCUMENTO CONFIDENCIAL — INTEIA</div>
+    <h1>Projeto de Potencialização e Financiamento</h1>
+    <h2>Plano maestral para transformar inteia.com.br em um dos maiores portais de Inteligência Artificial do Brasil</h2>
+    <div class="header-meta">
+      <span>Data: 04 de abril de 2026</span>
+      <span>Investimento proposto: R$ 50.000/mês (R$ 600K/ano)</span>
+      <span>Autor: Colmeia INTEIA — 5 Diretores de IA</span>
+      <span>Versão: 1.0</span>
+    </div>
+  </div>
+</header>
+
+<!-- ======================= EXECUTIVE SUMMARY ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 01</div>
+    <div class="section-title">Resumo Executivo</div>
+
+    <div class="callout">
+      <div class="callout-title">Tese Central</div>
+      <p>A INTEIA é, hoje, a <strong>única plataforma brasileira</strong> que integra simulação social multiagente, pesquisa eleitoral sintética calibrada (MAE 1.91pp), predição judicial com magistrados sintéticos e consultoria estratégica por IA — tudo em um único portal. Com um investimento estruturado de R$ 50.000/mês durante 12 meses, a plataforma pode capturar uma fatia significativa de um mercado de IA que movimenta <strong>US$ 3,4 bilhões no Brasil em 2026</strong>, com crescimento de 30% ao ano.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">13</div>
+        <div class="stat-label">Produtos de IA integrados</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">2.617</div>
+        <div class="stat-label">Agentes sintéticos calibrados</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">5</div>
+        <div class="stat-label">Verticais de mercado</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-value">R$ 600K</div>
+        <div class="stat-label">Investimento total 12 meses</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">R$ 3,4B</div>
+        <div class="stat-label">TAM — Mercado IA Brasil 2026</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">30%</div>
+        <div class="stat-label">Crescimento anual do setor</div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--gold);">O que este documento contém</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-number">01</div>
+        <h3>Mapeamento completo do site</h3>
+        <p>Auditoria de infraestrutura, produtos, preços, funcionalidades e posicionamento atual do inteia.com.br.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">02</div>
+        <h3>Análise de mercado</h3>
+        <p>TAM/SAM/SOM por vertical, concorrência, janela de oportunidade, tendências 2026.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">03</div>
+        <h3>Plano financeiro R$ 50K/mês</h3>
+        <p>Alocação mensal, projeção de receita, ROI, breakeven e cenários de escala.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">04</div>
+        <h3>Proposta para financiadores</h3>
+        <p>Pitch, valuation, estrutura de deal, exit strategy e comparativo com concorrentes.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">05</div>
+        <h3>Roadmap técnico e operacional</h3>
+        <p>Arquitetura de escala, equipe, processos, timeline de 12 meses trimestre a trimestre.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">06</div>
+        <h3>Revisão por 5 especialistas INTEIA</h3>
+        <p>Helena Strategos, Midas Chrysos, Ares Tekhton, Iris e Villa INTEIA contribuíram.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SITE AUDIT ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 02</div>
+    <div class="section-title">Mapeamento Completo do Portal inteia.com.br</div>
+    <div class="section-subtitle">Auditoria em profundidade de tudo que existe, funciona e precisa evoluir.</div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:1.5rem 0 1rem;">Inventário de Produtos</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Categoria</th>
+          <th>Status</th>
+          <th>Maturidade</th>
+          <th>Potencial de Receita</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-gold">Helena Strategos</td>
+          <td>Consultoria IA</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
+          </td>
+          <td class="td-green">Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Motor Preditivo</td>
+          <td>Predição</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:90%"></div></div>
+          </td>
+          <td class="td-green">Muito Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">POLARIS</td>
+          <td>Pesquisa</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
+          </td>
+          <td class="td-green">Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Consultores Lendários</td>
+          <td>Digital Twins</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+          </td>
+          <td>Médio-Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Magistrados Sintéticos</td>
+          <td>Jurídico</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:82%"></div></div>
+          </td>
+          <td class="td-green">Muito Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Pesquisa Eleitoral</td>
+          <td>Eleitoral</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:88%"></div></div>
+          </td>
+          <td class="td-green">Muito Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">CONECTA 2026</td>
+          <td>Gestão de Campanha</td>
+          <td><span class="pill pill-gold">Beta</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:60%"></div></div>
+          </td>
+          <td class="td-green">Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">WhatsApp Agents</td>
+          <td>Comunicação</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:70%"></div></div>
+          </td>
+          <td>Médio</td>
+        </tr>
+        <tr>
+          <td class="td-gold">OmniRoute</td>
+          <td>Infraestrutura</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
+          </td>
+          <td>Médio (B2B)</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Vila INTEIA</td>
+          <td>Plataforma</td>
+          <td><span class="pill pill-gold">Beta</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:55%"></div></div>
+          </td>
+          <td>Médio</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Simulador Social</td>
+          <td>Simulação</td>
+          <td><span class="pill pill-green">Operacional</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+          </td>
+          <td>Médio-Alto</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Academy</td>
+          <td>Educação</td>
+          <td><span class="pill pill-red">Planejado</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div>
+          </td>
+          <td>Alto (escalável)</td>
+        </tr>
+        <tr>
+          <td class="td-gold">MiroFish Lab</td>
+          <td>Simulação Multiagente</td>
+          <td><span class="pill pill-gold">Beta</span></td>
+          <td>
+            <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+          </td>
+          <td class="td-green">Muito Alto</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem;">Stack Técnica Atual</h3>
+    <div class="two-col">
+      <div>
+        <table>
+          <thead><tr><th>Componente</th><th>Tecnologia</th></tr></thead>
+          <tbody>
+            <tr><td>Backend principal</td><td>Python 3.12, FastAPI, SQLAlchemy</td></tr>
+            <tr><td>Frontend principal</td><td>Next.js, TypeScript, React Query</td></tr>
+            <tr><td>Landing page</td><td>HTML + Tailwind CSS</td></tr>
+            <tr><td>MiroFish frontend</td><td>Vue.js 3, Vite</td></tr>
+            <tr><td>Banco de dados</td><td>PostgreSQL</td></tr>
+            <tr><td>Filas</td><td>Celery + Redis</td></tr>
+            <tr><td>Auth</td><td>JWT</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <thead><tr><th>Componente</th><th>Tecnologia</th></tr></thead>
+          <tbody>
+            <tr><td>Gateway LLM</td><td>OmniRoute (Claude, GPT, Gemini, Grok)</td></tr>
+            <tr><td>Grafo de memória</td><td>Graphiti Server</td></tr>
+            <tr><td>Motor simulação</td><td>OASIS/MiroFish adaptado</td></tr>
+            <tr><td>Deploy</td><td>Docker multi-stage + nginx</td></tr>
+            <tr><td>Hosting</td><td>Vercel (frontends) + VPS</td></tr>
+            <tr><td>WhatsApp</td><td>8 agentes especializados</td></tr>
+            <tr><td>Monitoramento</td><td>Básico (logs)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem;">Pricing Atual</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-number">BRONZE</div>
+        <h3>R$ 5.000 – 10.000/mês</h3>
+        <p>Dashboard de inteligência, 2 pesquisas/mês com agentes, alertas eleitorais, relatórios Helena mensais, acesso aos 1.001 eleitores sintéticos, suporte por e-mail.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">PRATA — RECOMENDADO</div>
+        <h3>R$ 15.000 – 30.000/mês</h3>
+        <p>Tudo do Bronze + consultoria quinzenal, simulações ilimitadas, stress test de resiliência, Monte Carlo + Árvores Bayesianas, 158 consultores lendários, relatórios DOCX/PDF, suporte prioritário.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">OURO</div>
+        <h3>R$ 50.000 – 100.000/mês</h3>
+        <p>Tudo do Prata + equipe dedicada exclusiva, war room 24/7 com Helena, success fee condicionado, ajuste de mensagem em tempo real, 164 magistrados sintéticos, OmniRoute dedicado, WhatsApp Agents.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MARKET ANALYSIS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 03</div>
+    <div class="section-title">Análise de Mercado — Inteligência Artificial Brasil 2026</div>
+    <div class="section-subtitle">Dados reais de pesquisas de mercado, investimentos e tendências do ecossistema brasileiro de IA.</div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">US$ 3,4B</div>
+        <div class="stat-label">Gastos com IA no Brasil em 2026</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-value">41,9%</div>
+        <div class="stat-label">Empresas 100+ func. usando IA</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">R$ 23B</div>
+        <div class="stat-label">Plano Brasil IA até 2028</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">9M</div>
+        <div class="stat-label">Empresas usando IA no Brasil</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Paradoxo de oportunidade</div>
+      <p><strong>77% das empresas brasileiras investem apenas 2% do orçamento em IA</strong>, mas listam IA como prioridade número 1 para 2026. Isso representa uma janela massiva para plataformas que consigam demonstrar ROI claro e reduzir a barreira de adoção — exatamente o que a INTEIA faz com seus produtos integrados e custo otimizado via OmniRoute.</p>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem;">TAM/SAM/SOM por Vertical</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Vertical</th>
+          <th>TAM (Total Addressable Market)</th>
+          <th>SAM (Serviceable)</th>
+          <th>SOM (Obtainable 12 meses)</th>
+          <th>Ticket Médio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-gold">Inteligência Eleitoral</td>
+          <td>R$ 2,5B (campanhas 2026)</td>
+          <td>R$ 150M (IA eleitoral)</td>
+          <td>R$ 2,4M (20 clientes)</td>
+          <td>R$ 10K–50K/mês</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Inteligência Jurídica</td>
+          <td>R$ 72,5B (legaltech global)</td>
+          <td>R$ 800M (jurimetria BR)</td>
+          <td>R$ 1,2M (15 escritórios)</td>
+          <td>R$ 6K–30K/mês</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Lobby e Advocacy</td>
+          <td>R$ 500M (GovTech BR)</td>
+          <td>R$ 80M (monit. legislativo)</td>
+          <td>R$ 600K (8 clientes)</td>
+          <td>R$ 6K–15K/mês</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Corporativa</td>
+          <td>R$ 18B (IA software BR)</td>
+          <td>R$ 500M (consultoria IA)</td>
+          <td>R$ 900K (12 empresas)</td>
+          <td>R$ 5K–25K/mês</td>
+        </tr>
+        <tr>
+          <td class="td-gold">MiroFish Lab / Academy</td>
+          <td>R$ 3B (EdTech + pesquisa)</td>
+          <td>R$ 200M (IA aplicada)</td>
+          <td>R$ 480K (cursos + lab)</td>
+          <td>R$ 2K–8K/mês</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem;">Concorrência Mapeada</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Concorrente</th>
+          <th>Foco</th>
+          <th>Captação</th>
+          <th>Diferença vs INTEIA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Enter</td>
+          <td>Legaltech IA</td>
+          <td>US$ 35M (Founders Fund)</td>
+          <td>Focado em processamento massivo, sem simulação judicial</td>
+        </tr>
+        <tr>
+          <td>Blip</td>
+          <td>Chatbots corporativos</td>
+          <td>US$ 170,5M total</td>
+          <td>Genérico, sem verticais estratégicas</td>
+        </tr>
+        <tr>
+          <td>NeuralMind</td>
+          <td>NLP jurídico</td>
+          <td>Não divulgado</td>
+          <td>Focado em análise documental, sem agentes</td>
+        </tr>
+        <tr>
+          <td>Inteligov</td>
+          <td>Monit. legislativo</td>
+          <td>Não divulgado</td>
+          <td>Só monitora, não simula cenários</td>
+        </tr>
+        <tr>
+          <td>DataPolicy</td>
+          <td>GovTech SaaS</td>
+          <td>Não divulgado</td>
+          <td>Software de gestão, sem IA preditiva</td>
+        </tr>
+        <tr>
+          <td>Jusbrasil (Jus IA)</td>
+          <td>Pesquisa jurídica</td>
+          <td>US$ 50M+</td>
+          <td>Busca e resumo, sem magistrados sintéticos</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="callout-title">Vantagem competitiva única</div>
+      <p>Nenhum concorrente brasileiro combina simulação multiagente, predição judicial com magistrados calibrados, pesquisa eleitoral sintética e consultoria estratégica por IA em uma única plataforma. A INTEIA ocupa um nicho de <strong>inteligência estratégica integrada</strong> que não existe no mercado. O concorrente mais próximo no segmento eleitoral precisaria de no mínimo 2 anos e R$ 10M+ para replicar os ativos já construídos.</p>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem;">Janela de Oportunidade — Eleições 2026</h3>
+    <p style="color:var(--text-secondary); margin-bottom:1rem;">As eleições gerais de outubro de 2026 representam o maior evento de demanda concentrada para inteligência política no Brasil. Com o TSE regulamentando IA em campanhas e a demanda por inteligência eleitoral explodindo, a INTEIA está posicionada no timing perfeito.</p>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">5.570</div>
+        <div class="stat-label">Municípios com eleições em 2026</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-value">27</div>
+        <div class="stat-label">Governadores em disputa</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">513</div>
+        <div class="stat-label">Vagas na Câmara</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">6 meses</div>
+        <div class="stat-label">Até a eleição (out/2026)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= HELENA STRATEGOS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 04 — Análise Especialista</div>
+    <div class="section-title">Helena Strategos — Análise Estratégica</div>
+
+    <div class="specialist">
+      <div class="specialist-header">
+        <div class="specialist-icon helena">H</div>
+        <div>
+          <div class="specialist-name">Helena Inteia Vasconcelos</div>
+          <div class="specialist-role">Cientista-Chefe INTEIA — Estratégia, Cenários e Simulação</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--gold); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">1. Diagnóstico Estratégico</h3>
+
+      <p style="color:var(--text-secondary); margin-bottom:1rem;"><strong style="color:var(--text-primary)">Posição competitiva:</strong> A INTEIA opera em um blue ocean — não há plataforma brasileira que combine simulação social multiagente, predição judicial calibrada e inteligência eleitoral sintética. Os concorrentes atacam fatias isoladas (Enter = legaltech processual, Inteligov = monitoramento legislativo, Blip = chatbots genéricos). A INTEIA é a única com visão integrada cross-vertical.</p>
+
+      <p style="color:var(--text-secondary); margin-bottom:1rem;"><strong style="color:var(--text-primary)">Forças únicas:</strong> (1) 2.617 agentes sintéticos calibrados — ativo que levou meses para construir e calibrar, barreira real de entrada; (2) Motor preditivo com MAE 1.91pp — validação acadêmica em andamento, credibilidade científica; (3) 164 magistrados do STF/STJ/TJDFT/TRF1 — ninguém mais tem isso no Brasil; (4) OmniRoute como gateway de custo zero — margem operacional superior; (5) Equipe de 7 diretores IA especializados — operação 24/7 automatizada.</p>
+
+      <p style="color:var(--text-secondary); margin-bottom:1rem;"><strong style="color:var(--text-primary)">Gaps críticos:</strong> (1) Empresa de uma pessoa — bus factor 1; (2) Apenas 1 cliente pagante; (3) Falta de validação de mercado em escala; (4) Marketing inexistente; (5) Falta case público de sucesso; (6) Academy apenas planejada; (7) MiroFish Lab em beta.</p>
+
+      <h3 style="color:var(--gold); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">2. Cenários de Crescimento (12 meses)</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th>Conservador</th>
+            <th>Moderado</th>
+            <th>Agressivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Clientes ativos</td>
+            <td>8–12</td>
+            <td>20–30</td>
+            <td>40–60</td>
+          </tr>
+          <tr>
+            <td>Receita Mensal Recorrente (mês 12)</td>
+            <td class="td-gold">R$ 80K–120K</td>
+            <td class="td-gold">R$ 200K–350K</td>
+            <td class="td-gold">R$ 500K–800K</td>
+          </tr>
+          <tr>
+            <td>Ticket médio</td>
+            <td>R$ 10K</td>
+            <td>R$ 12K</td>
+            <td>R$ 15K</td>
+          </tr>
+          <tr>
+            <td>Equipe</td>
+            <td>3–4 pessoas</td>
+            <td>6–8 pessoas</td>
+            <td>12–15 pessoas</td>
+          </tr>
+          <tr>
+            <td>Breakeven</td>
+            <td>Mês 10</td>
+            <td>Mês 7</td>
+            <td>Mês 5</td>
+          </tr>
+          <tr>
+            <td>Valuation estimado</td>
+            <td>R$ 5M–8M</td>
+            <td>R$ 15M–25M</td>
+            <td>R$ 40M–60M</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="color:var(--text-secondary); margin-bottom:1rem;"><strong style="color:var(--text-primary)">Variáveis determinantes:</strong> (1) Velocidade de fechamento comercial nos primeiros 90 dias; (2) Resultado das eleições 2026 como validação pública; (3) Capacidade de contratar equipe comercial competente; (4) Publicação acadêmica do motor preditivo; (5) Um case de sucesso público de alto impacto.</p>
+
+      <h3 style="color:var(--gold); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">3. Estratégia de Alavancagem com R$ 50K/mês</h3>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-date">Trimestre 1 — Fundação Comercial (R$ 150K)</div>
+          <div class="timeline-title">Prioridade: fechar 5 clientes e validar o modelo</div>
+          <div class="timeline-desc">40% vendas e marketing, 30% produto, 20% infra, 10% operação. Foco em vertical eleitoral (urgência das eleições 2026) e jurídica (Paixão Cortes como referência). Contratar 1 vendedor sênior e 1 desenvolvedor.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Trimestre 2 — Escala Controlada (R$ 150K)</div>
+          <div class="timeline-title">Prioridade: 15 clientes e diversificação de verticais</div>
+          <div class="timeline-desc">35% vendas, 25% produto, 25% infra, 15% operação. Abrir vertical de Lobby/Advocacy. Lançar Academy com primeiros cursos. Contratar mais 2 pessoas (suporte + conteúdo).</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Trimestre 3 — Aceleração (R$ 150K)</div>
+          <div class="timeline-title">Prioridade: eleições 2026 como catalisador</div>
+          <div class="timeline-desc">30% vendas, 30% produto (MiroFish Lab produção), 25% infra, 15% operação. War rooms eleitorais como vitrine. Case público de sucesso. Contratar mais 2–3 pessoas.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Trimestre 4 — Consolidação (R$ 150K)</div>
+          <div class="timeline-title">Prioridade: autossustentabilidade e captação</div>
+          <div class="timeline-desc">25% vendas, 25% produto, 25% infra, 25% operação. Receita cobrindo custos operacionais. Preparar para rodada de investimento. Publicar resultados das eleições.</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--gold); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">4. Top 5 Riscos Estratégicos</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Risco</th>
+            <th>Prob.</th>
+            <th>Impacto</th>
+            <th>Mitigação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Dependência de Igor (bus factor 1)</td>
+            <td><span class="pill pill-red">Alta</span></td>
+            <td><span class="pill pill-red">Crítico</span></td>
+            <td>Contratar CTO/COO nos primeiros 60 dias</td>
+          </tr>
+          <tr>
+            <td>Mercado eleitoral sazonal</td>
+            <td><span class="pill pill-gold">Média</span></td>
+            <td><span class="pill pill-gold">Alto</span></td>
+            <td>Diversificar para jurídico e corporativo simultaneamente</td>
+          </tr>
+          <tr>
+            <td>Concorrente bem financiado entra</td>
+            <td><span class="pill pill-gold">Média</span></td>
+            <td><span class="pill pill-gold">Alto</span></td>
+            <td>Construir moat com dados calibrados e cases públicos</td>
+          </tr>
+          <tr>
+            <td>Regulação de IA em eleições</td>
+            <td><span class="pill pill-green">Baixa</span></td>
+            <td><span class="pill pill-gold">Médio</span></td>
+            <td>Compliance desde o dia 1, transparência como diferencial</td>
+          </tr>
+          <tr>
+            <td>Custo de LLM escala mais rápido que receita</td>
+            <td><span class="pill pill-gold">Média</span></td>
+            <td><span class="pill pill-gold">Médio</span></td>
+            <td>OmniRoute otimiza rotas, modelos open-source como fallback</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MIDAS CHRYSOS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 05 — Análise Especialista</div>
+    <div class="section-title">Midas Chrysos — Viabilidade Financeira e ROI</div>
+
+    <div class="specialist">
+      <div class="specialist-header">
+        <div class="specialist-icon midas">M</div>
+        <div>
+          <div class="specialist-name">Midas Chrysos</div>
+          <div class="specialist-role">Diretor de Estratégia e Negócios — Precificação, ROI, Valuation</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">1. Modelo de Receita por Produto</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto/Vertical</th>
+            <th>Modelo</th>
+            <th>Ticket Médio</th>
+            <th>Clientes 12m</th>
+            <th>MRR Projetado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-gold">Inteligência Eleitoral (Pacote)</td>
+            <td>Retainer mensal</td>
+            <td>R$ 20K/mês</td>
+            <td>10–15</td>
+            <td class="td-green">R$ 200K–300K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Magistrados Sintéticos</td>
+            <td>Assinatura + uso</td>
+            <td>R$ 8K/mês</td>
+            <td>10–20</td>
+            <td class="td-green">R$ 80K–160K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Consultoria Helena</td>
+            <td>Por projeto</td>
+            <td>R$ 15K/projeto</td>
+            <td>5–10/mês</td>
+            <td class="td-green">R$ 75K–150K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Lobby/Advocacy</td>
+            <td>Retainer</td>
+            <td>R$ 10K/mês</td>
+            <td>5–8</td>
+            <td>R$ 50K–80K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">MiroFish Lab</td>
+            <td>Por simulação</td>
+            <td>R$ 5K/simulação</td>
+            <td>10–20/mês</td>
+            <td>R$ 50K–100K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Academy</td>
+            <td>Assinatura/curso</td>
+            <td>R$ 500/aluno</td>
+            <td>100–300</td>
+            <td>R$ 50K–150K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">WhatsApp Agents (B2B)</td>
+            <td>SaaS mensal</td>
+            <td>R$ 3K/mês</td>
+            <td>10–20</td>
+            <td>R$ 30K–60K</td>
+          </tr>
+          <tr style="font-weight:700;">
+            <td class="td-gold">TOTAL PROJETADO (mês 12)</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="td-green" style="font-size:1.1rem;">R$ 535K–1M</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">2. Alocação do Investimento R$ 50K/mês</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th>Q1 (% do total)</th>
+            <th>Q2</th>
+            <th>Q3</th>
+            <th>Q4</th>
+            <th>Total 12m</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-gold">Equipe (salários)</td>
+            <td>R$ 15K (30%)</td>
+            <td>R$ 20K (40%)</td>
+            <td>R$ 22K (44%)</td>
+            <td>R$ 25K (50%)</td>
+            <td class="td-gold">R$ 246K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Marketing e Vendas</td>
+            <td>R$ 15K (30%)</td>
+            <td>R$ 12K (24%)</td>
+            <td>R$ 12K (24%)</td>
+            <td>R$ 8K (16%)</td>
+            <td class="td-gold">R$ 141K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Infraestrutura Cloud</td>
+            <td>R$ 8K (16%)</td>
+            <td>R$ 8K (16%)</td>
+            <td>R$ 8K (16%)</td>
+            <td>R$ 8K (16%)</td>
+            <td class="td-gold">R$ 96K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Produto/Desenvolvimento</td>
+            <td>R$ 8K (16%)</td>
+            <td>R$ 7K (14%)</td>
+            <td>R$ 5K (10%)</td>
+            <td>R$ 5K (10%)</td>
+            <td class="td-gold">R$ 75K</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Operação/Overhead</td>
+            <td>R$ 4K (8%)</td>
+            <td>R$ 3K (6%)</td>
+            <td>R$ 3K (6%)</td>
+            <td>R$ 4K (8%)</td>
+            <td class="td-gold">R$ 42K</td>
+          </tr>
+          <tr style="font-weight:700;">
+            <td>TOTAL</td>
+            <td>R$ 50K/mês</td>
+            <td>R$ 50K/mês</td>
+            <td>R$ 50K/mês</td>
+            <td>R$ 50K/mês</td>
+            <td class="td-gold">R$ 600K</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">3. Projeção Financeira 12 Meses</h3>
+
+      <div class="bar-chart" style="margin-bottom: 4rem;">
+        <div class="bar" style="height:5%"><div class="bar-value">6K</div><div class="bar-label">Mês 1</div></div>
+        <div class="bar" style="height:8%"><div class="bar-value">12K</div><div class="bar-label">Mês 2</div></div>
+        <div class="bar" style="height:12%"><div class="bar-value">25K</div><div class="bar-label">Mês 3</div></div>
+        <div class="bar" style="height:18%"><div class="bar-value">45K</div><div class="bar-label">Mês 4</div></div>
+        <div class="bar" style="height:25%"><div class="bar-value">70K</div><div class="bar-label">Mês 5</div></div>
+        <div class="bar" style="height:35%"><div class="bar-value">100K</div><div class="bar-label">Mês 6</div></div>
+        <div class="bar" style="height:45%"><div class="bar-value">140K</div><div class="bar-label">Mês 7</div></div>
+        <div class="bar" style="height:55%"><div class="bar-value">180K</div><div class="bar-label">Mês 8</div></div>
+        <div class="bar" style="height:65%"><div class="bar-value">230K</div><div class="bar-label">Mês 9</div></div>
+        <div class="bar" style="height:75%"><div class="bar-value">300K</div><div class="bar-label">Mês 10</div></div>
+        <div class="bar" style="height:85%"><div class="bar-value">400K</div><div class="bar-label">Mês 11</div></div>
+        <div class="bar" style="height:100%"><div class="bar-value">535K</div><div class="bar-label">Mês 12</div></div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box green">
+          <div class="stat-value">Mês 7</div>
+          <div class="stat-label">Breakeven projetado (cenário moderado)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">R$ 2,14M</div>
+          <div class="stat-label">Receita acumulada 12 meses</div>
+        </div>
+        <div class="stat-box blue">
+          <div class="stat-value">3,6x</div>
+          <div class="stat-label">Múltiplo de retorno sobre R$ 600K</div>
+        </div>
+        <div class="stat-box purple">
+          <div class="stat-value">R$ 1,54M</div>
+          <div class="stat-label">Lucro acumulado (receita - investimento)</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">4. Proposta para Financiadores</h3>
+
+      <div class="callout">
+        <div class="callout-title">Elevator Pitch</div>
+        <p><strong>A INTEIA é a única plataforma de inteligência artificial estratégica do Brasil que simula eleições, prevê decisões judiciais e mapeia dinâmicas políticas com 2.617 agentes sintéticos calibrados.</strong> Com R$ 50K/mês de investimento, projetamos R$ 535K de receita mensal recorrente em 12 meses, atendendo campanhas eleitorais, escritórios de advocacia e corporações que precisam de inteligência preditiva real — não chatbots genéricos.</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Parâmetro</th>
+            <th>Detalhe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-gold">Investimento solicitado</td>
+            <td>R$ 600.000 (12 meses × R$ 50K)</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Estrutura sugerida</td>
+            <td>Nota conversível (SAFE) com desconto de 20% ou equity de 5–8%</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Pre-money valuation</td>
+            <td>R$ 7,5M–12M (baseado em múltiplo de receita projetada)</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Investidor ideal</td>
+            <td>Anjo estratégico (político/jurídico) ou VC early-stage com tese em GovTech/LegalTech</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Retorno esperado</td>
+            <td>3,6x em 12 meses; 10–15x em 36 meses com rodada Series A</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Exit strategy</td>
+            <td>Aquisição por big four de consultoria, player de legaltech ou IPO GovTech</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Comparáveis</td>
+            <td>Enter: US$ 350M valuation com legaltech IA. INTEIA tem mais verticais e IP único.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color:var(--accent-green); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">5. Cenários de Escala</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Cenário</th>
+            <th>R$ 50K/mês</th>
+            <th>R$ 100K/mês</th>
+            <th>R$ 200K/mês</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Equipe (mês 12)</td>
+            <td>6–8</td>
+            <td>12–15</td>
+            <td>25–30</td>
+          </tr>
+          <tr>
+            <td>Clientes (mês 12)</td>
+            <td>20–30</td>
+            <td>40–60</td>
+            <td>80–120</td>
+          </tr>
+          <tr>
+            <td>MRR (mês 12)</td>
+            <td class="td-green">R$ 535K</td>
+            <td class="td-green">R$ 1,2M</td>
+            <td class="td-green">R$ 3M</td>
+          </tr>
+          <tr>
+            <td>Valuation projetado</td>
+            <td>R$ 15M–25M</td>
+            <td>R$ 40M–60M</td>
+            <td>R$ 100M+</td>
+          </tr>
+          <tr>
+            <td>Breakeven</td>
+            <td>Mês 7</td>
+            <td>Mês 6</td>
+            <td>Mês 5</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= ARES TEKHTON ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 06 — Análise Especialista</div>
+    <div class="section-title">Ares Tekhton — Infraestrutura e Arquitetura de Escala</div>
+
+    <div class="specialist">
+      <div class="specialist-header">
+        <div class="specialist-icon ares">A</div>
+        <div>
+          <div class="specialist-name">Ares Tekhton</div>
+          <div class="specialist-role">Diretor de Tecnologia — Arquitetura, Infra, DevOps, Automação</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-blue); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">1. Diagnóstico da Infraestrutura Atual</h3>
+
+      <div class="two-col">
+        <div>
+          <h4 style="color:var(--accent-green); margin-bottom:0.5rem;">Sólido</h4>
+          <ul style="color:var(--text-secondary); padding-left:1.5rem; font-size:0.9rem;">
+            <li>Stack Python/FastAPI + Next.js — moderna e escalável</li>
+            <li>OmniRoute como gateway LLM — custo otimizado</li>
+            <li>Docker multi-stage — deploy reproduzível</li>
+            <li>PostgreSQL + Redis/Celery — base robusta</li>
+            <li>Graphiti substituindo Zep — reduz lock-in</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="color:var(--accent-red); margin-bottom:0.5rem;">Precisa Evoluir</h4>
+          <ul style="color:var(--text-secondary); padding-left:1.5rem; font-size:0.9rem;">
+            <li>Sem monitoramento/observabilidade real</li>
+            <li>Sem CI/CD automatizado</li>
+            <li>Frontend dividido (Next.js + Vue.js)</li>
+            <li>Sem CDN/edge para assets</li>
+            <li>Sem backup automatizado</li>
+            <li>Auth básica (JWT simples)</li>
+            <li>Sem rate limiting na API</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-blue); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">2. Custos de Infraestrutura Mensais</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Atual</th>
+            <th>Escala (mês 6)</th>
+            <th>Produção (mês 12)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cloud (VPS/AWS)</td>
+            <td>R$ 500</td>
+            <td>R$ 3.000</td>
+            <td>R$ 6.000</td>
+          </tr>
+          <tr>
+            <td>Vercel (frontends)</td>
+            <td>R$ 0 (free)</td>
+            <td>R$ 400</td>
+            <td>R$ 800</td>
+          </tr>
+          <tr>
+            <td>CDN (Cloudflare)</td>
+            <td>R$ 0</td>
+            <td>R$ 200</td>
+            <td>R$ 500</td>
+          </tr>
+          <tr>
+            <td>APIs de IA (tokens)</td>
+            <td>R$ 200</td>
+            <td>R$ 2.000</td>
+            <td>R$ 5.000</td>
+          </tr>
+          <tr>
+            <td>Banco de dados gerenciado</td>
+            <td>R$ 0 (local)</td>
+            <td>R$ 500</td>
+            <td>R$ 1.500</td>
+          </tr>
+          <tr>
+            <td>Monitoramento (Grafana/Sentry)</td>
+            <td>R$ 0</td>
+            <td>R$ 300</td>
+            <td>R$ 800</td>
+          </tr>
+          <tr>
+            <td>Domínio + SSL + Email</td>
+            <td>R$ 50</td>
+            <td>R$ 100</td>
+            <td>R$ 200</td>
+          </tr>
+          <tr style="font-weight:700;">
+            <td>TOTAL INFRA</td>
+            <td>~R$ 750</td>
+            <td>~R$ 6.500</td>
+            <td>~R$ 14.800</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color:var(--accent-blue); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">3. Custo de IA por Produto (estimativa mensal em escala)</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Chamadas LLM/mês</th>
+            <th>Tokens médios</th>
+            <th>Custo est. via OmniRoute</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Helena Strategos</td>
+            <td>5.000–10.000</td>
+            <td>2K–8K/chamada</td>
+            <td>R$ 800–2.000</td>
+          </tr>
+          <tr>
+            <td>Motor Preditivo (Monte Carlo)</td>
+            <td>10.000+</td>
+            <td>1K–3K/iteração</td>
+            <td>R$ 500–1.500</td>
+          </tr>
+          <tr>
+            <td>Magistrados Sintéticos</td>
+            <td>3.000–8.000</td>
+            <td>3K–6K/consulta</td>
+            <td>R$ 400–1.200</td>
+          </tr>
+          <tr>
+            <td>Pesquisa Eleitoral (1.001 agentes)</td>
+            <td>1.001–5.000</td>
+            <td>1K–4K/agente</td>
+            <td>R$ 200–800</td>
+          </tr>
+          <tr>
+            <td>MiroFish (simulação multiagente)</td>
+            <td>2.000–20.000</td>
+            <td>2K–5K/round</td>
+            <td>R$ 300–2.000</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="callout-title">Vantagem OmniRoute</div>
+        <p>O gateway OmniRoute reduz custos de IA em até 80% ao rotear chamadas para provedores gratuitos ou de baixo custo (modelos open-source, tiers gratuitos de Claude/GPT). Custo estimado total de IA em escala: <strong>R$ 2.000–5.000/mês</strong> — uma fração do que concorrentes pagam.</p>
+      </div>
+
+      <h3 style="color:var(--accent-blue); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">4. Roadmap Técnico 12 Meses</h3>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-number">Q1 — FUNDAÇÃO</div>
+          <h3>Estabilizar e proteger</h3>
+          <p>CI/CD com GitHub Actions. Monitoramento com Sentry + Grafana. CDN Cloudflare. Backup automatizado PostgreSQL. Rate limiting. Migrar para cloud gerenciada. Unificar auth (JWT → OAuth2).</p>
+        </div>
+        <div class="card">
+          <div class="card-number">Q2 — ESCALA</div>
+          <h3>Crescer sem quebrar</h3>
+          <p>Auto-scaling na API. Cache Redis para consultas frequentes. MiroFish Lab em produção. API Gateway com throttling por cliente. Testes de carga. Ambiente de staging.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">Q3 — OTIMIZAÇÃO</div>
+          <h3>Performance e custo</h3>
+          <p>Fine-tuning de modelos para reduzir tokens. Cache de resultados de simulação. Edge functions para latência. Multi-tenant architecture. SSO para clientes enterprise.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">Q4 — ENTERPRISE</div>
+          <h3>Pronto para escala</h3>
+          <p>SOC 2 compliance. Data residency. SLA 99.9%. Disaster recovery. API pública documentada. SDK para integrações. White-label para parceiros.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= IRIS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 07 — Análise Especialista</div>
+    <div class="section-title">Iris — Operação, Equipe e Governança</div>
+
+    <div class="specialist">
+      <div class="specialist-header">
+        <div class="specialist-icon iris">I</div>
+        <div>
+          <div class="specialist-name">Iris</div>
+          <div class="specialist-role">Diretora Executiva — Operação, Agenda, Processos, Governança</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-purple); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">1. Plano de Contratação por Fase</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Fase</th>
+            <th>Cargo</th>
+            <th>Perfil</th>
+            <th>Salário est.</th>
+            <th>Prioridade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="2"><span class="pill pill-gold">Meses 1–3</span></td>
+            <td class="td-gold">Vendedor Sênior</td>
+            <td>Experiência em venda consultiva B2B, rede política/jurídica</td>
+            <td>R$ 5K + comissão</td>
+            <td><span class="pill pill-red">Crítico</span></td>
+          </tr>
+          <tr>
+            <td class="td-gold">Dev Full-Stack Pleno</td>
+            <td>Python + React/Next.js, experiência com APIs</td>
+            <td>R$ 8K</td>
+            <td><span class="pill pill-red">Crítico</span></td>
+          </tr>
+          <tr>
+            <td rowspan="2"><span class="pill pill-gold">Meses 4–6</span></td>
+            <td class="td-gold">Customer Success</td>
+            <td>Onboarding, suporte, retenção</td>
+            <td>R$ 4K</td>
+            <td><span class="pill pill-gold">Alto</span></td>
+          </tr>
+          <tr>
+            <td class="td-gold">Analista de Conteúdo/Marketing</td>
+            <td>Produção de cases, LinkedIn, conteúdo técnico</td>
+            <td>R$ 4K</td>
+            <td><span class="pill pill-gold">Alto</span></td>
+          </tr>
+          <tr>
+            <td rowspan="3"><span class="pill pill-gold">Meses 7–12</span></td>
+            <td class="td-gold">Dev Back-end Sênior</td>
+            <td>Arquitetura, performance, segurança</td>
+            <td>R$ 12K</td>
+            <td><span class="pill pill-gold">Alto</span></td>
+          </tr>
+          <tr>
+            <td class="td-gold">Segundo Vendedor</td>
+            <td>Vertical jurídica ou corporativa</td>
+            <td>R$ 5K + comissão</td>
+            <td>Médio</td>
+          </tr>
+          <tr>
+            <td class="td-gold">Estagiário/Assistente</td>
+            <td>Suporte operacional e administrativo</td>
+            <td>R$ 2K</td>
+            <td>Médio</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color:var(--accent-purple); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">2. Timeline de Marcos</h3>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-date">Dia 30 — Fundação comercial</div>
+          <div class="timeline-title">Primeiro vendedor contratado, pipeline de 20 leads, 2 propostas enviadas</div>
+          <div class="timeline-desc">Material de vendas pronto. Deck de apresentação. Demo funcional. CRM básico configurado.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Dia 60 — Segundo cliente</div>
+          <div class="timeline-title">2º cliente fechado, dev contratado, CI/CD operacional</div>
+          <div class="timeline-desc">Processo de onboarding documentado. SLA definido. Faturamento automatizado.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Dia 90 — Validação de modelo</div>
+          <div class="timeline-title">5 clientes ativos, R$ 50K MRR, processo comercial rodando</div>
+          <div class="timeline-desc">Fluxo de vendas validado. Métricas de aquisição mensuradas. Primeiro case público.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Mês 6 — Tração</div>
+          <div class="timeline-title">15 clientes, R$ 150K MRR, equipe de 5–6 pessoas</div>
+          <div class="timeline-desc">Academy lançada. MiroFish Lab em produção. Vertical de Lobby aberta. Marca reconhecida em Brasília.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Mês 9 — Eleições</div>
+          <div class="timeline-title">War rooms ativos, cobertura eleitoral, visibilidade nacional</div>
+          <div class="timeline-desc">Previsões publicadas. Cobertura de mídia. Validação pública do motor preditivo.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">Mês 12 — Consolidação</div>
+          <div class="timeline-title">30+ clientes, R$ 535K MRR, referência nacional em IA estratégica</div>
+          <div class="timeline-desc">Receita cobrindo custos. Preparação para rodada de investimento. Resultados eleitorais publicados. Board advisory constituído.</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--accent-purple); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">3. OKRs Trimestre 1</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Objetivo</th>
+            <th>Key Result</th>
+            <th>Meta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-gold" rowspan="3">Validar produto no mercado</td>
+            <td>Clientes pagantes</td>
+            <td class="td-green">5</td>
+          </tr>
+          <tr>
+            <td>MRR</td>
+            <td class="td-green">R$ 50K</td>
+          </tr>
+          <tr>
+            <td>NPS dos clientes</td>
+            <td class="td-green">≥ 8</td>
+          </tr>
+          <tr>
+            <td class="td-gold" rowspan="3">Construir máquina de vendas</td>
+            <td>Leads qualificados no pipeline</td>
+            <td>50</td>
+          </tr>
+          <tr>
+            <td>Taxa de conversão proposta→cliente</td>
+            <td>≥ 25%</td>
+          </tr>
+          <tr>
+            <td>Tempo médio de ciclo de venda</td>
+            <td>≤ 30 dias</td>
+          </tr>
+          <tr>
+            <td class="td-gold" rowspan="2">Estabilizar infraestrutura</td>
+            <td>Uptime do site</td>
+            <td>≥ 99.5%</td>
+          </tr>
+          <tr>
+            <td>Tempo de resposta API (p95)</td>
+            <td>≤ 2s</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color:var(--accent-purple); margin:1.5rem 0 1rem; font-family:'Cormorant Garamond',serif; font-size:1.3rem;">4. Governança Sugerida</h3>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>Board Advisory (não remunerado)</h3>
+          <p>3–5 conselheiros estratégicos: 1 político experiente, 1 advogado com rede, 1 empreendedor tech, 1 acadêmico (validação científica). Reunião mensal de 1h.</p>
+        </div>
+        <div class="card">
+          <h3>Rituais de Gestão</h3>
+          <p>Daily standup (15min). Weekly review (1h sextas). Monthly retrospective + OKR check. Quarterly board advisory. Semiannual investor update.</p>
+        </div>
+        <div class="card">
+          <h3>Processos Críticos</h3>
+          <p>Onboarding de cliente (checklist 15 itens). Delivery com SLA. Suporte com tíquete. Faturamento automatizado. NPS trimestral. Churn review mensal.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PLANO DE CAPTAÇÃO ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 08</div>
+    <div class="section-title">Proposta de Financiamento — R$ 50.000/mês</div>
+    <div class="section-subtitle">Documento-base para apresentação a potenciais financiadores, investidores-anjo e fundos de venture capital.</div>
+
+    <div class="callout">
+      <div class="callout-title">Tese do investimento</div>
+      <p>A INTEIA construiu, em 4 meses de operação, o que concorrentes levam 2+ anos e R$ 10M+ para replicar: <strong>2.617 agentes sintéticos calibrados, motor preditivo com MAE 1.91pp, 164 magistrados sintéticos e 13 produtos de IA integrados</strong>. O investimento de R$ 50K/mês por 12 meses transforma esse ativo técnico em negócio escalável, com breakeven projetado no mês 7 e MRR de R$ 535K no mês 12.</p>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--gold);">Por que investir agora</h3>
+
+    <div class="card-grid">
+      <div class="card card-highlight">
+        <div class="card-number">01 — TIMING</div>
+        <h3>Eleições 2026 em 6 meses</h3>
+        <p>A maior janela de demanda para inteligência política em 4 anos. Campanhas estão fechando contratos AGORA. Quem não investir nos próximos 90 dias perde o ciclo eleitoral inteiro.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">02 — MOAT TÉCNICO</div>
+        <h3>2.617 agentes calibrados</h3>
+        <p>Ativo que levou meses para construir e calibrar. Barreira real de entrada. Concorrentes precisam de 2+ anos e equipe multidisciplinar para replicar.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">03 — MERCADO COMPROVADO</div>
+        <h3>Enter captou US$ 350M</h3>
+        <p>Legaltech IA com foco menor que INTEIA já tem valuation de US$ 350M. INTEIA tem mais verticais, IP único e custo operacional inferior via OmniRoute.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">04 — CUSTO ZERO DE IA</div>
+        <h3>OmniRoute como vantagem estrutural</h3>
+        <p>Gateway proprietário que roteia chamadas de IA para provedores gratuitos. Margem bruta projetada de 70–85% — superior à média do mercado de SaaS.</p>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--gold);">Uso detalhado dos recursos — R$ 600K em 12 meses</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th>Valor Total</th>
+          <th>% do Total</th>
+          <th>O que financia</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-gold">Equipe</td>
+          <td>R$ 246.000</td>
+          <td>41%</td>
+          <td>Vendedor sênior, dev full-stack, CS, marketing, dev sênior, assistente</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Marketing e Vendas</td>
+          <td>R$ 141.000</td>
+          <td>23,5%</td>
+          <td>Google Ads, LinkedIn Ads, eventos, material de vendas, PR, cases</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Infraestrutura Cloud</td>
+          <td>R$ 96.000</td>
+          <td>16%</td>
+          <td>Servidores, CDN, banco de dados, monitoramento, APIs de IA, backups</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Produto e Desenvolvimento</td>
+          <td>R$ 75.000</td>
+          <td>12,5%</td>
+          <td>MiroFish Lab produção, Academy, melhorias em produtos existentes</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Operação</td>
+          <td>R$ 42.000</td>
+          <td>7%</td>
+          <td>Contabilidade, jurídico, escritório, ferramentas SaaS, contingência</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--gold);">Estruturas de deal possíveis</h3>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-number">OPÇÃO A</div>
+        <h3>SAFE (Nota Conversível)</h3>
+        <p>R$ 600K em SAFE com desconto de 20% na próxima rodada priced. Cap de R$ 12M. Sem juros. Converte em equity na Series Seed ou A.</p>
+        <p style="color:var(--gold); margin-top:0.5rem;">Ideal para: investidor-anjo individual</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">OPÇÃO B — RECOMENDADA</div>
+        <h3>Equity Direto (5–8%)</h3>
+        <p>R$ 600K por 5–8% da empresa, pre-money de R$ 7,5M–12M. Vesting de 12 meses. Assento no board advisory. Relatórios mensais.</p>
+        <p style="color:var(--gold); margin-top:0.5rem;">Ideal para: VC early-stage ou investidor estratégico</p>
+      </div>
+      <div class="card">
+        <div class="card-number">OPÇÃO C</div>
+        <h3>Revenue Share</h3>
+        <p>R$ 600K com retorno de 2x (R$ 1,2M) via 15% da receita bruta mensal até quitação. Sem equity. Prazo estimado: 18–24 meses.</p>
+        <p style="color:var(--gold); margin-top:0.5rem;">Ideal para: investidor conservador ou parceiro comercial</p>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--gold);">Perfil de investidor ideal</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Por quê</th>
+          <th>O que traz além do capital</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-gold">Político ou ex-político com capital</td>
+          <td>Rede de campanhas como canal de vendas direto</td>
+          <td>Acesso imediato a 10–20 campanhas em 2026</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Escritório de advocacia grande</td>
+          <td>Cliente + investidor. Usa o produto e financia evolução</td>
+          <td>Validação de mercado + receita garantida</td>
+        </tr>
+        <tr>
+          <td class="td-gold">VC com tese GovTech/LegalTech</td>
+          <td>Setor aquecido (Enter US$ 350M). INTEIA é a próxima tese</td>
+          <td>Mentoria, rede, follow-on em Series A</td>
+        </tr>
+        <tr>
+          <td class="td-gold">Corporate (consultoria política)</td>
+          <td>Parceria comercial com investimento. White-label possível</td>
+          <td>Canais de distribuição existentes</td>
+        </tr>
+        <tr>
+          <td class="td-gold">FINEP / BNDES / Governo</td>
+          <td>Plano Brasil IA: R$ 23B até 2028. Linhas para startups de IA</td>
+          <td>Capital não-dilutivo, credibilidade institucional</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= MIROFISH SIMULATION ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 09</div>
+    <div class="section-title">MiroFish Lab — Motor de Simulação como Diferencial Premium</div>
+    <div class="section-subtitle">O MiroFish é o motor de simulação social multiagente que transforma documentos em cenários preditivos com grafo de conhecimento e relatórios Helena.</div>
+
+    <div class="two-col">
+      <div>
+        <h3 style="color:var(--gold); margin-bottom:1rem; font-family:'Cormorant Garamond',serif;">Pipeline de Simulação</h3>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 1</div>
+          <h3>Ingestão de Material</h3>
+          <p>Upload de documentos, notícias, dossiês. Extração automática de texto e entidades via LLM.</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 2</div>
+          <h3>Construção de Grafo</h3>
+          <p>Ontologia gerada. Entidades e relações mapeadas. Grafo de conhecimento temporal via Graphiti.</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 3</div>
+          <h3>Configuração de Agentes</h3>
+          <p>Geração automática de perfis ou importação de agentes sintéticos INTEIA. Personalidade, memória e lógica.</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-number">ETAPA 4</div>
+          <h3>Simulação Multiagente</h3>
+          <p>Execução paralela em plataformas simuladas (Twitter/Reddit). Interações emergentes registradas.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">ETAPA 5</div>
+          <h3>Relatório Helena</h3>
+          <p>Síntese executiva com sinais, hipóteses, contradições e recomendações práticas. Grau de confiança.</p>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--gold); margin-bottom:1rem; font-family:'Cormorant Garamond',serif;">Aplicações Premium</h3>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Simulação Eleitoral</h3>
+          <p>Cenários de campanha, repercussão de narrativa, clusters de reação, tópicos quentes, posts prováveis.</p>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem;">Ticket: R$ 15K–50K por simulação</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Crise Reputacional</h3>
+          <p>Timeline de escalada, mapa de atores, gatilhos de agravamento, janelas de mitigação, contra-narrativas.</p>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem;">Ticket: R$ 10K–30K por simulação</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Jurídico-Institucional</h3>
+          <p>Cadeias de influência entre judiciário, legislativo, mídia e opinião pública. Cenários de repercussão.</p>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem;">Ticket: R$ 8K–25K por simulação</p>
+        </div>
+        <div class="card" style="margin-bottom:1rem;">
+          <h3>Integração Lenia-RR</h3>
+          <p>Exporta sinais para sistema Lenia: territórios, atores, segmentos, canais e pressão narrativa.</p>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem;">API de exportação já implementada</p>
+        </div>
+        <div class="card">
+          <h3>Vila INTEIA (144 consultores)</h3>
+          <p>Campus 3D gamificado com consultores lendários simulados. Chat, tarefas e colaboração em equipe.</p>
+          <p style="color:var(--gold); font-size:0.8rem; margin-top:0.5rem;">Diferencial: ninguém mais tem isso</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= VILLA INTEIA ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 10</div>
+    <div class="section-title">Potencial de Alavancagem — Visão Consolidada</div>
+
+    <div class="callout">
+      <div class="callout-title">Síntese dos 5 Especialistas</div>
+      <p>A INTEIA não precisa de muito para se tornar referência. Precisa de <strong>foco comercial nos primeiros 90 dias</strong> (Helena), <strong>equipe enxuta e competente</strong> (Iris), <strong>infraestrutura estável</strong> (Ares), <strong>modelo financeiro validado com 5 clientes</strong> (Midas) e <strong>um case público de alto impacto nas eleições 2026</strong> (todos). O investimento de R$ 50K/mês é a alavanca que falta.</p>
+    </div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:2rem 0 1rem; color:var(--gold);">O que existe vs. o que falta</h3>
+
+    <div class="two-col">
+      <div>
+        <h4 style="color:var(--accent-green); margin-bottom:1rem;">O que JÁ existe (ativo construído)</h4>
+        <table>
+          <tbody>
+            <tr><td>13 produtos de IA integrados</td><td class="td-green">Operacional</td></tr>
+            <tr><td>2.617 agentes sintéticos calibrados</td><td class="td-green">Calibrados</td></tr>
+            <tr><td>164 magistrados STF/STJ/TJDFT/TRF1</td><td class="td-green">Único no BR</td></tr>
+            <tr><td>Motor preditivo MAE 1.91pp</td><td class="td-green">Validação acadêmica</td></tr>
+            <tr><td>1.001 eleitores com 60+ atributos</td><td class="td-green">Operacional</td></tr>
+            <tr><td>OmniRoute (custo zero de IA)</td><td class="td-green">Produção</td></tr>
+            <tr><td>MiroFish Lab (simulação multiagente)</td><td class="td-gold">Beta avançado</td></tr>
+            <tr><td>CONECTA 2026 (gestão campanha)</td><td class="td-gold">Beta</td></tr>
+            <tr><td>Site no ar com pricing</td><td class="td-green">Público</td></tr>
+            <tr><td>1 cliente pagante (R$ 6K/mês)</td><td class="td-green">Validação</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="color:var(--accent-red); margin-bottom:1rem;">O que FALTA (o investimento resolve)</h4>
+        <table>
+          <tbody>
+            <tr><td>Equipe comercial</td><td class="td-red">Inexistente</td></tr>
+            <tr><td>Marketing estruturado</td><td class="td-red">Zero</td></tr>
+            <tr><td>Cases públicos</td><td class="td-red">Nenhum</td></tr>
+            <tr><td>Infraestrutura enterprise</td><td class="td-gold">Parcial</td></tr>
+            <tr><td>Processos de delivery</td><td class="td-gold">Informal</td></tr>
+            <tr><td>Academy (cursos)</td><td class="td-red">Planejado</td></tr>
+            <tr><td>CI/CD e monitoramento</td><td class="td-red">Ausente</td></tr>
+            <tr><td>Segundo desenvolvedor</td><td class="td-red">Necessário</td></tr>
+            <tr><td>Compliance e SLA</td><td class="td-gold">Básico</td></tr>
+            <tr><td>Board advisory</td><td class="td-red">Não existe</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="gold-line"></div>
+
+    <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; margin:1rem 0; color:var(--gold);">Projeção de Crescimento — Receita vs. Investimento</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th>Investimento (acum.)</th>
+          <th>Receita mensal</th>
+          <th>Receita (acum.)</th>
+          <th>Clientes</th>
+          <th>Equipe</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>R$ 50K</td><td>R$ 6K</td><td>R$ 6K</td><td>1</td><td>3</td><td><span class="pill pill-red">Investimento</span></td></tr>
+        <tr><td>2</td><td>R$ 100K</td><td>R$ 12K</td><td>R$ 18K</td><td>2</td><td>3</td><td><span class="pill pill-red">Investimento</span></td></tr>
+        <tr><td>3</td><td>R$ 150K</td><td>R$ 25K</td><td>R$ 43K</td><td>4</td><td>4</td><td><span class="pill pill-red">Investimento</span></td></tr>
+        <tr><td>4</td><td>R$ 200K</td><td>R$ 45K</td><td>R$ 88K</td><td>6</td><td>5</td><td><span class="pill pill-gold">Acelerando</span></td></tr>
+        <tr><td>5</td><td>R$ 250K</td><td>R$ 70K</td><td>R$ 158K</td><td>9</td><td>5</td><td><span class="pill pill-gold">Acelerando</span></td></tr>
+        <tr><td>6</td><td>R$ 300K</td><td>R$ 100K</td><td>R$ 258K</td><td>12</td><td>6</td><td><span class="pill pill-gold">Acelerando</span></td></tr>
+        <tr style="background:rgba(201,149,42,0.05);"><td><strong>7</strong></td><td>R$ 350K</td><td><strong>R$ 140K</strong></td><td>R$ 398K</td><td>16</td><td>7</td><td><span class="pill pill-green">BREAKEVEN</span></td></tr>
+        <tr><td>8</td><td>R$ 400K</td><td>R$ 180K</td><td>R$ 578K</td><td>19</td><td>7</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr><td>9</td><td>R$ 450K</td><td>R$ 230K</td><td>R$ 808K</td><td>23</td><td>8</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr><td>10</td><td>R$ 500K</td><td>R$ 300K</td><td>R$ 1,1M</td><td>26</td><td>8</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr><td>11</td><td>R$ 550K</td><td>R$ 400K</td><td>R$ 1,5M</td><td>29</td><td>8</td><td><span class="pill pill-green">Lucro</span></td></tr>
+        <tr style="background:rgba(201,149,42,0.08);"><td><strong>12</strong></td><td><strong>R$ 600K</strong></td><td><strong class="td-green">R$ 535K</strong></td><td><strong>R$ 2,14M</strong></td><td><strong>30+</strong></td><td><strong>8</strong></td><td><span class="pill pill-green">Consolidação</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="stats-row">
+      <div class="stat-box green">
+        <div class="stat-value">R$ 2,14M</div>
+        <div class="stat-label">Receita total acumulada em 12 meses</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">R$ 600K</div>
+        <div class="stat-label">Investimento total</div>
+      </div>
+      <div class="stat-box blue">
+        <div class="stat-value">3,6x</div>
+        <div class="stat-label">Retorno sobre investimento</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-value">R$ 15M–25M</div>
+        <div class="stat-label">Valuation projetado (mês 12)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= NEXT STEPS ======================= -->
+<section>
+  <div class="container">
+    <div class="section-label">Seção 11</div>
+    <div class="section-title">Próximos Passos Imediatos</div>
+
+    <div class="callout">
+      <div class="callout-title">Ação requerida</div>
+      <p>Este documento é o ponto de partida. Os próximos 30 dias determinam se a INTEIA captura a janela eleitoral de 2026 ou perde o ciclo inteiro.</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card card-highlight">
+        <div class="card-number">SEMANA 1–2</div>
+        <h3>Validar proposta com 5 potenciais investidores</h3>
+        <p>Apresentar este documento. Coletar feedback. Ajustar termos. Identificar interesse real vs. cortesia.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">SEMANA 2–3</div>
+        <h3>Contratar vendedor sênior</h3>
+        <p>Perfil: experiência em consultoria política ou jurídica. Rede existente. Comissão agressiva sobre novos clientes.</p>
+      </div>
+      <div class="card card-highlight">
+        <div class="card-number">SEMANA 3–4</div>
+        <h3>Gerar 20 leads qualificados</h3>
+        <p>Campanhas eleitorais em formação. Escritórios de advocacia em Brasília. Consultorias políticas. Associações de classe.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">MÊS 2</div>
+        <h3>Fechar 2º e 3º clientes</h3>
+        <p>Meta: 2 novos clientes além de Paixão Cortes. Verticais diferentes. Material de case em produção.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">MÊS 3</div>
+        <h3>Publicar primeiro case de sucesso</h3>
+        <p>Artigo no LinkedIn. Press release. Apresentação em evento jurídico ou político. Validação pública.</p>
+      </div>
+      <div class="card">
+        <div class="card-number">MÊS 3</div>
+        <h3>Fechar captação</h3>
+        <p>Term sheet assinada. Capital entrando. Equipe contratada. Máquina de vendas operacional.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= FOOTER ======================= -->
+<footer class="footer">
+  <div class="container">
+    <p style="color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:1.3rem; margin-bottom:0.5rem;">INTEIA — Inteligência Artificial Estratégica</p>
+    <p>Dr. Igor Morais Vasconcelos — Presidente e Pesquisador Responsável</p>
+    <p style="margin-top:0.5rem;"><a href="mailto:igor@inteia.com.br">igor@inteia.com.br</a> · <a href="https://inteia.com.br">inteia.com.br</a> · Brasília/DF</p>
+    <p style="margin-top:1rem; font-size:0.7rem;">Documento gerado pela Colmeia INTEIA — Helena Strategos, Midas Chrysos, Ares Tekhton, Iris, Villa INTEIA</p>
+    <p style="font-size:0.7rem;">Dados de mercado: pesquisa real abril/2026. Projeções baseadas em cenário moderado. Resultados não garantidos.</p>
+    <p style="font-size:0.7rem; margin-top:0.5rem;">CNPJ: 63.918.490/0001-20 · SHN Quadra 2 Bloco F, Sala 625/626 · Brasília-DF</p>
+  </div>
+</footer>
+
+</body>
+</html>
