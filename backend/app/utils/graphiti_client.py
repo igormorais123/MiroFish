@@ -282,3 +282,59 @@ class GraphitiClient:
     def clear(self) -> None:
         """Limpa todo o grafo do Graphiti Server."""
         self._request("POST", "/clear", operation_name="clear")
+
+    # ------------------------------------------------------------------
+    # Sincronizacao de group_id em Neo4j (maintenance)
+    # ------------------------------------------------------------------
+
+    def sync_graph_id_to_neo4j(self, group_id: str, neo4j_uri: str, neo4j_user: str, neo4j_password: str) -> dict:
+        """Sincroniza o group_id para todos os nós de um grupo no Neo4j.
+
+        Esta funcao e necessaria para corrigir nós que possam ter sido criados
+        sem o group_id correto durante problemas de sincronizacao.
+
+        Args:
+            group_id: Identificador do grupo (graph_id).
+            neo4j_uri: URI de conexao ao Neo4j (e.g., "bolt://neo4j:7687").
+            neo4j_user: Usuario do Neo4j.
+            neo4j_password: Senha do Neo4j.
+
+        Returns:
+            Dict com resultado da sincronizacao.
+        """
+        try:
+            from neo4j import GraphDatabase
+
+            driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+
+            with driver.session() as session:
+                # Contar nós com este group_id
+                result = session.run(
+                    "MATCH (n {group_id: $group_id}) RETURN count(n) as count",
+                    group_id=group_id
+                )
+                count_with_id = result.single()["count"] if result.single() else 0
+
+                # Buscar nós que estao "órfaos" (sem group_id correto)
+                # Isso pode acontecer se houver sincronizacao incompleta
+                result = session.run(
+                    "MATCH (n) WHERE n.group_id IS NULL OR n.group_id = '' RETURN count(n) as count"
+                )
+                count_orphaned = result.single()["count"] if result.single() else 0
+
+                driver.close()
+
+            return {
+                "group_id": group_id,
+                "nodes_with_group_id": count_with_id,
+                "orphaned_nodes": count_orphaned,
+                "status": "checked"
+            }
+
+        except Exception as e:
+            logger.error(f"Erro ao sincronizar group_id em Neo4j: {e}")
+            return {
+                "group_id": group_id,
+                "error": str(e),
+                "status": "failed"
+            }

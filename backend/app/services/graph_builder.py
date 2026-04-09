@@ -210,6 +210,8 @@ class GraphBuilderService:
         O Graphiti nao possui configuracao explicita de ontologia como o Zep.
         Enviamos a descricao da ontologia como mensagem para que o LLM interno
         do Graphiti considere esses tipos ao extrair entidades.
+
+        IMPORTANTE: Inclui group_id na mensagem para garantir propagacao em Neo4j.
         """
         # Constroi descricao textual da ontologia
         parts = [
@@ -236,6 +238,7 @@ class GraphBuilderService:
 
         ontology_text = "\n".join(parts)
 
+        # [FIX] Incluir group_id na mensagem para garantir propagacao em Neo4j
         self.client.add_messages(
             group_id=graph_id,
             messages=[{
@@ -243,9 +246,10 @@ class GraphBuilderService:
                 "role_type": "system",
                 "role": "system",
                 "source_description": "Definicao de ontologia MiroFish",
+                "group_id": graph_id,  # Propagacao explicita do group_id
             }],
         )
-        logger.info(f"Contexto de ontologia enviado para o grupo {graph_id}")
+        logger.info(f"Contexto de ontologia enviado para o grupo {graph_id} com {len(ontology.get('entity_types', []))} tipos de entidade")
 
     def add_text_batches(
         self,
@@ -254,8 +258,13 @@ class GraphBuilderService:
         batch_size: int = 3,
         progress_callback: Optional[Callable] = None
     ) -> None:
-        """Adicionar texto ao grafo em lotes via POST /messages."""
+        """Adicionar texto ao grafo em lotes via POST /messages.
+
+        IMPORTANTE: Todos os chunks DEVEM incluir o graph_id/group_id no metadata
+        para garantir propagacao correta para Neo4j.
+        """
         total_chunks = len(chunks)
+        logger.info(f"Iniciando envio de {total_chunks} blocos para o grupo {graph_id}")
 
         for i in range(0, total_chunks, batch_size):
             batch_chunks = chunks[i:i + batch_size]
@@ -270,6 +279,7 @@ class GraphBuilderService:
                 )
 
             # Constroi mensagens para o lote
+            # CRITICO: Incluir group_id em cada mensagem para garantir sincronizacao em Neo4j
             messages = []
             for chunk in batch_chunks:
                 messages.append({
@@ -277,6 +287,8 @@ class GraphBuilderService:
                     "role_type": "user",
                     "role": "document",
                     "source_description": f"Bloco de texto do documento (lote {batch_num})",
+                    # [FIX] Incluir group_id no metadata da mensagem para propagacao em Neo4j
+                    "group_id": graph_id,
                 })
 
             # Enviar para o Graphiti com retry
@@ -287,6 +299,7 @@ class GraphBuilderService:
                         group_id=graph_id,
                         messages=messages,
                     )
+                    logger.debug(f"Lote {batch_num} enviado com sucesso para o grupo {graph_id}")
                     # Pausa entre lotes para nao sobrecarregar o servidor
                     time.sleep(2)
                     break
@@ -300,6 +313,7 @@ class GraphBuilderService:
                         continue
                     if progress_callback:
                         progress_callback(f"Falha no envio do lote {batch_num}: {error_str}", 0)
+                    logger.error(f"Falha ao enviar lote {batch_num}: {error_str}")
                     raise
 
     def _wait_for_episodes(
