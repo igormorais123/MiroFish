@@ -1929,8 +1929,12 @@ class ReportAgent:
                 logger.info(f"Helena Strategos: tentando modelo {resolved}")
                 helena_llm = LLMClient(model=model_name)
                 result = helena_llm.chat(
-                    system_prompt=HELENA_SYSTEM_PROMPT,
-                    user_message=user_prompt,
+                    messages=[
+                        {"role": "system", "content": HELENA_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=4096
                 )
                 if result and len(result.strip()) > 100:
                     logger.info(f"Helena Strategos: analise gerada com {resolved} ({len(result)} chars)")
