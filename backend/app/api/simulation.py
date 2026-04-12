@@ -450,14 +450,33 @@ def prepare_simulation():
         # Enriquecimento Apify (opcional)
         enrich_queries = data.get('enrich_queries', [])
         enrich_actors = data.get('enrich_actors', [])
-        if enrich_queries or enrich_actors:
+        enrich_ig_posts = data.get('enrich_ig_posts', [])
+        enrich_ig_tagged = data.get('enrich_ig_tagged', [])
+        enrich_youtube = data.get('enrich_youtube', [])
+        enrich_auto = data.get('enrich_auto', False)
+        has_enrich = any([enrich_queries, enrich_actors, enrich_ig_posts,
+                          enrich_ig_tagged, enrich_youtube, enrich_auto])
+        if has_enrich:
             try:
                 from ..services.apify_enricher import ApifyEnricher
                 enricher = ApifyEnricher()
+                if enrich_auto and not any([enrich_queries, enrich_actors]):
+                    targets = enricher.extract_targets_from_text(
+                        document_text + "\n" + simulation_requirement
+                    )
+                    enrich_queries = enrich_queries or targets.get("queries", [])
+                    enrich_actors = enrich_actors or targets.get("ig_handles", [])
+                    enrich_youtube = enrich_youtube or targets.get("yt_urls", [])
+                    enrich_ig_posts = enrich_ig_posts or enrich_actors
+                    logger.info(f"Apify auto: {len(enrich_queries)} queries, "
+                                f"{len(enrich_actors)} IG, {len(enrich_youtube)} YT")
                 block = enricher.build_enrichment_block(
                     queries=enrich_queries,
                     actors_instagram=enrich_actors,
-                    results_per_query=8,
+                    ig_posts_handles=enrich_ig_posts,
+                    ig_tagged_handles=enrich_ig_tagged,
+                    youtube_urls=enrich_youtube,
+                    project_id=state.project_id,
                 )
                 if block:
                     document_text = document_text.rstrip() + "\n\n" + block + "\n"

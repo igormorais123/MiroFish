@@ -56,13 +56,19 @@
           <p class="description">
             Adiciona fatos web e perfis sociais reais ao contexto antes da geração de agentes. Melhora a fidelidade da simulação.
           </p>
+          <div class="enrichment-toggle">
+            <label class="toggle-label">
+              <input type="checkbox" v-model="enrichAuto" />
+              <span>Extrair automaticamente do briefing</span>
+            </label>
+          </div>
           <div class="enrichment-fields">
             <div class="field-group">
               <label class="field-label">Buscas Google (uma por linha)</label>
               <textarea
                 v-model="enrichQueries"
                 class="field-input"
-                rows="3"
+                rows="2"
                 placeholder="ACM Neto 2026 Bahia governador&#10;Jerônimo Rodrigues aprovação governo"
               ></textarea>
             </div>
@@ -73,6 +79,24 @@
                 class="field-input"
                 rows="2"
                 placeholder="acmneto&#10;brunoreisba"
+              ></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Posts marcados — tagged (sem @, um por linha)</label>
+              <textarea
+                v-model="enrichTagged"
+                class="field-input"
+                rows="2"
+                placeholder="acmneto"
+              ></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label">URLs de vídeos YouTube (um por linha)</label>
+              <textarea
+                v-model="enrichYoutube"
+                class="field-input"
+                rows="2"
+                placeholder="https://youtube.com/watch?v=..."
               ></textarea>
             </div>
           </div>
@@ -709,6 +733,9 @@ let lastLoggedConfigStage = ''
 // Enriquecimento Apify
 const enrichQueries = ref('')
 const enrichActors = ref('')
+const enrichTagged = ref('')
+const enrichYoutube = ref('')
+const enrichAuto = ref(false)
 
 // Configuração de rodadas da simulação
 const useCustomRounds = ref(false) // Usar quantidade automatica de rodadas por padrão
@@ -829,10 +856,17 @@ const startPrepareSimulation = async () => {
     }
     const queries = enrichQueries.value.split('\n').map(q => q.trim()).filter(Boolean)
     const actors = enrichActors.value.split('\n').map(a => a.trim().replace(/^@/, '')).filter(Boolean)
+    const tagged = enrichTagged.value.split('\n').map(a => a.trim().replace(/^@/, '')).filter(Boolean)
+    const ytUrls = enrichYoutube.value.split('\n').map(u => u.trim()).filter(Boolean)
     if (queries.length) preparePayload.enrich_queries = queries
     if (actors.length) preparePayload.enrich_actors = actors
-    if (queries.length || actors.length) {
-      addLog(`Enriquecimento Apify: ${queries.length} buscas, ${actors.length} perfis`)
+    if (actors.length) preparePayload.enrich_ig_posts = actors
+    if (tagged.length) preparePayload.enrich_ig_tagged = tagged
+    if (ytUrls.length) preparePayload.enrich_youtube = ytUrls
+    if (enrichAuto.value) preparePayload.enrich_auto = true
+    const enrichTotal = queries.length + actors.length + tagged.length + ytUrls.length
+    if (enrichTotal > 0 || enrichAuto.value) {
+      addLog(`Enriquecimento Apify: ${queries.length} buscas, ${actors.length} perfis IG, ${tagged.length} tagged, ${ytUrls.length} YT${enrichAuto.value ? ' + auto' : ''}`)
     }
     const res = await prepareSimulation(preparePayload)
     
@@ -2653,6 +2687,26 @@ onUnmounted(() => {
 
 .enrichment-card {
   border-left: 3px solid #c9952a;
+}
+
+.enrichment-toggle {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  accent-color: #c9952a;
+  width: 16px;
+  height: 16px;
 }
 
 .enrichment-fields {
