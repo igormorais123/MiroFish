@@ -363,7 +363,9 @@ def prepare_simulation():
             "entity_types": ["Student", "PublicFigure"],  // opcional, tipos de entidade
             "use_llm_for_profiles": true,                 // opcional, usar LLM para perfis
             "parallel_profile_count": 5,                  // opcional, paralelismo, padrao 5
-            "force_regenerate": false                     // opcional, forcar regeneracao, padrao false
+            "force_regenerate": false,                    // opcional, forcar regeneracao, padrao false
+            "enrich_queries": ["query1", "query2"],       // opcional, queries Google via Apify
+            "enrich_actors": ["@handle1", "@handle2"]     // opcional, perfis Instagram via Apify
         }
 
     Retorno:
@@ -444,6 +446,24 @@ def prepare_simulation():
 
         # Obtem texto do documento
         document_text = ProjectManager.get_extracted_text(state.project_id) or ""
+
+        # Enriquecimento Apify (opcional)
+        enrich_queries = data.get('enrich_queries', [])
+        enrich_actors = data.get('enrich_actors', [])
+        if enrich_queries or enrich_actors:
+            try:
+                from ..services.apify_enricher import ApifyEnricher
+                enricher = ApifyEnricher()
+                block = enricher.build_enrichment_block(
+                    queries=enrich_queries,
+                    actors_instagram=enrich_actors,
+                    results_per_query=8,
+                )
+                if block:
+                    document_text = document_text.rstrip() + "\n\n" + block + "\n"
+                    logger.info(f"Apify: {len(block)} chars anexados ao contexto")
+            except Exception as e:
+                logger.warning(f"Apify enrichment falhou (simulacao prossegue sem): {e}")
 
         entity_types_list = data.get('entity_types')
         use_llm_for_profiles = data.get('use_llm_for_profiles', True)

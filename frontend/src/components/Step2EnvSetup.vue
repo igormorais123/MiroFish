@@ -41,6 +41,44 @@
         </div>
       </div>
 
+      <!-- Enriquecimento Apify (opcional) -->
+      <div class="step-card enrichment-card" :class="{ 'active': phase === 0 || phase === 1 }">
+        <div class="card-header">
+          <div class="step-info">
+            <span class="step-num" style="background: #c9952a; color: #1a1a2e;">A</span>
+            <span class="step-title">Enriquecimento Apify</span>
+          </div>
+          <div class="step-status">
+            <span class="badge" style="background: rgba(201,149,42,0.15); color: #c9952a;">Opcional</span>
+          </div>
+        </div>
+        <div class="card-content">
+          <p class="description">
+            Adiciona fatos web e perfis sociais reais ao contexto antes da geração de agentes. Melhora a fidelidade da simulação.
+          </p>
+          <div class="enrichment-fields">
+            <div class="field-group">
+              <label class="field-label">Buscas Google (uma por linha)</label>
+              <textarea
+                v-model="enrichQueries"
+                class="field-input"
+                rows="3"
+                placeholder="ACM Neto 2026 Bahia governador&#10;Jerônimo Rodrigues aprovação governo"
+              ></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Perfis Instagram (sem @, um por linha)</label>
+              <textarea
+                v-model="enrichActors"
+                class="field-input"
+                rows="2"
+                placeholder="acmneto&#10;brunoreisba"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Step 02: Geração de perfis dos agentes -->
       <div class="step-card" :class="{ 'active': phase === 1, 'completed': phase > 1 }">
         <div class="card-header">
@@ -668,6 +706,10 @@ let lastLoggedMessage = ''
 let lastLoggedProfileCount = 0
 let lastLoggedConfigStage = ''
 
+// Enriquecimento Apify
+const enrichQueries = ref('')
+const enrichActors = ref('')
+
 // Configuração de rodadas da simulação
 const useCustomRounds = ref(false) // Usar quantidade automatica de rodadas por padrão
 const customMaxRounds = ref(40)   // Padrao recomendado: 40 rodadas
@@ -780,11 +822,19 @@ const startPrepareSimulation = async () => {
   emit('update-status', 'processing')
   
   try {
-    const res = await prepareSimulation({
+    const preparePayload = {
       simulation_id: props.simulationId,
       use_llm_for_profiles: true,
       parallel_profile_count: 5
-    })
+    }
+    const queries = enrichQueries.value.split('\n').map(q => q.trim()).filter(Boolean)
+    const actors = enrichActors.value.split('\n').map(a => a.trim().replace(/^@/, '')).filter(Boolean)
+    if (queries.length) preparePayload.enrich_queries = queries
+    if (actors.length) preparePayload.enrich_actors = actors
+    if (queries.length || actors.length) {
+      addLog(`Enriquecimento Apify: ${queries.length} buscas, ${actors.length} perfis`)
+    }
+    const res = await prepareSimulation(preparePayload)
     
     if (res.success && res.data) {
       if (res.data.already_prepared) {
@@ -2599,5 +2649,52 @@ onUnmounted(() => {
 .modal-leave-to .profile-modal {
   transform: scale(0.95) translateY(10px);
   opacity: 0;
+}
+
+.enrichment-card {
+  border-left: 3px solid #c9952a;
+}
+
+.enrichment-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-input {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #333;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: #c9952a;
+  background: #fff;
+}
+
+.field-input::placeholder {
+  color: #aaa;
 }
 </style>
