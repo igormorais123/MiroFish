@@ -1,15 +1,10 @@
 """
 Enriquecimento de materiais-base via Apify.
 
-Fontes suportadas:
-  - Google SERP (fatos web)
-  - Instagram: perfis, posts recentes (com comments e mentions), tagged posts
-  - YouTube: comentarios de videos
+Fontes: Google SERP, Instagram (perfis, posts, tagged), YouTube comments.
+Modos: lean (economia), full (completo), batch (escala municipal).
 
-Funcionalidades:
-  - auto_enrich_from_briefing(): extrai queries e handles do texto-base via LLM
-  - build_enrichment_block(): monta bloco markdown completo
-  - Cache em disco: evita reprocessar no force_regenerate
+Cache em disco evita reprocessamento. Budget guard impede estouro.
 """
 from __future__ import annotations
 
@@ -35,9 +30,42 @@ try:
 except ImportError as exc:
     raise ImportError(
         "apify_client.py nao encontrado. Esperado em "
-        "C:/Users/IgorPC/Colmeia/scripts/apify_client.py. "
-        "Ajuste PYTHONPATH ou copie o helper para o backend."
+        "C:/Users/IgorPC/Colmeia/scripts/apify_client.py."
     ) from exc
+
+
+PROFILES = {
+    "lean": {
+        "results_per_query": 5,
+        "posts_per_handle": 3,
+        "max_ig_profiles": 3,
+        "max_ig_posts_handles": 2,
+        "enable_tagged": False,
+        "enable_youtube": False,
+        "yt_max_comments": 10,
+        "budget_limit_pct": 90,
+    },
+    "full": {
+        "results_per_query": 8,
+        "posts_per_handle": 5,
+        "max_ig_profiles": 10,
+        "max_ig_posts_handles": 10,
+        "enable_tagged": True,
+        "enable_youtube": True,
+        "yt_max_comments": 20,
+        "budget_limit_pct": 90,
+    },
+    "batch": {
+        "results_per_query": 3,
+        "posts_per_handle": 2,
+        "max_ig_profiles": 2,
+        "max_ig_posts_handles": 1,
+        "enable_tagged": False,
+        "enable_youtube": False,
+        "yt_max_comments": 0,
+        "budget_limit_pct": 95,
+    },
+}
 
 
 def _cache_path(project_id: str) -> Path:
@@ -45,76 +73,90 @@ def _cache_path(project_id: str) -> Path:
     return base / "projects" / project_id / "apify_cache.json"
 
 
-def _cache_key(
-    queries: list[str],
-    actors: list[str],
-    ig_posts_handles: list[str],
-    ig_tagged_handles: list[str],
-    yt_urls: list[str],
-) -> str:
-    raw = json.dumps(
-        sorted(queries) + sorted(actors) + sorted(ig_posts_handles)
-        + sorted(ig_tagged_handles) + sorted(yt_urls),
-        ensure_ascii=False,
-    )
+def _cache_key(*lists: list[str]) -> str:
+    raw = json.dumps([sorted(l) for l in lists], ensure_ascii=False)
     return hashlib.md5(raw.encode()).hexdigest()
 
 
 class ApifyEnricher:
-    """Coleta fatos web e perfis sociais via Apify para enriquecer contexto."""
 
-    def __init__(self, client: ApifyClient | None = None):
+    def __init__(self, client: ApifyClient | None = None, profile: str = "full"):
         self.client = client or ApifyClient()
+        self.cfg = PROFILES.get(profile, PROFILES["full"]).copy()
+        self.profile_name = profile
+        self._calls_made = 0
+        self._budget_blocked = False
+
+    # ==================== BUDGET GUARD ====================
+
+    def check_budget(self) -> bool:
+        """Retorna True se ainda pode gastar. Seta _budget_blocked se nao."""
+        if self._budget_blocked:
+            return False
+        try:
+            u = self.client.usage()
+            pct = u.get("pct", 0)
+            if pct >= self.cfg["budget_limit_pct"]:
+                logger.warning(
+                    f"Budget Apify bloqueado: {pct}% >= {self.cfg['budget_limit_pct']}% "
+                    f"(US$ {u['usd_used']:.2f} / US$ {u['usd_limit']})"
+                )
+                self._budget_blocked = True
+                return False
+            return True
+        except Exception as e:
+            logger.warning(f"Falha ao checar budget: {e}")
+            return True
 
     # ==================== GOOGLE SERP ====================
 
     def fetch_case_facts(
         self,
         queries: list[str],
-        results_per_query: int = 8,
+        results_per_query: int | None = None,
     ) -> list[dict[str, Any]]:
-        if not queries:
+        if not queries or not self.check_budget():
             return []
-        logger.info(f"Apify SERP: {len(queries)} queries x {results_per_query}")
-        items = self.client.google_search(queries, results_per_query=results_per_query)
+        rpq = results_per_query or self.cfg["results_per_query"]
+        logger.info(f"Apify SERP [{self.profile_name}]: {len(queries)} queries x {rpq}")
+        self._calls_made += 1
+        items = self.client.google_search(queries, results_per_query=rpq)
         organic: list[dict[str, Any]] = []
         for page in items:
             for r in page.get("organicResults", []) or []:
-                organic.append(
-                    {
-                        "query": page.get("searchQuery", {}).get("term", ""),
-                        "title": r.get("title", ""),
-                        "url": r.get("url", ""),
-                        "description": r.get("description", ""),
-                    }
-                )
+                organic.append({
+                    "query": page.get("searchQuery", {}).get("term", ""),
+                    "title": r.get("title", ""),
+                    "url": r.get("url", ""),
+                    "description": r.get("description", ""),
+                })
         return organic
 
     # ==================== INSTAGRAM PERFIS ====================
 
     def fetch_instagram_profiles(self, handles: list[str]) -> list[dict[str, Any]]:
-        if not handles:
+        handles = handles[:self.cfg["max_ig_profiles"]]
+        if not handles or not self.check_budget():
             return []
-        logger.info(f"Apify Instagram perfis: {len(handles)}")
+        logger.info(f"Apify IG perfis [{self.profile_name}]: {len(handles)}")
+        self._calls_made += 1
         items = self.client.instagram_profiles(handles, limit=1)
         profiles: list[dict[str, Any]] = []
         for it in items:
             if it.get("error"):
-                logger.warning(f"Apify erro {it.get('username')}: {it.get('errorDescription','')[:80]}")
+                logger.warning(f"IG erro {it.get('username')}: {it.get('errorDescription','')[:80]}")
                 continue
-            profiles.append(
-                {
-                    "handle": it.get("username", ""),
-                    "full_name": it.get("fullName", ""),
-                    "biography": it.get("biography", ""),
-                    "followers": it.get("followersCount", 0),
-                    "following": it.get("followsCount", 0),
-                    "posts": it.get("postsCount", 0),
-                    "verified": it.get("verified", False),
-                    "category": it.get("businessCategoryName") or it.get("category", ""),
-                    "external_url": it.get("externalUrl", ""),
-                }
-            )
+            profiles.append({
+                "handle": it.get("username", ""),
+                "full_name": it.get("fullName", ""),
+                "biography": it.get("biography", ""),
+                "followers": it.get("followersCount", 0),
+                "following": it.get("followsCount", 0),
+                "posts": it.get("postsCount", 0),
+                "verified": it.get("verified", False),
+                "category": it.get("businessCategoryName") or it.get("category", ""),
+                "external_url": it.get("externalUrl", ""),
+            })
         return profiles
 
     # ==================== INSTAGRAM POSTS + COMMENTS ====================
@@ -122,14 +164,17 @@ class ApifyEnricher:
     def fetch_instagram_posts(
         self,
         handles: list[str],
-        posts_per_handle: int = 5,
+        posts_per_handle: int | None = None,
     ) -> list[dict[str, Any]]:
-        if not handles:
+        handles = handles[:self.cfg["max_ig_posts_handles"]]
+        if not handles or not self.check_budget():
             return []
-        logger.info(f"Apify Instagram posts: {len(handles)} handles x {posts_per_handle}")
+        pph = posts_per_handle or self.cfg["posts_per_handle"]
+        logger.info(f"Apify IG posts [{self.profile_name}]: {len(handles)} x {pph}")
+        self._calls_made += 1
         items = self.client.run_actor(
             "apify/instagram-post-scraper",
-            {"username": handles, "resultsLimit": posts_per_handle},
+            {"username": handles, "resultsLimit": pph},
             timeout=180,
         )
         posts: list[dict[str, Any]] = []
@@ -163,12 +208,13 @@ class ApifyEnricher:
         handles: list[str],
         limit_per_handle: int = 5,
     ) -> list[dict[str, Any]]:
-        if not handles:
+        if not handles or not self.cfg["enable_tagged"] or not self.check_budget():
             return []
-        logger.info(f"Apify Instagram tagged: {len(handles)} handles")
+        logger.info(f"Apify IG tagged [{self.profile_name}]: {len(handles)}")
         all_tagged: list[dict[str, Any]] = []
-        for handle in handles:
+        for handle in handles[:2]:
             try:
+                self._calls_made += 1
                 items = self.client.run_actor(
                     "instagram-scraper/instagram-tagged-posts-scraper",
                     {"username": handle, "resultsLimit": limit_per_handle},
@@ -194,15 +240,19 @@ class ApifyEnricher:
     def fetch_youtube_comments(
         self,
         video_urls: list[str],
-        max_comments: int = 20,
+        max_comments: int | None = None,
     ) -> list[dict[str, Any]]:
-        if not video_urls:
+        if not video_urls or not self.cfg["enable_youtube"] or not self.check_budget():
             return []
-        logger.info(f"Apify YouTube comments: {len(video_urls)} videos x {max_comments}")
+        mc = max_comments or self.cfg["yt_max_comments"]
+        if mc <= 0:
+            return []
+        logger.info(f"Apify YT comments [{self.profile_name}]: {len(video_urls)} x {mc}")
+        self._calls_made += 1
         start_urls = [{"url": u} for u in video_urls]
         items = self.client.run_actor(
             "streamers/youtube-comments-scraper",
-            {"startUrls": start_urls, "maxComments": max_comments, "maxReplies": 0},
+            {"startUrls": start_urls, "maxComments": mc, "maxReplies": 0},
             timeout=180,
         )
         comments: list[dict[str, Any]] = []
@@ -217,10 +267,9 @@ class ApifyEnricher:
             })
         return comments
 
-    # ==================== AUTO-ENRICH FROM BRIEFING ====================
+    # ==================== AUTO-EXTRACT FROM TEXT ====================
 
     def extract_targets_from_text(self, text: str) -> dict[str, list[str]]:
-        """Extrai queries, handles e URLs de video do texto-base sem LLM."""
         ig_pattern = r'@([a-zA-Z0-9_.]+)'
         ig_handles = list(set(re.findall(ig_pattern, text)))
 
@@ -246,7 +295,7 @@ class ApifyEnricher:
 
         return {
             "queries": queries[:10],
-            "ig_handles": ig_handles[:10],
+            "ig_handles": ig_handles[:self.cfg["max_ig_profiles"]],
             "yt_urls": yt_urls[:5],
         }
 
@@ -263,18 +312,14 @@ class ApifyEnricher:
                 return None
         return None
 
-    def save_cache(
-        self,
-        project_id: str,
-        cache_key: str,
-        block: str,
-    ) -> None:
+    def save_cache(self, project_id: str, cache_key: str, block: str) -> None:
         path = _cache_path(project_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "key": cache_key,
             "enriched_at": datetime.utcnow().isoformat(),
             "block": block,
+            "profile": self.profile_name,
         }
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         logger.info(f"Cache Apify salvo: {path}")
@@ -288,9 +333,9 @@ class ApifyEnricher:
         ig_posts_handles: list[str] | None = None,
         ig_tagged_handles: list[str] | None = None,
         youtube_urls: list[str] | None = None,
-        results_per_query: int = 8,
-        posts_per_handle: int = 5,
-        yt_max_comments: int = 20,
+        results_per_query: int | None = None,
+        posts_per_handle: int | None = None,
+        yt_max_comments: int | None = None,
         project_id: str | None = None,
     ) -> str:
         queries = queries or []
@@ -308,6 +353,10 @@ class ApifyEnricher:
             if cached and cached.get("key") == key:
                 logger.info("Usando bloco Apify do cache")
                 return cached["block"]
+
+        if not self.check_budget():
+            logger.warning("Budget Apify esgotado, retornando vazio")
+            return ""
 
         parts: list[str] = ["# Enriquecimento Apify", ""]
 
@@ -355,14 +404,16 @@ class ApifyEnricher:
                 ts = p["timestamp"][:10] if p["timestamp"] else ""
                 parts.append(f"### {p['handle']} ({ts}) — {p['likes']} curtidas, {p['comments_count']} comentarios")
                 if p["caption"]:
-                    parts.append(f"Legenda: {p['caption'][:300]}")
+                    cap_limit = 200 if self.profile_name == "batch" else 300
+                    parts.append(f"Legenda: {p['caption'][:cap_limit]}")
                 if p["hashtags"]:
                     parts.append(f"Hashtags: {' '.join('#' + h for h in p['hashtags'][:10])}")
                 if p["mentions"]:
                     parts.append(f"Mencoes: {' '.join('@' + m for m in p['mentions'])}")
                 if p["latest_comments"]:
+                    max_cm = 3 if self.profile_name == "batch" else 5
                     parts.append("Comentarios:")
-                    for cm in p["latest_comments"][:5]:
+                    for cm in p["latest_comments"][:max_cm]:
                         parts.append(f"  - @{cm['author']}: {cm['text'][:120]}")
                 parts.append(f"URL: {p['url']}")
                 parts.append("")
@@ -403,6 +454,147 @@ class ApifyEnricher:
             self.save_cache(project_id, key, block)
 
         return block
+
+    # ==================== BATCH MODE ====================
+
+    def enrich_batch(
+        self,
+        municipalities: list[dict[str, Any]],
+        project_id_prefix: str = "batch",
+    ) -> list[dict[str, Any]]:
+        """Enriquece multiplos municipios de forma otimizada.
+
+        Cada municipio e um dict com:
+            name: str, queries: list[str], ig_handles: list[str],
+            yt_urls: list[str] (opcional)
+
+        Agrupa handles de Instagram numa unica chamada ao actor.
+        Retorna lista de {name, block, cached, cost_estimate}.
+        """
+        results: list[dict[str, Any]] = []
+        if not municipalities:
+            return results
+
+        all_ig_handles: list[str] = []
+        handle_to_muni: dict[str, list[str]] = {}
+        for m in municipalities:
+            for h in m.get("ig_handles", [])[:self.cfg["max_ig_profiles"]]:
+                all_ig_handles.append(h)
+                handle_to_muni.setdefault(h, []).append(m["name"])
+
+        all_ig_handles = list(dict.fromkeys(all_ig_handles))
+
+        logger.info(
+            f"Batch [{self.profile_name}]: {len(municipalities)} municipios, "
+            f"{len(all_ig_handles)} handles IG unicos"
+        )
+
+        # Coleta profiles em lote (1 chamada para todos)
+        all_profiles_data: dict[str, dict] = {}
+        if all_ig_handles and self.check_budget():
+            profiles = self.fetch_instagram_profiles(all_ig_handles)
+            for p in profiles:
+                all_profiles_data[p["handle"]] = p
+
+        # Coleta posts em lote (1 chamada para todos)
+        all_posts_data: dict[str, list[dict]] = {}
+        posts_handles = all_ig_handles[:self.cfg["max_ig_posts_handles"] * len(municipalities)]
+        if posts_handles and self.check_budget():
+            posts = self.fetch_instagram_posts(posts_handles)
+            for p in posts:
+                handle = p.get("handle", "")
+                all_posts_data.setdefault(handle, []).append(p)
+
+        # Coleta SERP em lote (queries agrupadas)
+        all_queries: list[str] = []
+        query_to_muni: dict[str, str] = {}
+        for m in municipalities:
+            for q in m.get("queries", []):
+                all_queries.append(q)
+                query_to_muni[q] = m["name"]
+
+        all_facts: dict[str, list[dict]] = {}
+        if all_queries and self.check_budget():
+            batch_size = 20
+            for i in range(0, len(all_queries), batch_size):
+                batch = all_queries[i:i + batch_size]
+                facts = self.fetch_case_facts(batch)
+                for f in facts:
+                    muni = query_to_muni.get(f["query"], "")
+                    all_facts.setdefault(muni, []).append(f)
+
+        # Monta blocos por municipio
+        for m in municipalities:
+            pid = f"{project_id_prefix}_{m['name'].lower().replace(' ', '_')}"
+
+            cached = self.load_cache(pid)
+            if cached:
+                results.append({"name": m["name"], "block": cached["block"], "cached": True})
+                continue
+
+            parts: list[str] = [f"# Enriquecimento: {m['name']}", ""]
+
+            muni_facts = all_facts.get(m["name"], [])
+            if muni_facts:
+                parts.append("## Fatos web")
+                parts.append("")
+                for f in muni_facts:
+                    parts.append(f"- **{f['title']}** — {f['description']}")
+                parts.append("")
+
+            for h in m.get("ig_handles", [])[:self.cfg["max_ig_profiles"]]:
+                p = all_profiles_data.get(h)
+                if p:
+                    verif = " (verificado)" if p["verified"] else ""
+                    parts.append(f"## @{p['handle']} — {p['full_name']}{verif}")
+                    parts.append(f"Seguidores: {p['followers']:,} | Bio: {p.get('biography','')[:150]}")
+                    h_posts = all_posts_data.get(p["full_name"], [])
+                    for post in h_posts[:self.cfg["posts_per_handle"]]:
+                        if post["caption"]:
+                            parts.append(f"- Post ({post['timestamp'][:10]}): {post['caption'][:200]}")
+                            if post["latest_comments"]:
+                                for cm in post["latest_comments"][:2]:
+                                    parts.append(f"  > @{cm['author']}: {cm['text'][:100]}")
+                    parts.append("")
+
+            block = "\n".join(parts) if len(parts) > 2 else ""
+            if block:
+                self.save_cache(pid, "batch", block)
+            results.append({"name": m["name"], "block": block, "cached": False})
+
+        return results
+
+    def estimate_batch_cost(self, n_municipalities: int, avg_handles: int = 2) -> dict[str, Any]:
+        """Estima custo para N municipios no perfil atual."""
+        c = self.cfg
+        serp_calls = (n_municipalities + 19) // 20
+        serp_cost = serp_calls * 0.01
+
+        unique_handles = min(n_municipalities * avg_handles, n_municipalities * c["max_ig_profiles"])
+        profile_calls = (unique_handles + 9) // 10
+        profile_cost = profile_calls * 0.01
+
+        posts_handles = min(unique_handles, n_municipalities * c["max_ig_posts_handles"])
+        posts_calls = (posts_handles + 4) // 5
+        posts_cost = posts_calls * 0.06
+
+        tagged_cost = 0.0
+        if c["enable_tagged"]:
+            tagged_cost = min(unique_handles, n_municipalities * 2) * 0.06
+
+        total = serp_cost + profile_cost + posts_cost + tagged_cost
+        return {
+            "n_municipalities": n_municipalities,
+            "profile": self.profile_name,
+            "serp_cost": serp_cost,
+            "profile_cost": profile_cost,
+            "posts_cost": posts_cost,
+            "tagged_cost": tagged_cost,
+            "total_usd": total,
+            "serp_calls": serp_calls,
+            "profile_calls": profile_calls,
+            "posts_calls": posts_calls,
+        }
 
     def usage(self) -> dict[str, Any]:
         return self.client.usage()

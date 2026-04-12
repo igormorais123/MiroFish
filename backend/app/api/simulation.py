@@ -459,7 +459,8 @@ def prepare_simulation():
         if has_enrich:
             try:
                 from ..services.apify_enricher import ApifyEnricher
-                enricher = ApifyEnricher()
+                enrich_profile = data.get('enrich_profile', 'lean')
+                enricher = ApifyEnricher(profile=enrich_profile)
                 if enrich_auto and not any([enrich_queries, enrich_actors]):
                     targets = enricher.extract_targets_from_text(
                         document_text + "\n" + simulation_requirement
