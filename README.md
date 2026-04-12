@@ -49,6 +49,7 @@ Relatório analítico → Conversa com agentes → Insights
 | **Performance** | — | Timeout LLM 90s, fallback strategies |
 | **Persistência** | — | State em disco (tasks_state.json) |
 | **Mobile** | — | Responsivo (breakpoints 480px) |
+| **Enriquecimento** | — | Apify (Google SERP + Instagram) para contexto factual |
 
 ### Aplicações
 
@@ -64,9 +65,9 @@ Relatório analítico → Conversa com agentes → Insights
 mirofish-inteia/
 ├── backend/                   # Python 3.12 + FastAPI
 │   ├── app/
-│   │   ├── services/          # Gerenciador de simulação, ontologia, LLM
+│   │   ├── services/          # Gerenciador de simulação, ontologia, LLM, Apify
 │   │   └── utils/             # Cliente LLM, Graphiti, Zep
-│   ├── scripts/               # Simulação paralela, proxy LLM
+│   ├── scripts/               # Simulação paralela, proxy LLM, enrich_project
 │   └── tests/
 │
 ├── frontend/                  # Vue.js 3 + Vite
@@ -149,6 +150,50 @@ docker compose -f docker-compose.yml up -d --build
 # Verificar
 curl http://seu-ip:4000/api/health
 ```
+
+## Enriquecimento Apify
+
+O Mirofish pode coletar fatos web e perfis sociais reais via [Apify](https://apify.com) antes de construir o grafo, aumentando a fidelidade dos agentes simulados.
+
+### Via interface (Step 02)
+
+O painel "Enriquecimento Apify" aparece antes da geração de perfis. Preencha:
+- **Buscas Google**: uma query por linha (ex: `ACM Neto 2026 Bahia governador`)
+- **Perfis Instagram**: um handle por linha, sem @ (ex: `acmneto`)
+
+Os dados coletados são injetados no texto-base automaticamente antes da construção do grafo.
+
+### Via API
+
+```bash
+POST /api/simulation/prepare
+{
+  "simulation_id": "sim_xxxx",
+  "enrich_queries": ["reforma tributária PEC 45", "Neto 2026 Bahia"],
+  "enrich_actors": ["acmneto", "brunoreisba"]
+}
+```
+
+### Via CLI
+
+```bash
+cd backend
+python scripts/enrich_project.py \
+  --project-id <id> \
+  --query "reforma tributária PEC 45" \
+  --actor acmneto \
+  --dry-run  # mostra bloco sem salvar
+```
+
+### Custo
+
+| Operação | Custo aproximado |
+|----------|-----------------|
+| Google SERP (1 query, 8 resultados) | US$ 0,002 |
+| Perfil Instagram (1 handle) | US$ 0,0015 |
+| Enriquecimento típico (10 queries + 10 perfis) | US$ 0,035 |
+
+Requer conta Apify com token em `APIFY_TOKEN`. O Mirofish prossegue normalmente se o Apify falhar.
 
 ## Documentação
 
