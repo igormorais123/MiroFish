@@ -157,11 +157,15 @@ O Mirofish pode coletar fatos web e perfis sociais reais via [Apify](https://api
 
 ### Via interface (Step 02)
 
-O painel "Enriquecimento Apify" aparece antes da geração de perfis. Preencha:
-- **Buscas Google**: uma query por linha (ex: `ACM Neto 2026 Bahia governador`)
-- **Perfis Instagram**: um handle por linha, sem @ (ex: `acmneto`)
+O painel "Enriquecimento Apify" aparece antes da geração de perfis. Fontes disponíveis:
+- **Buscas Google**: fatos web atualizados sobre o caso
+- **Perfis Instagram**: bio, seguidores, categoria, verificação
+- **Posts recentes Instagram**: legendas, curtidas, comentários, menções, hashtags
+- **Tagged posts**: quem marcou os atores em publicações
+- **Comentários YouTube**: opinião pública em vídeos relacionados
+- **Extração automática**: checkbox que detecta @handles, queries e URLs do briefing
 
-Os dados coletados são injetados no texto-base automaticamente antes da construção do grafo.
+Os dados coletados são injetados no texto-base antes da construção do grafo. Cache em disco evita reprocessamento.
 
 ### Via API
 
@@ -169,8 +173,12 @@ Os dados coletados são injetados no texto-base automaticamente antes da constru
 POST /api/simulation/prepare
 {
   "simulation_id": "sim_xxxx",
-  "enrich_queries": ["reforma tributária PEC 45", "Neto 2026 Bahia"],
-  "enrich_actors": ["acmneto", "brunoreisba"]
+  "enrich_queries": ["reforma tributária PEC 45"],
+  "enrich_actors": ["acmneto", "brunoreisba"],
+  "enrich_ig_posts": ["acmneto"],
+  "enrich_ig_tagged": ["acmneto"],
+  "enrich_youtube": ["https://youtube.com/watch?v=..."],
+  "enrich_auto": true
 }
 ```
 
@@ -191,7 +199,10 @@ python scripts/enrich_project.py \
 |----------|-----------------|
 | Google SERP (1 query, 8 resultados) | US$ 0,002 |
 | Perfil Instagram (1 handle) | US$ 0,0015 |
-| Enriquecimento típico (10 queries + 10 perfis) | US$ 0,035 |
+| Posts Instagram (5 posts) | US$ 0,003 |
+| Tagged posts (5 posts) | US$ 0,003 |
+| Comentários YouTube (20 comentários) | US$ 0,005 |
+| Enriquecimento completo (10 queries + 5 atores) | US$ 0,07 |
 
 Requer conta Apify com token em `APIFY_TOKEN`. O Mirofish prossegue normalmente se o Apify falhar.
 
