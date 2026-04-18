@@ -18,6 +18,58 @@ from .text_processor import TextProcessor
 logger = get_logger('mirofish.graph_builder')
 
 
+# 2026-04-18, Phase 6: mapa de traducao para nomes de relacao em SCREAMING_SNAKE_CASE
+# Graphiti extrai relacoes em ingles; o fork INTEIA exibe em pt-BR no grafo visual.
+_RELATION_TRANSLATION = {
+    "FEARS": "TEME",
+    "ADVOCATES": "DEFENDE",
+    "OPPOSES": "OPOE_A",
+    "SUPPORTS": "APOIA",
+    "IMPLEMENTS": "IMPLEMENTA",
+    "CRITICIZES": "CRITICA",
+    "PROPOSES": "PROPOE",
+    "BELIEVES": "ACREDITA",
+    "REPRESENTS": "REPRESENTA",
+    "COMPETES": "COMPETE_COM",
+    "COMPETES_WITH": "COMPETE_COM",
+    "COLLABORATES": "COLABORA",
+    "COLLABORATES_WITH": "COLABORA_COM",
+    "DEPENDS": "DEPENDE",
+    "DEPENDS_ON": "DEPENDE_DE",
+    "PART_OF": "PARTE_DE",
+    "LEADS": "LIDERA",
+    "LEADS_TO": "LEVA_A",
+    "CAUSES": "CAUSA",
+    "AFFECTS": "AFETA",
+    "INFLUENCES": "INFLUENCIA",
+    "CONTROLS": "CONTROLA",
+    "OWNS": "POSSUI",
+    "CREATES": "CRIA",
+    "DESTROYS": "DESTROI",
+    "PROMOTES": "PROMOVE",
+    "DEFENDS": "DEFENDE",
+    "ATTACKS": "ATACA",
+    "THREATENS": "AMEACA",
+    "PROTECTS": "PROTEGE",
+    "ACCUSES": "ACUSA",
+    "NEGOTIATES": "NEGOCIA",
+    "ALLIES_WITH": "ALIADO_DE",
+    "LOCATED_IN": "LOCALIZADO_EM",
+    "WORKS_FOR": "TRABALHA_PARA",
+    "MEMBER_OF": "MEMBRO_DE",
+}
+
+
+def _translate_relation_name(name: str) -> str:
+    """Traduz nomes SCREAMING_SNAKE_CASE de ingles para pt-BR."""
+    if not name:
+        return name
+    upper = name.upper()
+    if upper in _RELATION_TRANSLATION:
+        return _RELATION_TRANSLATION[upper]
+    return name
+
+
 @dataclass
 class GraphInfo:
     """Informacoes do grafo"""
@@ -597,6 +649,10 @@ class GraphBuilderService:
         for edge in edges_data:
             if edge.get("fact"):
                 edge["fact"] = self._translate_if_english(edge["fact"])
+            # 2026-04-18, Phase 6: traduzir nome de relacao (SCREAMING_SNAKE)
+            for key in ("name", "fact_type"):
+                if edge.get(key):
+                    edge[key] = _translate_relation_name(edge[key])
 
         return {
             "graph_id": graph_id,
@@ -607,7 +663,11 @@ class GraphBuilderService:
         }
 
     def _translate_if_english(self, text: str) -> str:
-        """Detecta se o texto esta em ingles e traduz para pt-BR usando LLM barato."""
+        """Detecta se o texto esta em ingles e traduz para pt-BR usando LLM barato.
+
+        2026-04-18, Phase 6: fix da assinatura do LLMClient.chat() (usa messages=[])
+        — bug silencioso antigo que fazia toda traducao falhar e voltar o texto original.
+        """
         if not text or len(text) < 10:
             return text
         # Heuristica simples: se tem palavras comuns em ingles, traduz
@@ -624,8 +684,12 @@ class GraphBuilderService:
             from ..utils.llm_client import LLMClient
             client = LLMClient()
             result = client.chat(
-                system_prompt="Traduza o texto abaixo para português brasileiro. Retorne APENAS a tradução, sem explicações.",
-                user_message=text,
+                messages=[
+                    {"role": "system", "content": "Traduza o texto abaixo para português brasileiro. Retorne APENAS a tradução, sem explicações."},
+                    {"role": "user", "content": text},
+                ],
+                temperature=0.2,
+                max_tokens=1024,
             )
             return result.strip() if result else text
         except Exception:

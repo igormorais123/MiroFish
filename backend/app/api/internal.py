@@ -245,7 +245,7 @@ def require_internal_token(view_func):
 @internal_bp.route('/health', methods=['GET'])
 @require_internal_token
 def internal_health():
-    """Healthcheck enxuto para o backend INTEIA verificar disponibilidade."""
+    """Healthcheck completo com dados de infra (exige token)."""
     return jsonify({
         "success": True,
         "data": {
@@ -256,6 +256,16 @@ def internal_health():
             "graphiti_url": Config.GRAPHITI_BASE_URL,
         }
     })
+
+
+@internal_bp.route('/health/public', methods=['GET'])
+def internal_health_public():
+    """Healthcheck publico — retorna apenas up/down, sem expor config.
+
+    2026-04-18, Phase 7: criado para substituir usos de /health sem token
+    (evita vazar LLM_BASE_URL/GRAPHITI_BASE_URL em monitoring externo).
+    """
+    return jsonify({"success": True, "status": "up"})
 
 
 @internal_bp.route('/projects', methods=['POST'])

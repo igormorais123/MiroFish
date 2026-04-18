@@ -56,7 +56,9 @@ def list_projects():
     """
     Listar todos os projetos
     """
-    limit = request.args.get('limit', 50, type=int)
+    # 2026-04-18, Phase 7: validacao de limits
+    from ..utils.pagination import get_limit
+    limit = get_limit(default=50, max_limit=1000)
     projects = ProjectManager.list_projects(limit=limit)
 
     return jsonify({

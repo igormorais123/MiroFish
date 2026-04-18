@@ -21,7 +21,11 @@ from ..utils.logger import get_logger
 
 logger = get_logger("mirofish.apify_enricher")
 
-_COLMEIA_SCRIPTS = Path(r"C:/Users/IgorPC/Colmeia/scripts")
+import os as _os
+
+# 2026-04-18, Phase 7 Task: path Windows hardcoded vira env var
+# Fallback para o path historico em dev Windows, mas VPS Linux usa COLMEIA_SCRIPTS_PATH
+_COLMEIA_SCRIPTS = Path(_os.environ.get("COLMEIA_SCRIPTS_PATH", "C:/Users/IgorPC/Colmeia/scripts"))
 if _COLMEIA_SCRIPTS.exists() and str(_COLMEIA_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_COLMEIA_SCRIPTS))
 
@@ -29,8 +33,8 @@ try:
     from apify_client import ApifyClient  # type: ignore
 except ImportError as exc:
     raise ImportError(
-        "apify_client.py nao encontrado. Esperado em "
-        "C:/Users/IgorPC/Colmeia/scripts/apify_client.py."
+        f"apify_client.py nao encontrado em {_COLMEIA_SCRIPTS}. "
+        "Defina COLMEIA_SCRIPTS_PATH ou instale apify_client como dependencia."
     ) from exc
 
 

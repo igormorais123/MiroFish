@@ -1903,8 +1903,10 @@ def get_simulation_actions(simulation_id: str):
         }
     """
     try:
-        limit = request.args.get('limit', 100, type=int)
-        offset = request.args.get('offset', 0, type=int)
+        # 2026-04-18, Phase 7: validacao de limits (evita OOM)
+        from ..utils.pagination import get_limit, get_offset
+        limit = get_limit(default=100, max_limit=10000)
+        offset = get_offset(default=0)
         platform = request.args.get('platform')
         agent_id = request.args.get('agent_id', type=int)
         round_num = request.args.get('round_num', type=int)
