@@ -435,9 +435,10 @@ class GraphBuilderService:
             stall_timeout=stall_timeout,
         )
 
-        # Verificar materializacao com ate 5 tentativas rapidas
-        max_checks = 5
-        check_interval = 5
+        # Verificar materializacao — 10 checks x 10s (2026-04-18, Phase 2 Task 7)
+        # Ataca "Graphiti falha silenciosamente — nos nunca materializam" (CONCERNS.md)
+        max_checks = 10
+        check_interval = 10
         last_graph_data: Dict[str, Any] | None = None
 
         for attempt in range(max_checks):
@@ -449,7 +450,7 @@ class GraphBuilderService:
             if node_count > 0 or edge_count > 0:
                 if progress_callback:
                     progress_callback(
-                        f"Grafo materializado: {node_count} nos, {edge_count} arestas",
+                        f"Grafo materializado: {node_count} nos, {edge_count} arestas (check {attempt+1}/{max_checks})",
                         1.0
                     )
                 return graph_data
@@ -457,18 +458,29 @@ class GraphBuilderService:
             if attempt < max_checks - 1:
                 if progress_callback:
                     progress_callback(
-                        f"Verificando materializacao... ({attempt+1}/{max_checks})",
-                        0.5 + (attempt * 0.1)
+                        f"Verificando materializacao... ({attempt+1}/{max_checks}, 0 nos ate agora)",
+                        0.5 + (attempt * 0.05)
                     )
                 time.sleep(check_interval)
 
-        # Retorna o que tem — o processamento pode continuar em background
+        # Zero nos apos 100s de espera — sinal forte de falha silenciosa
+        # Log estruturado para diagnostico e nao silencia o problema
+        import logging
+        _glog = logging.getLogger('mirofish.graphiti')
+        _glog.error(
+            f"Graphiti zero nos apos {max_checks}x{check_interval}s para graph_id={graph_id}. "
+            f"last_graph_data={last_graph_data}"
+        )
+
         if last_graph_data is not None:
             if progress_callback:
-                progress_callback("Grafo criado (processamento pode continuar em background)", 1.0)
+                progress_callback(
+                    "ATENCAO: grafo com zero nos apos timeout — relatorio pode ficar superficial",
+                    1.0
+                )
             return last_graph_data
 
-        raise RuntimeError(f"Graphiti nao respondeu para {graph_id}")
+        raise RuntimeError(f"Graphiti nao respondeu para {graph_id} apos {max_checks*check_interval}s")
 
     def _get_graph_info(self, graph_id: str) -> GraphInfo:
         """Obter informacoes do grafo via busca ampla."""

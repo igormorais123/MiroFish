@@ -61,16 +61,83 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("LLM_API_KEY ou OMNIROUTE_API_KEY nao configurada")
 
+    def _get_fallback_providers(self):
+        """Retorna lista de providers de fallback configurados via env.
+
+        Formato: [(nome, base_url, api_key, model_override), ...]
+        Provider primario (OmniRoute) e sempre tentado primeiro.
+        Fallbacks so sao usados se LLM_FALLBACK_ENABLED=true.
+        """
+        import os
+        if os.environ.get("LLM_FALLBACK_ENABLED", "false").lower() != "true":
+            return []
+        fallbacks = []
+        deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+        if deepseek_key:
+            fallbacks.append((
+                "deepseek",
+                "https://api.deepseek.com/v1",
+                deepseek_key,
+                os.environ.get("DEEPSEEK_FALLBACK_MODEL", "deepseek-chat"),
+            ))
+        groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+        if groq_key:
+            fallbacks.append((
+                "groq",
+                "https://api.groq.com/openai/v1",
+                groq_key,
+                os.environ.get("GROQ_FALLBACK_MODEL", "llama-3.3-70b-versatile"),
+            ))
+        return fallbacks
+
     def _request_with_retry(self, **kwargs):
-        """Executa chamada ao provider via requests (compativel com OmniRouter)."""
+        """Executa chamada ao provider via requests (compativel com OmniRouter).
+
+        Em caso de falha apos self.max_retries, tenta providers de fallback
+        configurados via LLM_FALLBACK_ENABLED=true + DEEPSEEK_API_KEY/GROQ_API_KEY.
+        """
         kwargs["stream"] = False
 
-        url = f"{self.base_url}/chat/completions"
+        # Provider primario (OmniRoute)
+        providers = [("omniroute", self.base_url, self.api_key, None)]
+        providers.extend(self._get_fallback_providers())
+
+        last_error = None
+        for provider_name, base_url, api_key, model_override in providers:
+            try:
+                resp_data = self._try_provider(
+                    base_url=base_url,
+                    api_key=api_key,
+                    model_override=model_override,
+                    provider_name=provider_name,
+                    **kwargs,
+                )
+                return resp_data
+            except Exception as exc:
+                last_error = exc
+                # Log de fallback so se houver outro provider para tentar
+                from .logger import get_logger
+                _fb_logger = get_logger('mirofish.llm')
+                if provider_name != providers[-1][0]:
+                    _fb_logger.warning(
+                        f"Provider {provider_name} falhou ({type(exc).__name__}: {str(exc)[:100]}), tentando fallback"
+                    )
+                continue
+
+        raise last_error
+
+    def _try_provider(self, base_url, api_key, model_override, provider_name, **kwargs):
+        """Tenta um provider especifico com max_retries retries."""
+        url = f"{base_url.rstrip('/')}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "Connection": "close",
         }
+        # Substitui modelo se provider de fallback exige modelo diferente
+        if model_override:
+            kwargs = dict(kwargs)
+            kwargs["model"] = model_override
 
         last_error = None
         for attempt in range(1, self.max_retries + 1):
