@@ -69,3 +69,6 @@ backend/run.log
 # Docker 数据
 data/
 .gstack/
+
+# Playwright MCP snapshots (geradas a cada sessão, não versionar)
+.playwright-mcp/

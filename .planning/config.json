@@ -1,0 +1,8 @@
+{
+  "project_name": "MiroFish INTEIA",
+  "granularity": "standard",
+  "yolo_mode": true,
+  "commit_docs": true,
+  "model_profile": "quality",
+  "created_at": "2026-04-09"
+}
