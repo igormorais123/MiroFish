@@ -2,8 +2,17 @@
 
 ## Current
 - **Milestone:** v1.2 — Motor Confiável
-- **Phase:** 1 (Diagnóstico do Pipeline que Trava) — pending
-- **Status:** pronto para `/gsd-plan-phase 01`
+- **Phase:** 2 (Fix do Pipeline) — deployed, aguardando UAT runtime
+- **Status:** 6 tasks de 7 aplicadas em produção (VPS kvm4, container healthy)
+
+## Phase 2 Status
+- Task 1 (think/code-fence): já existia — sem ação
+- Task 2 (None fallback): já existia em report_agent.py:1394 — sem ação
+- Task 3 (MAX_TOOL_CALLS_PER_CHAT 2→3): ✅ live
+- Task 4 (backoff 5-30s + jitter, MAX_RETRIES=8): ✅ live
+- Task 5 (provider fallback chain DeepSeek/Groq, opt-in): ✅ live, aguarda chaves
+- Task 6 (SQLite chmod): ✅ live
+- Task 7 (Graphiti health check 10x10s): ✅ live
 
 ## Decisions
 - 2026-04-18: Diagnóstico real de Igor sobrescreve plano antigo — problemas reais são pipeline incompleto, output superficial que repete upload, lentidão, defasagem vs upstream
