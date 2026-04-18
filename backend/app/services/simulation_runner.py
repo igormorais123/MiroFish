@@ -422,6 +422,19 @@ class SimulationRunner:
             if max_rounds is not None and max_rounds > 0:
                 cmd.extend(["--max-rounds", str(max_rounds)])
             
+            # Garante permissao de escrita em .db existentes (fix "readonly database" em restart)
+            # 2026-04-18, Phase 2 Task 6 (ver DIAGNOSTICO_TRAVAMENTO.md #6)
+            try:
+                for _db_name in os.listdir(sim_dir):
+                    if _db_name.endswith('.db') or _db_name.endswith('.sqlite'):
+                        _db_path = os.path.join(sim_dir, _db_name)
+                        try:
+                            os.chmod(_db_path, 0o666)
+                        except OSError:
+                            pass
+            except OSError:
+                pass
+
             # Cria arquivo de log principal, evitando bloqueio por buffer cheio de stdout/stderr
             main_log_path = os.path.join(sim_dir, "simulation.log")
             main_log_file = open(main_log_path, 'w', encoding='utf-8')

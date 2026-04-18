@@ -107,7 +107,7 @@ class Config:
     LLM_BASE_URL = _default_llm_base_url()
     LLM_MODEL_NAME = _default_llm_model_name()
     LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '90'))
-    LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '3'))
+    LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '8'))
     LLM_MODEL_ALIASES = _parse_alias_map()
 
     # Modelo para acoes de agentes na simulacao (barato, rapido)

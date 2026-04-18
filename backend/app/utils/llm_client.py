@@ -9,6 +9,7 @@ Usa requests em vez do SDK OpenAI/httpx para compatibilidade com OmniRouter
 """
 
 import json
+import random
 import re
 import time
 from typing import Optional, Dict, Any, List
@@ -112,7 +113,11 @@ class LLMClient:
                 last_error = exc
                 if attempt >= self.max_retries:
                     break
-                time.sleep(min(1 * attempt, 3))
+                # Backoff exponencial 5-30s + jitter (2026-04-18, Phase 2 Task 4)
+                # Sobrevive a downtime de ~2min do OmniRoute quando max_retries=8
+                base = min(5 * (2 ** (attempt - 1)), 30)
+                jitter = random.uniform(0, base * 0.3)
+                time.sleep(base + jitter)
 
         raise last_error
 

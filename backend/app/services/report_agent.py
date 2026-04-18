@@ -937,7 +937,9 @@ class ReportAgent:
     MAX_REFLECTION_ROUNDS = 3
 
     # Maximo de chamadas de ferramenta no chat
-    MAX_TOOL_CALLS_PER_CHAT = 2
+    # 2026-04-18: subido de 2→3 para reduzir rejeicao de Final Answer
+    # quando min_tool_calls=3 forca ReACT a mais consultas (ver DIAGNOSTICO_TRAVAMENTO.md #3)
+    MAX_TOOL_CALLS_PER_CHAT = 3
     
     def __init__(
         self,
