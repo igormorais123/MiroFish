@@ -224,7 +224,9 @@ class SimulationConfigGenerator:
     ):
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
-        self.model_name = model_name or Config.LLM_AGENT_MODEL
+        # Resolve aliases (haiku-tasks -> qwen2.5:7b-instruct etc) antes de bater no provider.
+        raw_model = model_name or Config.LLM_AGENT_MODEL
+        self.model_name = Config.resolve_model_name(raw_model) if hasattr(Config, "resolve_model_name") else raw_model
 
         if not self.api_key:
             raise ValueError("LLM_API_KEY nao configurada")

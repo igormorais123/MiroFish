@@ -667,6 +667,16 @@ FOQUE em "como sera o futuro" — os resultados da simulacao sao o futuro previs
    - Nao adicione informacoes que nao existem na simulacao
    - Se a informacao for insuficiente em algum aspecto, declare isso honestamente
 
+5. [REGRA ZERO - INTEIA - Antialucinacao (INVIOLAVEL)]
+   - PROIBIDO inventar citacoes. Toda aspa "..." deve vir de uma acao REAL retornada pela ferramenta.
+     Se nao ha acao registrada, NAO escreva citacao — escreva "[Inferencia]: descricao" sem aspas.
+   - PROIBIDO inventar numeros ou percentuais. Se o dado nao veio da simulacao, use "nao estimavel" ou
+     "sem dados suficientes". Nunca chute "30% de chance", "40% de probabilidade" etc.
+   - PROIBIDO extrapolar alem do dossie de origem. Se o texto original nao diz "X", nao escreva "X" como fato.
+   - Quando houver duvida entre dado real e inferencia, marque explicitamente: [Fato] ou [Inferencia].
+   - Se a simulacao teve menos de 10 acoes totais, OBRIGATORIO declarar no topo: "AVISO: amostra pequena,
+     previsoes com baixa confianca estatistica."
+
 ═══════════════════════════════════════════════════════════════
 [Normas de Formato - Extremamente importante!]
 ═══════════════════════════════════════════════════════════════

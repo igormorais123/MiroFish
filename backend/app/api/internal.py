@@ -908,6 +908,148 @@ def get_internal_task(task_id: str):
     })
 
 
+@internal_bp.route('/run-preset', methods=['POST'])
+@require_internal_token
+def run_preset():
+    """Executa pipeline Mirofish completo em uma chamada.
+
+    Payload:
+        {
+            "name": "Simulacao X",
+            "simulation_requirement": "descricao...",
+            "materials": [{"filename": "x.md", "text": "..."}, ...],
+            "structured_context": {...},            # opcional
+            "preset": "vida-pessoal|eleitoral|mercado",   # opcional, define max_rounds
+            "max_rounds": 50,                       # opcional, override
+            "enable_twitter": true,
+            "enable_reddit": true
+        }
+
+    Retorna task_id para polling via /api/internal/v1/tasks/<task_id>.
+    Quando a task completa, result inclui {project_id, simulation_id, report_id}.
+    """
+    try:
+        payload = request.get_json() or {}
+
+        presets = {
+            "vida-pessoal": {"max_rounds": 50, "parallel_profile_count": 5},
+            "eleitoral": {"max_rounds": 200, "parallel_profile_count": 10},
+            "mercado": {"max_rounds": 100, "parallel_profile_count": 8},
+            "smoke": {"max_rounds": 10, "parallel_profile_count": 5},
+        }
+        preset_cfg = presets.get(payload.get("preset") or "smoke", presets["smoke"])
+        max_rounds = int(payload.get("max_rounds") or preset_cfg["max_rounds"])
+        parallel_profile_count = int(payload.get("parallel_profile_count") or preset_cfg["parallel_profile_count"])
+        enable_twitter = bool(payload.get("enable_twitter", True))
+        enable_reddit = bool(payload.get("enable_reddit", True))
+
+        task_manager = TaskManager()
+        task_id = task_manager.create_task(
+            task_type="mirofish_run_preset",
+            metadata={"preset": payload.get("preset", "smoke"), "max_rounds": max_rounds},
+        )
+
+        def run_pipeline():
+            try:
+                import time as _t
+                task_manager.update_task(task_id, status=TaskStatus.PROCESSING, progress=2, message="Criando projeto...")
+
+                # 1. Projeto + ontologia (sync)
+                project = ProjectManager.create_project(name=payload.get("name", "Projeto Mirofish"))
+                combined, materials = _build_project_text(payload)
+                structured = _normalize_structured_context(payload)
+                structured_text = _render_structured_context(structured)
+                final_text = "\n\n".join(p for p in (structured_text, combined) if p).strip()
+                if not final_text:
+                    raise ValueError("Sem conteudo textual em materials/structured_context")
+                project = _finalize_project_from_payload(project, payload, final_text, materials, structured)
+                task_manager.update_task(task_id, progress=18, message=f"Ontologia gerada: {project.project_id}")
+
+                # 2. Graph build
+                from ..services.graph_builder import GraphBuilderService
+                from ..services.text_processor import TextProcessor
+                builder = GraphBuilderService()
+                text = ProjectManager.get_extracted_text(project.project_id)
+                chunks = TextProcessor.split_text(text, chunk_size=project.chunk_size or Config.DEFAULT_CHUNK_SIZE,
+                                                  overlap=project.chunk_overlap or Config.DEFAULT_CHUNK_OVERLAP)
+                graph_id = builder.create_graph(name=project.name or "Mirofish Graph")
+                project.graph_id = graph_id
+                ProjectManager.save_project(project)
+                builder.set_ontology(graph_id, project.ontology)
+                builder.add_text_batches(graph_id, chunks, batch_size=3)
+                try:
+                    builder.wait_for_graph_materialization(graph_id, expected_count=len(chunks), timeout=180, stall_timeout=45)
+                except Exception as e:
+                    logger.warning(f"Grafo materializou parcialmente: {e}")
+                project.status = ProjectStatus.GRAPH_COMPLETED
+                ProjectManager.save_project(project)
+                task_manager.update_task(task_id, progress=45, message=f"Grafo pronto: {graph_id}")
+
+                # 3. Simulacao
+                manager = SimulationManager()
+                state = manager.create_simulation(project_id=project.project_id, graph_id=graph_id,
+                                                  enable_twitter=enable_twitter, enable_reddit=enable_reddit)
+                task_manager.update_task(task_id, progress=55, message=f"Simulacao criada: {state.simulation_id}")
+
+                # 4. Prepare (gera perfis)
+                manager.prepare_simulation(
+                    simulation_id=state.simulation_id,
+                    simulation_requirement=project.simulation_requirement,
+                    document_text=text,
+                    use_llm_for_profiles=True,
+                    parallel_profile_count=parallel_profile_count,
+                )
+                task_manager.update_task(task_id, progress=70, message="Perfis gerados")
+
+                # 5. Start + wait
+                SimulationRunner.start_simulation(
+                    simulation_id=state.simulation_id,
+                    platform="parallel",
+                    max_rounds=max_rounds,
+                    enable_graph_memory_update=False,
+                    graph_id=graph_id,
+                )
+                deadline = _t.time() + 3600
+                while _t.time() < deadline:
+                    rs = SimulationRunner.get_run_state(state.simulation_id)
+                    if rs and rs.to_detail_dict().get("runner_status") in ("completed", "failed", "stopped"):
+                        break
+                    _t.sleep(10)
+                task_manager.update_task(task_id, progress=85, message="Simulacao concluida, gerando relatorio...")
+
+                # 6. Relatorio
+                import uuid
+                from ..services.report_agent import ReportAgent, ReportManager
+                report_id = f"report_{uuid.uuid4().hex[:12]}"
+                agent = ReportAgent(graph_id=graph_id, simulation_id=state.simulation_id,
+                                    simulation_requirement=project.simulation_requirement)
+                report = agent.generate_report(report_id=report_id)
+                ReportManager.save_report(report)
+
+                task_manager.update_task(
+                    task_id, status=TaskStatus.COMPLETED, progress=100,
+                    message="Pipeline Mirofish concluido",
+                    result={
+                        "project_id": project.project_id,
+                        "graph_id": graph_id,
+                        "simulation_id": state.simulation_id,
+                        "report_id": report_id,
+                        "report_url": f"/api/report/{report_id}",
+                    },
+                )
+            except Exception as exc:
+                logger.error(f"Falha run-preset: {exc}")
+                logger.error(traceback.format_exc())
+                task_manager.update_task(task_id, status=TaskStatus.FAILED, message=f"Falha: {exc}")
+
+        threading.Thread(target=run_pipeline, daemon=True).start()
+        return jsonify({"success": True, "data": {"task_id": task_id, "status": "processing"}}), 202
+    except Exception as exc:
+        logger.error(f"Falha run-preset: {exc}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
 @internal_bp.route('/token-usage', methods=['GET'])
 @require_internal_token
 def get_token_usage():
