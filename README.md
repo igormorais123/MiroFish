@@ -50,6 +50,10 @@ Relatório analítico → Conversa com agentes → Insights
 | **Persistência** | — | State em disco (tasks_state.json) |
 | **Mobile** | — | Responsivo (breakpoints 480px) |
 | **Enriquecimento** | — | Apify (Google SERP + Instagram) para contexto factual |
+| **QC do relatório** | — | Overlap upload×relatório (jaccard 5-gram, alerta >30%) + gate editorial por seção |
+| **Anti-viés** | — | Devil's advocate em ~20% dos perfis + diversidade intra-grupo |
+| **Helena cenários** | Análise narrativa | Tabela obrigatória de 3 cenários probabilísticos (Base/Otimista/Contrário, soma=100%) |
+| **Testes** | — | Suite pytest com 53 testes em utils críticos |
 
 ### Aplicações
 
