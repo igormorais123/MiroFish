@@ -732,7 +732,12 @@ Importante:
 - Use portugues do Brasil por padrao
 - Se o contexto nao indicar outra localidade, assuma ambiente ocidental e brasileiro
 - age deve ser 30 e gender deve ser "other"
-- A fala institucional deve ser coerente com o papel da organizacao"""
+- A fala institucional deve ser coerente com o papel da organizacao
+- Se a entidade representa um grupo grande/heterogeneo (ex: eleitorado, base de apoio, populacao,
+  classe profissional), a persona DEVE refletir diversidade interna: mencione subgrupos com posicoes
+  divergentes (favoravel, neutro, contrario) em vez de tratar o grupo como bloco monolitico.
+  Em "postura diante de controversias", explicite tensoes internas reais (geracao, regiao, classe,
+  ideologia) ao inves de uma posicao consensual artificial."""
 
     def _generate_profile_rule_based(
         self,
