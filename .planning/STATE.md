@@ -2,8 +2,9 @@
 
 ## Current
 - **Milestone:** v1.2 — Motor Confiável
-- **Phases completas:** 1, 2, 5 (Onda A), 6, 7, 8
+- **Phases completas:** 1, 2, 3 (parcial — QC + 3 cenários), 4 (perf -53%), 5 (Onda A), 6, 7, 8
 - **Status:** deploy contínuo ativo no VPS kvm4, volume-mounted para hot-patch
+- **Última sessão (2026-04-27):** Phase 3 entregou QC overlap + gate editorial + Helena 3 cenários probabilísticos. Proxy LLM blindado contra MemoryError (Waitress + MAX_CONTENT_LENGTH 8MB).
 
 ## v1.2 Phase Status
 
