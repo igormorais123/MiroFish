@@ -145,10 +145,18 @@ def generate_report():
                         message=f"[{stage}] {message}"
                     )
 
+                # Tenta carregar texto-base do projeto para QC overlap (Phase 3)
+                source_text = None
+                try:
+                    source_text = ProjectManager.get_extracted_text(state.project_id)
+                except Exception:
+                    pass
+
                 # Gerar relatorio (passando o report_id pre-gerado)
                 report = agent.generate_report(
                     progress_callback=progress_callback,
-                    report_id=report_id
+                    report_id=report_id,
+                    source_text=source_text,
                 )
 
                 # Salvar relatorio

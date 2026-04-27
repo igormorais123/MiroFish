@@ -807,9 +807,17 @@ class SimulationRunner:
                         message=f"[{stage}] {message}"
                     )
 
+                # Texto-base para QC overlap (Phase 3) — best-effort
+                source_text = None
+                try:
+                    source_text = ProjectManager.get_extracted_text(state.project_id)
+                except Exception:
+                    pass
+
                 report = agent.generate_report(
                     progress_callback=progress_callback,
-                    report_id=report_id
+                    report_id=report_id,
+                    source_text=source_text,
                 )
 
                 ReportManager.save_report(report)

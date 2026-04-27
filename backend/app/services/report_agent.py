@@ -893,15 +893,29 @@ Com base no relatorio de previsao completo gerado pela simulacao, produza uma \
 secao final intitulada "Analise Estrategica" que contenha:
 
 1. **Sintese Executiva** (3-5 linhas): o que esta simulacao revelou que NAO era obvio antes
-2. **Riscos Criticos**: riscos concretos identificados, com probabilidade estimada (0-100%)
-3. **Oportunidades**: janelas de acao que a simulacao revelou
-4. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
-5. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
+2. **Tres Cenarios Probabilisticos** (OBRIGATORIO): tabela em Markdown com 3 cenarios mutuamente exclusivos
+   cuja soma de probabilidades = 100%. Formato exato:
+
+   | Cenario | Probabilidade | Narrativa-chave (1-2 linhas) | Gatilho de virada |
+   |---------|--------------|------------------------------|-------------------|
+   | **Base** (mais provavel) | XX% | ... | ... |
+   | **Otimista** | YY% | ... | ... |
+   | **Contrario** (devil's advocate) | ZZ% | ... | ... |
+
+   O cenario Contrario deve oferecer uma leitura estruturalmente oposta a do Base (nao apenas "menos do mesmo").
+   XX + YY + ZZ DEVE ser 100. Se a amostra for pequena, ajuste as probabilidades para refletir incerteza
+   (ex: 40/30/30 ao inves de 70/20/10).
+
+3. **Riscos Criticos**: riscos concretos identificados, com probabilidade estimada (0-100%)
+4. **Oportunidades**: janelas de acao que a simulacao revelou
+5. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
+6. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
    (considerar: tamanho da amostra de agentes, numero de rodadas, diversidade de perfis)
 
 [Regras Absolutas]
 - Lidere com a recomendacao, fundamente depois
 - Zero linguagem de esquiva ("depende", "e complexo", "ha muitas variaveis")
+- A tabela de 3 cenarios e OBRIGATORIA — relatorio sem ela e considerado incompleto
 - Cada risco com probabilidade numerica
 - Cada recomendacao com prazo e responsavel quando aplicavel
 - Termine com uma frase de assinatura pessoal — acida, inteligente, memoravel
@@ -1642,7 +1656,8 @@ class ReportAgent:
     def generate_report(
         self,
         progress_callback: Optional[Callable[[str, int, str], None]] = None,
-        report_id: Optional[str] = None
+        report_id: Optional[str] = None,
+        source_text: Optional[str] = None,
     ) -> Report:
         """
         Gera o relatorio completo (saida em tempo real por secao)
@@ -1834,6 +1849,46 @@ class ReportAgent:
                     logger.info(f"Analise Helena concluida para relatorio {report_id}")
             except Exception as e:
                 logger.warning(f"Analise Helena falhou (nao-bloqueante): {e}")
+
+            # Phase 3 QC: medir overlap relatorio<->upload + grounding por secao
+            try:
+                from app.utils.report_quality import (
+                    measure_overlap, evaluate_section_grounding, render_qc_block,
+                )
+                # Coleta nomes de entidades conhecidas do grafo (best-effort)
+                known_entities: list[str] = []
+                try:
+                    if hasattr(self, "zep_tools") and self.zep_tools is not None:
+                        gd = self.zep_tools.get_graph_data() if hasattr(self.zep_tools, "get_graph_data") else None
+                        if gd and isinstance(gd, dict):
+                            for n in (gd.get("nodes") or [])[:200]:
+                                nm = n.get("name") or n.get("label") or ""
+                                if nm:
+                                    known_entities.append(nm)
+                except Exception:
+                    pass
+
+                # Avalia cada secao individualmente
+                sections_eval = []
+                for sec in outline.sections:
+                    if sec.content:
+                        sections_eval.append(evaluate_section_grounding(sec.content, known_entities))
+
+                # Mede overlap se tiver source_text
+                overlap = measure_overlap(assembled_content, source_text or "", threshold=0.30)
+                qc_block = render_qc_block(overlap, sections_eval)
+                assembled_content += qc_block
+
+                if overlap.get("alert"):
+                    logger.warning(
+                        f"QC ALERTA overlap={overlap['jaccard_5gram']:.1%} > 30% — relatorio pode estar parafraseando upload"
+                    )
+                logger.info(
+                    f"QC report_id={report_id} overlap={overlap['jaccard_5gram']:.1%} "
+                    f"sections_grounded={sum(1 for s in sections_eval if s.get('passes_gate'))}/{len(sections_eval)}"
+                )
+            except Exception as e:
+                logger.warning(f"QC pos-relatorio falhou (nao-bloqueante): {e}")
 
             report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
