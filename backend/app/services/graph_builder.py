@@ -487,10 +487,11 @@ class GraphBuilderService:
             stall_timeout=stall_timeout,
         )
 
-        # Verificar materializacao — 10 checks x 10s (2026-04-18, Phase 2 Task 7)
-        # Ataca "Graphiti falha silenciosamente — nos nunca materializam" (CONCERNS.md)
-        max_checks = 10
-        check_interval = 10
+        # Verificar materializacao — 4 checks x 5s (2026-04-25 timing fix)
+        # Reduzido de 10x10s=100s para 4x5s=20s pq Graphiti consistentemente retorna 0 nos
+        # e cai pro fallback LLM extractor (mais rapido). Economiza 80s/run.
+        max_checks = 4
+        check_interval = 5
         last_graph_data: Dict[str, Any] | None = None
 
         for attempt in range(max_checks):

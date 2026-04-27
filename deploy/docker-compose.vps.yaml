@@ -31,7 +31,7 @@ services:
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-mirofish2026}
       - OPENAI_API_KEY=${LLM_API_KEY:-ollama}
-      - OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+      - OPENAI_BASE_URL=http://host.docker.internal:8004/v1
       - MODEL_NAME=${GRAPHITI_MODEL:-gemma4:e2b}
       - SMALL_MODEL_NAME=${GRAPHITI_MODEL:-gemma4:e2b}
       - EMBEDDER_MODEL_NAME=nomic-embed-text

@@ -1737,72 +1737,62 @@ class ReportAgent:
             
             logger.info(f"Sumario salvo no arquivo: {report_id}/outline.json")
 
-            # Fase 2: Geracao secao por secao (salvamento por secao)
+            # Fase 2: Geracao paralela de secoes (2026-04-25 timing fix)
+            # Trocou loop sequencial por ThreadPool com 4 workers. Sem contexto cruzado
+            # (previous_sections=[]) — pequena perda de coesao narrativa, ganho ~5x.
+            # Cada secao tem seu proprio system prompt + Regra Zero, entao independencia e aceitavel.
             report.status = ReportStatus.GENERATING
-            
+
             total_sections = len(outline.sections)
-            generated_sections = []  # Salva conteudo para contexto
-            
-            for i, section in enumerate(outline.sections):
-                section_num = i + 1
-                base_progress = 20 + int((i / total_sections) * 70)
-                
-                # Atualiza progresso
-                ReportManager.update_progress(
-                    report_id, "generating", base_progress,
-                    f"Gerando secao: {section.title} ({section_num}/{total_sections})",
-                    current_section=section.title,
-                    completed_sections=completed_section_titles
-                )
-                
-                if progress_callback:
-                    progress_callback(
-                        "generating",
-                        base_progress,
-                        f"Gerando secao: {section.title} ({section_num}/{total_sections})"
-                    )
-                
-                # Gera conteudo da secao principal
-                section_content = self._generate_section_react(
-                    section=section,
-                    outline=outline,
-                    previous_sections=generated_sections,
-                    progress_callback=lambda stage, prog, msg:
-                        progress_callback(
-                            stage, 
-                            base_progress + int(prog * 0.7 / total_sections),
-                            msg
-                        ) if progress_callback else None,
-                    section_index=section_num
-                )
-                
-                section.content = section_content
-                generated_sections.append(f"## {section.title}\n\n{section_content}")
+            generated_sections = [None] * total_sections  # Pre-aloca para manter ordem
+            import concurrent.futures
+            from threading import Lock as _Lock
+            _section_lock = _Lock()
+            _completed = [0]
 
-                # Salva a secao
-                ReportManager.save_section(report_id, section_num, section)
-                completed_section_titles.append(section.title)
-
-                # Registra log de conclusao da secao
-                full_section_content = f"## {section.title}\n\n{section_content}"
-
-                if self.report_logger:
-                    self.report_logger.log_section_full_complete(
-                        section_title=section.title,
+            def _gen_one_section(idx: int, sec):
+                section_num = idx + 1
+                try:
+                    content = self._generate_section_react(
+                        section=sec,
+                        outline=outline,
+                        previous_sections=[],  # paralelizado: sem contexto cruzado
+                        progress_callback=None,  # callbacks agregados fora do thread
                         section_index=section_num,
-                        full_content=full_section_content.strip()
                     )
+                    sec.content = content
+                    ReportManager.save_section(report_id, section_num, sec)
+                    if self.report_logger:
+                        self.report_logger.log_section_full_complete(
+                            section_title=sec.title,
+                            section_index=section_num,
+                            full_content=f"## {sec.title}\n\n{content}".strip(),
+                        )
+                    logger.info(f"Secao salva: {report_id}/section_{section_num:02d}.md")
+                    return idx, content, None
+                except Exception as e:
+                    logger.error(f"Falha gerando secao {section_num}: {e}")
+                    return idx, f"_(erro ao gerar secao: {e})_", str(e)
 
-                logger.info(f"Secao salva: {report_id}/section_{section_num:02d}.md")
-
-                # Atualiza progresso
-                ReportManager.update_progress(
-                    report_id, "generating",
-                    base_progress + int(70 / total_sections),
-                    f"Secao {section.title} concluida",
-                    current_section=None,
-                    completed_sections=completed_section_titles
-                )
+            # Submete todas as secoes em paralelo
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as _exec:
+                _futures = {_exec.submit(_gen_one_section, i, s): i for i, s in enumerate(outline.sections)}
+                for _fut in concurrent.futures.as_completed(_futures):
+                    i, content, err = _fut.result()
+                    generated_sections[i] = f"## {outline.sections[i].title}\n\n{content}"
+                    with _section_lock:
+                        _completed[0] += 1
+                        done = _completed[0]
+                        completed_section_titles.append(outline.sections[i].title)
+                    base_progress = 20 + int((done / total_sections) * 70)
+                    ReportManager.update_progress(
+                        report_id, "generating", base_progress,
+                        f"Secao concluida ({done}/{total_sections})",
+                        current_section=None,
+                        completed_sections=completed_section_titles,
+                    )
+                    if progress_callback:
+                        progress_callback("generating", base_progress, f"Secao concluida ({done}/{total_sections})")
             
             # Fase 3: Montagem do relatorio completo
             if progress_callback:
