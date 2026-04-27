@@ -208,7 +208,8 @@ class OasisProfileGenerator:
         self,
         entity: EntityNode,
         user_id: int,
-        use_llm: bool = True
+        use_llm: bool = True,
+        stance: str = "default",
     ) -> OasisAgentProfile:
         """
         Gera OASIS Agent Profile a partir de entidade Zep
@@ -237,7 +238,8 @@ class OasisProfileGenerator:
                 entity_type=entity_type,
                 entity_summary=entity.summary,
                 entity_attributes=entity.attributes,
-                context=context
+                context=context,
+                stance=stance,
             )
         else:
             # Gera perfil basico por regras
@@ -432,13 +434,25 @@ class OasisProfileGenerator:
         """Verifica se e entidade de tipo grupo/instituicao"""
         return entity_type.lower() in self.GROUP_ENTITY_TYPES
 
+    # Instrucao adversarial — Phase 3 do roadmap v1.2 ("contra-agentes/devil's advocate")
+    _CONTRARIAN_INSTRUCTION = (
+        "\n\n[INSTRUCAO ADICIONAL — STANCE CONTRARIA]\n"
+        "Este perfil DEVE ler o cenario de forma estruturalmente OPOSTA ao consenso aparente "
+        "no contexto fornecido. Pratique ceticismo metodico: questione premissas, exponha riscos "
+        "que a narrativa hegemonica esconde, traga vieses ignorados, ofereca leitura adversarial. "
+        "Nao seja troll nem caricato — seja um critico fundamentado, com argumentos consistentes. "
+        "A persona deve refletir essa postura cetica/adversarial sem perder coerencia com o tipo "
+        "de entidade representado."
+    )
+
     def _generate_profile_with_llm(
         self,
         entity_name: str,
         entity_type: str,
         entity_summary: str,
         entity_attributes: Dict[str, Any],
-        context: str
+        context: str,
+        stance: str = "default",
     ) -> Dict[str, Any]:
         """
         Usa LLM para gerar perfil muito detalhado
@@ -458,6 +472,10 @@ class OasisProfileGenerator:
             prompt = self._build_group_persona_prompt(
                 entity_name, entity_type, entity_summary, entity_attributes, context
             )
+
+        # Phase 3: stance adversarial em ~20% dos perfis para evitar viés de consenso
+        if stance == "contrarian":
+            prompt = prompt + self._CONTRARIAN_INSTRUCTION
 
         # Tenta multiplas geracoes ate sucesso ou limite de retentativas
         max_attempts = 3
@@ -861,6 +879,22 @@ Importante:
                 except Exception as e:
                     logger.warning(f"Falha ao salvar profiles em tempo real: {e}")
 
+        # Phase 3: define quais idx serao contrarians (~20% — 1 a cada 5).
+        # Determinismo via idx evita variacao entre runs do mesmo grafo.
+        # Skip se total < 5 (amostra pequena) ou se desativado por env.
+        import os as _os
+        contrarian_disabled = _os.environ.get("MIROFISH_DISABLE_CONTRARIANS", "0") == "1"
+        contrarian_ratio = 5  # 1 a cada N
+        contrarians_planned = 0 if (total < 5 or contrarian_disabled) else max(1, total // contrarian_ratio)
+        if contrarians_planned > 0:
+            logger.info(f"Devil's advocate: {contrarians_planned}/{total} perfis como contrarians (1/{contrarian_ratio})")
+
+        def _stance_for(idx: int) -> str:
+            if contrarians_planned <= 0:
+                return "default"
+            # Distribui contrarians uniformemente: idx 2, 7, 12, ...
+            return "contrarian" if (idx % contrarian_ratio == 2) else "default"
+
         def generate_single_profile(idx: int, entity: EntityNode) -> tuple:
             """Funcao de trabalho para gerar um unico profile"""
             entity_type = entity.get_entity_type() or "Entity"
@@ -869,7 +903,8 @@ Importante:
                 profile = self.generate_profile_from_entity(
                     entity=entity,
                     user_id=idx,
-                    use_llm=use_llm
+                    use_llm=use_llm,
+                    stance=_stance_for(idx),
                 )
 
                 # Imprime perfil gerado no console e log em tempo real

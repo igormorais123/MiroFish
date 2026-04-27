@@ -72,3 +72,17 @@ data/
 
 # Playwright MCP snapshots (geradas a cada sessão, não versionar)
 .playwright-mcp/
+
+# Memoria do agente Claude (pessoal, fora do escopo do projeto)
+memory/
+
+# Backups locais de .env
+.env.*.bak
+*.bak
+
+# Logs de proxy locais (devem ser regerados em runtime)
+logs_*.log
+logs_backend*.log
+
+# Plataformas de grafo locais (instancias, nao versionar)
+graph_platforms/
