@@ -1,32 +1,54 @@
 # MiroFish INTEIA
 
+Atualizado em: 2026-05-04
+
 ## Visao
-Sistema de simulacao social com agentes sinteticos para previsao de cenarios politicos, midiaticos e eleitorais. Combina GraphRAG + OASIS simulation engine + LLM analysis para gerar relatorios de inteligencia.
+
+Sistema de simulacao social multiagente para cenarios politicos, midiaticos, juridico-institucionais, reputacionais e de mercado. O produto combina grafo de conhecimento, perfis sinteticos, OASIS em Twitter/Reddit, enriquecimento factual e Helena Strategos para produzir relatorios de inteligencia com trilha de evidencia.
+
+## Tese atual
+
+O MiroFish INTEIA nao deve entregar "relatorio bonito" se a simulacao nao sustentou a conclusao. A promessa da consultoria por simulacao foi transformada em contrato operacional:
+
+1. briefing e material-base obrigatorios;
+2. grafo, perfis e configuracao persistidos;
+3. simulacao OASIS concluida e auditavel;
+4. diversidade minima semantica, comportamental e de agentes;
+5. trace OASIS com interacao social real;
+6. auditoria literal de citacoes diretas;
+7. relatorio separado por fato, simulacao, inferencia e campo necessario.
 
 ## Stack
-- **Frontend**: Vue.js 3 + Vite
-- **Backend**: Flask (Python 3.12)
-- **GraphRAG**: Graphiti + Neo4j + Zep
-- **Simulacao**: OASIS engine (multi-platform: Twitter/Reddit)
-- **LLM Routing**: OmniRoute (Claude Opus 4.6, Sonnet 4.6, DeepSeek, GPT-5.4)
-- **Deploy**: Docker containers em VPS KVM4 (72.62.108.24)
 
-## Infraestrutura
-- Container `mirofish-inteia`: nginx (porta 3001) + Flask (porta 5001)
-- Container `zep-graphiti`: Graphiti API (porta 8003)
-- Container `zep-neo4j`: Neo4j graph DB
-- Container `omniroute-inteia`: LLM router (porta 20128)
+- **Frontend:** Vue.js 3 + Vite
+- **Backend:** Flask/Python
+- **Grafo/memoria:** Graphiti + Zep/Neo4j, com fallback local de evidencias
+- **Simulacao:** OASIS multi-plataforma (Twitter + Reddit)
+- **Relatorio:** ReportAgent + Helena Strategos + gate sistemico
+- **LLM routing:** OmniRoute/OpenAI-compatible
+- **Deploy:** Docker/nginx em VPS, com execucao local suportada
 
-## Acesso
-- Frontend: http://72.62.108.24:3001
-- Backend API: http://72.62.108.24:5001
-- SSH: `ssh kvm4`
+## Componentes criticos
 
-## Configuracao de Modelos (Qualidade)
-- LLM_PREMIUM_MODEL: claude/claude-sonnet-4-6 (relatorios)
-- LLM_HELENA_MODEL: claude/claude-opus-4-6 (analise estrategica)
-- LLM_AGENT_MODEL: mirofish-smart (simulacao)
-- LLM_MODEL_NAME: BestFREE (volume alto / grafos)
+- `backend/app/services/report_system_gate.py` — gate estrutural antes/depois do relatorio.
+- `backend/app/utils/report_quality.py` — auditoria de citacoes e qualidade textual.
+- `backend/app/services/simulation_data_reader.py` — metricas de diversidade e trace OASIS.
+- `backend/app/services/social_bootstrap.py` — pulso social inicial deterministico.
+- `backend/scripts/run_parallel_simulation.py` — execucao OASIS com interacoes persistidas.
+- `frontend/src/components/Step3Simulation.vue` — bloqueio visual antes do relatorio.
+- `frontend/src/components/Step4Report.vue` — cadeia de custodia do relatorio.
 
-## Milestone Atual
-v1.1 — Relatorio Premium + Melhorias de Qualidade
+## Infraestrutura conhecida
+
+- Frontend local validado: `http://localhost:5173`
+- Backend local validado: `http://localhost:5001`
+- VPS historico: `kvm4` / `72.62.108.24`
+- Containers historicos: `mirofish-inteia`, `zep-graphiti`, `zep-neo4j`, `omniroute-inteia`
+
+## Milestone atual
+
+**v1.3 — Consultoria por Simulacao Auditavel**
+
+Status: P0 estrutural implementado e validado localmente em 2026-05-04.
+
+Proxima validacao de produto: executar uma simulacao nova, longa o suficiente, com LLM ativo, e verificar se atravessa o gate ate um relatorio publicavel.

@@ -109,6 +109,15 @@ export const getRunStatusDetail = (simulationId) => {
 }
 
 /**
+ * Obter leitura consolidada de qualidade da simulacao
+ * @param {string} simulationId
+ * @param {Object} params - { require_completed? }
+ */
+export const getSimulationQuality = (simulationId, params = {}) => {
+  return service.get(`/api/simulation/${simulationId}/quality`, { params })
+}
+
+/**
  * Obter postagens da simulacao
  * @param {string} simulationId
  * @param {string} platform - 'reddit' | 'twitter'

@@ -4,3 +4,4 @@
 - [Apify integrado ao Mirofish](project_apify_integration.md) — Fontes, cache, auto-briefing, plano Starter US$29
 - [OmniRoute + Apify Bridge](reference_omniroute_apify.md) — Provedor 16, 4 combos pipeline, roteamento integrado
 - [Mirofish = GPT-5.5 via Codex OAuth](decision_codex_oauth_5_5.md) — Premium foi 42% mais rápido que mini; ChatGPT Pro creditos ilimitados; sem API keys
+- [Consultoria por Simulacao Auditavel](../.planning/LEARNINGS_CONSULTORIA_SIMULADA.md) — Gate estrutural, auditoria de evidencias, diversidade social, cadeia de custodia e pulso OASIS

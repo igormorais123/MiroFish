@@ -143,6 +143,31 @@ class PlatformConfig:
 
 
 @dataclass
+class SocialDynamicsConfig:
+    """Contrato de interacao social minima para evitar simulacao monologica."""
+    bootstrap_enabled: bool = True
+    bootstrap_max_actions: int = 12
+    twitter_bootstrap_actions: Optional[int] = None
+    reddit_bootstrap_actions: Optional[int] = None
+    twitter_bootstrap_action_mix: List[str] = field(
+        default_factory=lambda: ["LIKE_POST", "QUOTE_POST", "REPOST"]
+    )
+    reddit_bootstrap_action_mix: List[str] = field(
+        default_factory=lambda: ["CREATE_COMMENT", "LIKE_POST", "DISLIKE_POST", "CREATE_COMMENT"]
+    )
+
+
+@dataclass
+class DeliveryGovernanceConfig:
+    """Politica declarada de entrega do ciclo simulacao -> relatorio."""
+    mode: str = "client"
+    label: str = "Entrega cliente"
+    report_min_actions: Optional[int] = None
+    require_completed_simulation: Optional[bool] = None
+    require_source_text: Optional[bool] = None
+
+
+@dataclass
 class SimulationParameters:
     """Conjunto completo de parametros da simulacao."""
     # Metadados basicos
@@ -163,6 +188,12 @@ class SimulationParameters:
     # Configuracao das plataformas
     twitter_config: Optional[PlatformConfig] = None
     reddit_config: Optional[PlatformConfig] = None
+
+    # Contrato de dinamica social
+    social_dynamics: SocialDynamicsConfig = field(default_factory=SocialDynamicsConfig)
+
+    # Contrato de entrega e publicabilidade
+    delivery_governance: DeliveryGovernanceConfig = field(default_factory=DeliveryGovernanceConfig)
     
     # Configuracao de LLM
     llm_model: str = ""
@@ -185,6 +216,8 @@ class SimulationParameters:
             "event_config": asdict(self.event_config),
             "twitter_config": asdict(self.twitter_config) if self.twitter_config else None,
             "reddit_config": asdict(self.reddit_config) if self.reddit_config else None,
+            "social_dynamics": asdict(self.social_dynamics),
+            "delivery_governance": asdict(self.delivery_governance),
             "llm_model": self.llm_model,
             "llm_base_url": self.llm_base_url,
             "generated_at": self.generated_at,

@@ -43,6 +43,24 @@ export const getReport = (reportId) => {
 }
 
 /**
+ * Listar artefatos de auditoria do relatorio
+ * @param {string} reportId
+ * @param {boolean} includeContent
+ */
+export const getReportArtifacts = (reportId, includeContent = false) => {
+  return service.get(`/api/report/${reportId}/artifacts`, { params: { include_content: includeContent } })
+}
+
+/**
+ * Obter artefato especifico de auditoria do relatorio
+ * @param {string} reportId
+ * @param {string} artifactName
+ */
+export const getReportArtifact = (reportId, artifactName) => {
+  return service.get(`/api/report/${reportId}/artifacts/${artifactName}`)
+}
+
+/**
  * Conversar com o Report Agent
  * @param {Object} data - { simulation_id, message, chat_history? }
  */

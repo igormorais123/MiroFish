@@ -155,6 +155,20 @@ class Config:
     REPORT_AGENT_MAX_TOOL_CALLS = int(os.environ.get('REPORT_AGENT_MAX_TOOL_CALLS', '5'))
     REPORT_AGENT_MAX_REFLECTION_ROUNDS = int(os.environ.get('REPORT_AGENT_MAX_REFLECTION_ROUNDS', '2'))
     REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
+    REPORT_MIN_ACTIONS = int(os.environ.get('REPORT_MIN_ACTIONS', '10'))
+    REPORT_REQUIRE_COMPLETED_SIMULATION = os.environ.get('REPORT_REQUIRE_COMPLETED_SIMULATION', 'true').lower() == 'true'
+    REPORT_REQUIRE_SOURCE_TEXT = os.environ.get('REPORT_REQUIRE_SOURCE_TEXT', 'true').lower() == 'true'
+    REPORT_FAIL_ON_UNSUPPORTED_QUOTES = os.environ.get('REPORT_FAIL_ON_UNSUPPORTED_QUOTES', 'true').lower() == 'true'
+    REPORT_MIN_DISTINCT_2 = float(os.environ.get('REPORT_MIN_DISTINCT_2', '0.30'))
+    REPORT_MIN_AGENT_ACTIVITY_ENTROPY = float(os.environ.get('REPORT_MIN_AGENT_ACTIVITY_ENTROPY', '0.25'))
+    REPORT_MIN_BEHAVIOR_ENTROPY = float(os.environ.get('REPORT_MIN_BEHAVIOR_ENTROPY', '0.20'))
+    REPORT_REQUIRE_ACTION_TYPE_DIVERSITY = os.environ.get('REPORT_REQUIRE_ACTION_TYPE_DIVERSITY', 'true').lower() == 'true'
+    REPORT_DELIVERY_MODE = os.environ.get('REPORT_DELIVERY_MODE', 'client').strip().lower()
+    REPORT_DEMO_MIN_ACTIONS = int(os.environ.get('REPORT_DEMO_MIN_ACTIONS', '3'))
+    REPORT_DEMO_REQUIRE_COMPLETED_SIMULATION = (
+        os.environ.get('REPORT_DEMO_REQUIRE_COMPLETED_SIMULATION', 'false').lower() == 'true'
+    )
+    REPORT_DEMO_REQUIRE_SOURCE_TEXT = os.environ.get('REPORT_DEMO_REQUIRE_SOURCE_TEXT', 'false').lower() == 'true'
 
     @classmethod
     def resolve_model_name(cls, model_name=None) -> str:

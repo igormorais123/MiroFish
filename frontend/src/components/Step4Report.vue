@@ -139,6 +139,49 @@
           <div class="workflow-divider"></div>
         </div>
 
+        <div v-if="auditVisible" class="audit-panel" :class="auditPanelClass">
+          <div class="audit-header">
+            <div class="audit-title-row">
+              <span class="audit-dot"></span>
+              <span class="audit-title">Cadeia de custódia</span>
+            </div>
+            <span class="audit-status">{{ auditStatusText }}</span>
+          </div>
+
+          <div class="audit-metrics">
+            <div class="audit-metric">
+              <span class="audit-label">Ações</span>
+              <span class="audit-value mono">{{ formatMetric(gateMetrics.total_actions_count, 0) }}</span>
+            </div>
+            <div class="audit-metric">
+              <span class="audit-label">Distinct-2</span>
+              <span class="audit-value mono">{{ formatMetric(diversityMetrics.distinct_2) }}</span>
+            </div>
+            <div class="audit-metric">
+              <span class="audit-label">Entropia</span>
+              <span class="audit-value mono">{{ formatMetric(diversityMetrics.action_type_entropy_norm) }}</span>
+            </div>
+            <div class="audit-metric">
+              <span class="audit-label">Interações</span>
+              <span class="audit-value mono">{{ formatMetric(oasisTraceMetrics.interactive_actions_total, 0) }}</span>
+            </div>
+            <div class="audit-metric">
+              <span class="audit-label">Citações</span>
+              <span class="audit-value mono">{{ quoteAuditLabel }}</span>
+            </div>
+            <div class="audit-metric">
+              <span class="audit-label">Artefatos</span>
+              <span class="audit-value mono">{{ reportArtifacts.length }}</span>
+            </div>
+          </div>
+
+          <div v-if="auditIssues.length" class="audit-issues">
+            <div v-for="issue in auditIssues.slice(0, 2)" :key="issue" class="audit-issue">
+              {{ issue }}
+            </div>
+          </div>
+        </div>
+
         <div class="workflow-timeline">
           <TransitionGroup name="timeline-item">
             <div 
@@ -392,7 +435,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog } from '../api/report'
+import { getAgentLog, getConsoleLog, getReport, getReportArtifacts } from '../api/report'
 
 const router = useRouter()
 
@@ -428,6 +471,9 @@ const leftPanel = ref(null)
 const rightPanel = ref(null)
 const logContent = ref(null)
 const showRawResult = reactive({})
+const reportRecord = ref(null)
+const reportArtifacts = ref([])
+const auditLoadError = ref(null)
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
@@ -1744,6 +1790,93 @@ const displayLogs = computed(() => {
   return agentLogs.value
 })
 
+const artifactContentByName = (name) => {
+  const found = reportArtifacts.value.find(item => item.name === name)
+  return found?.content || null
+}
+
+const qualityGate = computed(() => {
+  return reportRecord.value?.quality_gate || artifactContentByName('system_gate.json') || null
+})
+
+const evidenceAudit = computed(() => {
+  return reportRecord.value?.evidence_audit || artifactContentByName('evidence_audit.json') || null
+})
+
+const evidenceManifest = computed(() => {
+  return artifactContentByName('evidence_manifest.json') || null
+})
+
+const gateMetrics = computed(() => {
+  return qualityGate.value?.metrics || evidenceManifest.value?.quality_gate?.metrics || {}
+})
+
+const diversityMetrics = computed(() => {
+  return gateMetrics.value?.diversity || {}
+})
+
+const oasisTraceMetrics = computed(() => {
+  return diversityMetrics.value?.oasis_trace || {}
+})
+
+const gateApproved = computed(() => {
+  return qualityGate.value?.passes_gate === true
+})
+
+const gateBlocked = computed(() => {
+  return qualityGate.value?.passes_gate === false
+})
+
+const auditMissing = computed(() => {
+  return !!reportRecord.value && !qualityGate.value && !evidenceAudit.value
+})
+
+const auditVisible = computed(() => {
+  return !!reportRecord.value || !!qualityGate.value || !!evidenceAudit.value || reportArtifacts.value.length > 0 || !!auditLoadError.value
+})
+
+const auditPanelClass = computed(() => ({
+  approved: gateApproved.value && evidenceAudit.value?.passes_gate !== false && !diagnosticOnly.value,
+  blocked: gateBlocked.value || evidenceAudit.value?.passes_gate === false || auditMissing.value,
+  pending: !gateApproved.value && !gateBlocked.value,
+  diagnostic: diagnosticOnly.value
+}))
+
+const diagnosticOnly = computed(() => {
+  return reportRecord.value?.delivery_status === 'diagnostic_only' ||
+    gateMetrics.value?.diagnostic_only === true ||
+    gateMetrics.value?.delivery_publishable_mode === false
+})
+
+const auditStatusText = computed(() => {
+  if (gateBlocked.value || evidenceAudit.value?.passes_gate === false) return 'Bloqueado'
+  if (diagnosticOnly.value) return 'Diagnóstico'
+  if (gateApproved.value && evidenceAudit.value?.passes_gate !== false) return 'Aprovado'
+  if (auditMissing.value) return 'Não auditado'
+  if (auditLoadError.value) return 'Indisponível'
+  return 'Pendente'
+})
+
+const auditIssues = computed(() => {
+  const issues = [
+    ...(qualityGate.value?.issues || []),
+    ...(evidenceAudit.value?.unsupported_quotes || []).map(q => `Citação sem suporte: ${q}`)
+  ]
+  if (!issues.length && auditMissing.value) {
+    return ['Relatório sem gate estrutural ou auditoria de citações; tratar como legado não publicável.']
+  }
+  if (!issues.length && diagnosticOnly.value) {
+    return ['Relatório em modo diagnóstico/smoke; não usar como entrega publicável.']
+  }
+  if (!issues.length && auditLoadError.value) return [auditLoadError.value]
+  return issues.map(item => typeof item === 'string' ? item : JSON.stringify(item)).filter(Boolean)
+})
+
+const quoteAuditLabel = computed(() => {
+  if (!evidenceAudit.value) return '-'
+  return `${evidenceAudit.value.quotes_supported || 0}/${evidenceAudit.value.quotes_total || 0}`
+})
+
 // Workflow steps overview (status-based, no nested cards)
 const activeSectionIndex = computed(() => {
   if (isComplete.value) return null
@@ -1858,6 +1991,11 @@ const formatResultSize = (length) => {
   if (!length) return ''
   if (length < 1000) return `${length} caracteres`
   return `${(length / 1000).toFixed(1)} mil caracteres`
+}
+
+const formatMetric = (value, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
+  return Number(value).toFixed(digits)
 }
 
 const truncateText = (text, maxLen) => {
@@ -2015,6 +2153,7 @@ const getLogLevelClass = (log) => {
 // Polling
 let agentLogTimer = null
 let consoleLogTimer = null
+let reportAuditTimer = null
 
 const fetchAgentLog = async () => {
   if (!props.reportId) return
@@ -2051,6 +2190,7 @@ const fetchAgentLog = async () => {
             isComplete.value = true
             currentSectionIndex.value = null  // Garantir limpeza do estado de loading
             emit('update-status', 'completed')
+            fetchReportAudit()
             stopPolling()
             // Logica de rolagem unificada no nextTick após o fim do loop
           }
@@ -2149,14 +2289,39 @@ const fetchConsoleLog = async () => {
   }
 }
 
+const fetchReportAudit = async () => {
+  if (!props.reportId) return
+
+  try {
+    const [reportRes, artifactsRes] = await Promise.all([
+      getReport(props.reportId),
+      getReportArtifacts(props.reportId, true)
+    ])
+
+    if (reportRes.success && reportRes.data) {
+      reportRecord.value = reportRes.data
+    }
+
+    if (artifactsRes.success && artifactsRes.data) {
+      reportArtifacts.value = artifactsRes.data.artifacts || []
+    }
+
+    auditLoadError.value = null
+  } catch (err) {
+    auditLoadError.value = err.message || 'Falha ao carregar auditoria'
+  }
+}
+
 const startPolling = () => {
-  if (agentLogTimer || consoleLogTimer) return
+  if (agentLogTimer || consoleLogTimer || reportAuditTimer) return
   
   fetchAgentLog()
   fetchConsoleLog()
+  fetchReportAudit()
   
   agentLogTimer = setInterval(fetchAgentLog, 2000)
   consoleLogTimer = setInterval(fetchConsoleLog, 1500)
+  reportAuditTimer = setInterval(fetchReportAudit, 5000)
 }
 
 const stopPolling = () => {
@@ -2167,6 +2332,10 @@ const stopPolling = () => {
   if (consoleLogTimer) {
     clearInterval(consoleLogTimer)
     consoleLogTimer = null
+  }
+  if (reportAuditTimer) {
+    clearInterval(reportAuditTimer)
+    reportAuditTimer = null
   }
 }
 
@@ -2196,6 +2365,9 @@ watch(() => props.reportId, (newId) => {
     collapsedSections.value = new Set()
     isComplete.value = false
     startTime.value = null
+    reportRecord.value = null
+    reportArtifacts.value = []
+    auditLoadError.value = null
     
     startPolling()
   }
@@ -2891,6 +3063,125 @@ watch(() => props.reportId, (newId) => {
   height: 1px;
   background: var(--wf-divider);
   margin: 14px 0 0 0;
+}
+
+.audit-panel {
+  margin: 14px 20px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.audit-panel.approved {
+  background: #F9FAFB;
+  border-color: #D1FAE5;
+}
+
+.audit-panel.blocked {
+  background: #FEF2F2;
+  border-color: #FECACA;
+}
+
+.audit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.audit-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.audit-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  flex: 0 0 auto;
+}
+
+.audit-panel.approved .audit-dot {
+  background: #10B981;
+}
+
+.audit-panel.blocked .audit-dot {
+  background: #B91C1C;
+}
+
+.audit-title,
+.audit-status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.audit-title {
+  color: #111827;
+}
+
+.audit-status {
+  color: #6B7280;
+  flex: 0 0 auto;
+}
+
+.audit-panel.approved .audit-status {
+  color: #065F46;
+}
+
+.audit-panel.blocked .audit-status {
+  color: #991B1B;
+}
+
+.audit-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.audit-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.audit-label {
+  font-size: 10px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audit-value {
+  font-size: 12px;
+  color: #374151;
+}
+
+.audit-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.audit-issue {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #991B1B;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(185, 28, 28, 0.12);
+  border-radius: 6px;
+  padding: 6px 8px;
 }
 
 /* Workflow Timeline */

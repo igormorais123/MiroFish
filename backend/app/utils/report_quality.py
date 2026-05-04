@@ -14,7 +14,8 @@ from typing import Iterable
 
 _WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]+", re.UNICODE)
 _NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:%|R\$|reais|mil|milh[oõ]es|bilh[oõ]es|pp|p\.p\.|nós|n[oó]s|fatos|agentes|rodadas|dias|horas|minutos)?\b", re.IGNORECASE)
-_QUOTE_RE = re.compile(r'"[^"]{8,}"|"[^"]{8,}"|"[^"]{8,}"')
+_QUOTE_RE = re.compile(r'"([^"\n]{8,})"|“([^”\n]{8,})”|‘([^’\n]{8,})’')
+_MARKDOWN_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
 def _normalize(text: str) -> list[str]:
@@ -24,6 +25,16 @@ def _normalize(text: str) -> list[str]:
     nfkd = unicodedata.normalize("NFKD", text)
     cleaned = "".join(c for c in nfkd if not unicodedata.combining(c))
     return [tok.lower() for tok in _WORD_RE.findall(cleaned) if len(tok) > 2]
+
+
+def _normalize_text_for_match(text: str) -> str:
+    """Normaliza texto para comparacao conservadora de citacoes."""
+    return " ".join(_normalize(text))
+
+
+def _strip_code_fences(text: str) -> str:
+    """Remove blocos de codigo para nao auditar exemplos como se fossem claims."""
+    return _MARKDOWN_FENCE_RE.sub(" ", text or "")
 
 
 def _ngrams(tokens: list[str], n: int) -> set[tuple[str, ...]]:
@@ -122,6 +133,102 @@ def evaluate_section_grounding(content: str, known_entities: Iterable[str] | Non
         "score": round(score, 3),
         "passes_gate": score >= 0.5,
     }
+
+
+def extract_direct_quotes(text: str, min_chars: int = 8) -> list[str]:
+    """Extrai citacoes diretas entre aspas duplas/curvas.
+
+    A Regra Zero INTEIA exige que uma aspa no relatorio exista no corpus de
+    evidencia. Esta funcao ignora exemplos em blocos de codigo.
+    """
+    cleaned = _strip_code_fences(text)
+    quotes: list[str] = []
+    for match in _QUOTE_RE.finditer(cleaned):
+        quote = next((group for group in match.groups() if group), "")
+        quote = re.sub(r"\s+", " ", quote).strip()
+        if len(quote) >= min_chars:
+            quotes.append(quote)
+    return quotes
+
+
+def quote_supported_by_evidence(quote: str, evidence_texts: Iterable[str]) -> bool:
+    """Retorna True somente se a citacao aparece no corpus de evidencia.
+
+    O teste e deliberadamente conservador: citacao direta precisa existir como
+    sequencia normalizada dentro do texto-base, logs de simulacao ou fatos
+    extraidos. Parafrase deve ser marcada como inferencia/simulacao, sem aspas.
+    """
+    normalized_quote = _normalize_text_for_match(quote)
+    if not normalized_quote:
+        return False
+
+    for evidence in evidence_texts or []:
+        normalized_evidence = _normalize_text_for_match(evidence)
+        if normalized_quote and normalized_quote in normalized_evidence:
+            return True
+    return False
+
+
+def audit_report_evidence(
+    report_md: str,
+    evidence_texts: Iterable[str],
+    *,
+    fail_on_unsupported_quotes: bool = True,
+) -> dict:
+    """Audita se o relatorio usa citacoes sustentadas pelo sistema.
+
+    Returns:
+        {
+            "passes_gate": bool,
+            "quotes_total": int,
+            "quotes_supported": int,
+            "quotes_unsupported": int,
+            "unsupported_quotes": [str],
+            "fail_on_unsupported_quotes": bool,
+        }
+    """
+    evidence_list = [text for text in (evidence_texts or []) if text]
+    quotes = extract_direct_quotes(report_md)
+    unsupported = [
+        quote
+        for quote in quotes
+        if not quote_supported_by_evidence(quote, evidence_list)
+    ]
+
+    passes_gate = not (fail_on_unsupported_quotes and unsupported)
+
+    return {
+        "passes_gate": passes_gate,
+        "quotes_total": len(quotes),
+        "quotes_supported": len(quotes) - len(unsupported),
+        "quotes_unsupported": len(unsupported),
+        "unsupported_quotes": unsupported[:20],
+        "fail_on_unsupported_quotes": fail_on_unsupported_quotes,
+        "evidence_documents": len(evidence_list),
+    }
+
+
+def render_evidence_audit_block(audit: dict) -> str:
+    """Gera bloco Markdown com o resultado da auditoria de evidencias."""
+    status = "OK" if audit.get("passes_gate") else "BLOQUEADO"
+    lines = [
+        "",
+        "## Auditoria de Evidencias",
+        "",
+        f"- **Gate de citacoes:** {status}",
+        f"- **Citacoes diretas:** {audit.get('quotes_supported', 0)}/{audit.get('quotes_total', 0)} sustentadas pelo corpus",
+        f"- **Documentos de evidencia auditados:** {audit.get('evidence_documents', 0)}",
+    ]
+
+    unsupported = audit.get("unsupported_quotes") or []
+    if unsupported:
+        lines.append("- **Citacoes sem suporte encontradas:**")
+        for quote in unsupported[:5]:
+            clipped = quote[:180] + ("..." if len(quote) > 180 else "")
+            lines.append(f"  - {clipped}")
+
+    lines.append("")
+    return "\n".join(lines)
 
 
 def render_qc_block(overlap: dict, sections_eval: list[dict] | None = None) -> str:

@@ -1,6 +1,17 @@
 # Testing Patterns
 
 **Analysis Date:** 2026-04-13
+**Last update:** 2026-05-04
+
+## Current Validation Snapshot
+
+2026-05-04:
+
+- Backend suite: `python -m pytest backend\tests` — 73 passed.
+- Focused gate suite: report artifacts, delivery governance, report quality and social bootstrap passed.
+- Frontend build: `npm run build` in `frontend/` — passed.
+- Consistency: `git diff --check` — no whitespace errors, only Windows CRLF warnings.
+- Local health: backend `http://localhost:5001/health` and frontend `http://localhost:5173` responded 200.
 
 ## Test Framework
 
@@ -14,8 +25,8 @@
 
 **Run Commands:**
 ```bash
-# Run all tests (from backend/ directory)
-pytest
+# Run all tests from repository root
+python -m pytest backend\tests
 
 # Watch mode (not configured, use pytest-watch if needed)
 pytest --watch
@@ -24,10 +35,10 @@ pytest --watch
 pytest --cov=app
 
 # Specific test file
-pytest backend/tests/test_graph_builder.py
+python -m pytest backend\tests\test_graph_builder.py
 
 # Specific test
-pytest backend/tests/test_graph_builder.py::test_wait_for_graph_materialization_returns_empty_gracefully
+python -m pytest backend\tests\test_graph_builder.py::test_wait_for_graph_materialization_returns_empty_gracefully
 ```
 
 **Frontend Testing:**
@@ -172,7 +183,7 @@ open htmlcov/index.html  # macOS
 start htmlcov/index.html  # Windows
 ```
 
-**Current State:** No coverage configuration or CI/CD checks enforcing minimums
+**Current State:** 70 backend tests pass locally; no enforced coverage threshold or frontend unit test suite yet.
 
 ## Test Types
 
@@ -257,7 +268,7 @@ pytest                   # Run tests
 **Untested Áreas:**
 - API endpoints: No tests for Flask routes (`api/graph.py`, `api/simulation.py`, etc.)
 - Frontend: No Vue component tests
-- Services: Only `GraphBuilderService` has minimal testing
+- Services: Core contracts now cover report quality, artifacts, delivery governance, social bootstrap, simulation data reader and state sync; API route coverage remains limited
 - Error paths: Very limited exception testing
 - Integration: No multi-service workflows tested
 
@@ -267,9 +278,9 @@ pytest                   # Run tests
 - Refactoring services becomes risky
 
 **Priority:** **High** — Recommend adding:
-1. API route tests using Flask test client
-2. Service layer tests for critical operations (simulation, graph building)
-3. Error condition testing
+1. API route tests using Flask test client, especially `/api/report/generate`, report artifacts and `/api/simulation/<id>/quality`
+2. Frontend component tests for Step 3 gate and Step 4 custody panel
+3. End-to-end smoke workflow: briefing -> graph -> profiles -> simulation -> quality -> report
 
 ## Best Practices Observed
 
@@ -289,4 +300,4 @@ pytest                   # Run tests
 
 ---
 
-*Testing analysis: 2026-04-13*
+*Testing map updated: 2026-05-04*

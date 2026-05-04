@@ -450,6 +450,29 @@ class Report:
     created_at: str = ""
     completed_at: str = ""
     error: Optional[str] = None
+    quality_gate: Optional[Dict[str, Any]] = None
+    evidence_audit: Optional[Dict[str, Any]] = None
+
+    def delivery_status(self) -> str:
+        """Classificacao operacional para entrega ao cliente."""
+        if self.status == ReportStatus.FAILED:
+            return "failed"
+        if self.status != ReportStatus.COMPLETED:
+            return "in_progress"
+        if not self.quality_gate or not self.evidence_audit:
+            return "legacy_unverified"
+        if self.quality_gate.get("passes_gate") is not True:
+            return "blocked_by_system_gate"
+        if self.evidence_audit.get("passes_gate") is not True:
+            return "blocked_by_evidence_audit"
+        gate_metrics = self.quality_gate.get("metrics") or {}
+        if gate_metrics.get("diagnostic_only") or gate_metrics.get("delivery_publishable_mode") is False:
+            return "diagnostic_only"
+        return "publishable"
+
+    def is_publishable(self) -> bool:
+        """Verdadeiro somente quando o relatorio passou por todo o contrato INTEIA."""
+        return self.delivery_status() == "publishable"
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -462,7 +485,11 @@ class Report:
             "markdown_content": self.markdown_content,
             "created_at": self.created_at,
             "completed_at": self.completed_at,
-            "error": self.error
+            "error": self.error,
+            "quality_gate": self.quality_gate,
+            "evidence_audit": self.evidence_audit,
+            "delivery_status": self.delivery_status(),
+            "publishable": self.is_publishable(),
         }
 
 
@@ -554,19 +581,19 @@ Voce e um especialista em redacao de "Relatorios de Previsao Futura", com uma "v
 IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
 
 [Conceito Central]
-Construimos um mundo simulado e injetamos nele uma "demanda de simulacao" especifica como variavel. O resultado da evolucao do mundo simulado e uma previsao do que pode acontecer no futuro. O que voce esta observando nao sao "dados experimentais", mas sim um "ensaio do futuro".
+Construimos um mundo simulado e injetamos nele uma "demanda de simulacao" especifica como variavel. O resultado da evolucao do mundo simulado e um teste de hipotese para decisao, nao uma certeza sobre o futuro. O que voce esta observando nao sao "dados experimentais" nem "campo real", mas um ensaio do futuro que precisa declarar limites.
 
 [Sua Tarefa]
-Redigir um "Relatorio de Previsao Futura" que responda:
-1. Sob as condicoes que definimos, o que aconteceu no futuro?
-2. Como os diferentes tipos de Agents (grupos) reagiram e agiram?
-3. Quais tendencias e riscos futuros dignos de atencao esta simulacao revelou?
+Redigir um "Relatorio de Consultoria por Simulacao" que responda:
+1. Qual hipotese foi testada?
+2. O que a simulacao observou sob as condicoes definidas?
+3. Onde o resultado e forte, onde e fragil e qual risco residual permanece?
 
 [Posicionamento do Relatorio]
-- Este e um relatorio de previsao futura baseado em simulacao, revelando "se assim, como sera o futuro"
-- Foco nos resultados da previsao: evolucao dos eventos, reacoes dos grupos, fenomenos emergentes, riscos potenciais
-- As falas e acoes dos Agents no mundo simulado sao previsoes do comportamento futuro dos grupos
-- NAO e uma analise da situacao atual do mundo real
+- Este e um relatorio de consultoria por simulacao: testa hipoteses antes da recomendacao
+- Foco em hipotese testada, resultado observado, limite da simulacao e risco residual
+- As falas e acoes dos Agents no mundo simulado sao evidencias simuladas, nao fatos de campo
+- NAO venda previsao como certeza; rotule [Fato], [Simulacao], [Inferencia] ou [Campo necessario]
 - NAO e um resumo generico de opiniao publica
 
 [Limite de Secoes]
@@ -629,15 +656,16 @@ Secao a ser redigida agora: {section_title}
 ═══════════════════════════════════════════════════════════════
 
 O mundo simulado e um ensaio do futuro. Injetamos condicoes especificas (demanda de simulacao) no mundo simulado,
-e o comportamento e as interacoes dos Agents na simulacao sao previsoes do comportamento futuro dos grupos.
+e o comportamento e as interacoes dos Agents na simulacao sao evidencias simuladas para decisao, nao fatos de campo.
 
 Sua tarefa e:
-- Revelar o que aconteceu no futuro sob as condicoes definidas
-- Prever como os diferentes tipos de grupos (Agents) reagiram e agiram
+- Mostrar qual hipotese foi testada
+- Revelar o que a simulacao observou sob as condicoes definidas
+- Separar resultado estavel, fragilidade, limite e risco residual
 - Descobrir tendencias futuras, riscos e oportunidades dignos de atencao
 
 NAO escreva como uma analise da situacao atual do mundo real
-FOQUE em "como sera o futuro" — os resultados da simulacao sao o futuro previsto
+FOQUE em "o que a simulacao sustenta" — os resultados simulados informam decisao, mas nao substituem campo real
 
 ═══════════════════════════════════════════════════════════════
 [Regras Mais Importantes - Obrigatorio seguir]
@@ -655,17 +683,18 @@ FOQUE em "como sera o futuro" — os resultados da simulacao sao o futuro previs
      > "Um certo grupo expressaria: conteudo original..."
    - Essas citacoes sao as evidencias centrais da previsao simulada
 
-3. [Consistencia linguistica - Citacoes devem ser traduzidas para o idioma do relatorio]
+3. [Consistencia linguistica - Citacoes diretas nao podem ser fabricadas nem traduzidas como aspas]
    - O conteudo retornado pelas ferramentas pode conter ingles, portugues ou expressoes mistas
    - O relatorio deve seguir o idioma principal da solicitacao do usuario e dos materiais originais
    - Se nao houver indicacao clara, use portugues do Brasil como padrao
-   - Ao citar conteudo em outros idiomas, traduza primeiro para o idioma do relatorio mantendo o sentido original
-   - Esta regra se aplica tanto ao texto principal quanto ao conteudo nos blocos de citacao (formato >)
+   - Use aspas SOMENTE quando a frase exata existir nas evidencias retornadas por ferramentas ou no material-base
+   - Se precisar traduzir ou resumir uma fala, faca como parafrase marcada [Simulacao] ou [Inferencia], sem aspas
 
 4. [Apresentar fielmente os resultados da previsao]
    - O conteudo do relatorio deve refletir os resultados da simulacao que representam o futuro no mundo simulado
    - Nao adicione informacoes que nao existem na simulacao
    - Se a informacao for insuficiente em algum aspecto, declare isso honestamente
+   - Cada recomendacao deve trazer: hipotese, resultado, limite e risco residual
 
 5. [REGRA ZERO - INTEIA - Antialucinacao (INVIOLAVEL)]
    - PROIBIDO inventar citacoes. Toda aspa "..." deve vir de uma acao REAL retornada pela ferramenta.
@@ -911,6 +940,7 @@ secao final intitulada "Analise Estrategica" que contenha:
 5. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
 6. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
    (considerar: tamanho da amostra de agentes, numero de rodadas, diversidade de perfis)
+7. **Limites e Campo Necessario**: o que foi simulado, o que foi confirmado e o que ainda exige dado externo
 
 [Regras Absolutas]
 - Lidere com a recomendacao, fundamente depois
@@ -918,6 +948,9 @@ secao final intitulada "Analise Estrategica" que contenha:
 - A tabela de 3 cenarios e OBRIGATORIA — relatorio sem ela e considerado incompleto
 - Cada risco com probabilidade numerica
 - Cada recomendacao com prazo e responsavel quando aplicavel
+- Rotule claims como [Fato], [Simulacao], [Inferencia] ou [Campo necessario]
+- Nao use aspas diretas se a frase nao aparece literalmente no relatorio ou nos dados simulados
+- Se a evidencia for fraca, reduza a confianca e declare o limite; nao compense com retorica
 - Termine com uma frase de assinatura pessoal — acida, inteligente, memoravel
 
 [Formato]
@@ -1658,6 +1691,7 @@ class ReportAgent:
         progress_callback: Optional[Callable[[str, int, str], None]] = None,
         report_id: Optional[str] = None,
         source_text: Optional[str] = None,
+        delivery_mode: Optional[str] = None,
     ) -> Report:
         """
         Gera o relatorio completo (saida em tempo real por secao)
@@ -1717,6 +1751,52 @@ class ReportAgent:
             ReportManager.update_progress(
                 report_id, "pending", 0, "Inicializando relatorio...",
                 completed_sections=[]
+            )
+            ReportManager.save_report(report)
+
+            # Gate estrutural INTEIA: impede relatorio fora do sistema consolidado.
+            if not source_text:
+                try:
+                    from .simulation_manager import SimulationManager
+                    from ..models.project import ProjectManager
+
+                    sim_state = SimulationManager().get_simulation(self.simulation_id)
+                    if sim_state:
+                        source_text = ProjectManager.get_extracted_text(sim_state.project_id)
+                except Exception as gate_source_err:
+                    logger.warning(f"Nao foi possivel carregar texto-base para gate: {gate_source_err}")
+
+            from .report_system_gate import (
+                assert_report_system_ready,
+                collect_report_evidence,
+                compact_evidence_for_manifest,
+            )
+
+            gate_result = assert_report_system_ready(
+                simulation_id=self.simulation_id,
+                graph_id=self.graph_id,
+                source_text=source_text,
+                delivery_mode=delivery_mode,
+            )
+            evidence_bundle = collect_report_evidence(
+                simulation_id=self.simulation_id,
+                source_text=source_text,
+            )
+            report.quality_gate = gate_result.to_dict()
+            ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
+            ReportManager.save_json_artifact(
+                report_id,
+                "evidence_manifest.json",
+                {
+                    "simulation_id": self.simulation_id,
+                    "graph_id": self.graph_id,
+                    "simulation_requirement": self.simulation_requirement,
+                    "quality_gate": report.quality_gate,
+                    "evidence_index": compact_evidence_for_manifest(
+                        evidence_bundle.get("evidence_index", [])
+                    ),
+                    "total_evidence_documents": evidence_bundle.get("total_evidence_documents", 0),
+                },
             )
             ReportManager.save_report(report)
             
@@ -1890,6 +1970,31 @@ class ReportAgent:
             except Exception as e:
                 logger.warning(f"QC pos-relatorio falhou (nao-bloqueante): {e}")
 
+            # Auditoria hard-gate de evidencias: citacoes diretas precisam existir no corpus.
+            from app.utils.report_quality import (
+                audit_report_evidence,
+                render_evidence_audit_block,
+            )
+
+            evidence_audit = audit_report_evidence(
+                assembled_content,
+                evidence_bundle.get("evidence_texts", []),
+                fail_on_unsupported_quotes=Config.REPORT_FAIL_ON_UNSUPPORTED_QUOTES,
+            )
+            report.evidence_audit = evidence_audit
+            ReportManager.save_json_artifact(report_id, "evidence_audit.json", evidence_audit)
+            assembled_content += render_evidence_audit_block(evidence_audit)
+
+            if not evidence_audit.get("passes_gate"):
+                report.markdown_content = assembled_content
+                report.status = ReportStatus.FAILED
+                report.error = (
+                    "Relatorio bloqueado pela auditoria de evidencias: "
+                    f"{evidence_audit.get('quotes_unsupported', 0)} citacoes sem suporte"
+                )
+                ReportManager.save_report(report)
+                raise ValueError(report.error)
+
             report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.now().isoformat()
@@ -1927,6 +2032,9 @@ class ReportAgent:
             logger.error(f"Falha na geracao do relatorio: {str(e)}")
             report.status = ReportStatus.FAILED
             report.error = str(e)
+            gate_result = getattr(e, "result", None)
+            if gate_result is not None and hasattr(gate_result, "to_dict"):
+                report.quality_gate = gate_result.to_dict()
             
             # Registra log de erro
             if self.report_logger:
@@ -1934,6 +2042,8 @@ class ReportAgent:
             
             # Salva o estado de falha
             try:
+                if report.quality_gate:
+                    ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
                 ReportManager.save_report(report)
                 ReportManager.update_progress(
                     report_id, "failed", -1, f"Falha na geracao do relatorio: {str(e)}",
@@ -2208,6 +2318,52 @@ class ReportManager:
     def _get_console_log_path(cls, report_id: str) -> str:
         """Obtem o caminho do arquivo de log de console"""
         return os.path.join(cls._get_report_folder(report_id), "console_log.txt")
+
+    @classmethod
+    def save_json_artifact(cls, report_id: str, filename: str, payload: Dict[str, Any]) -> None:
+        """Salva artefato JSON auxiliar dentro da pasta do relatorio."""
+        cls._ensure_report_folder(report_id)
+        safe_name = os.path.basename(filename)
+        if not safe_name.endswith(".json"):
+            safe_name += ".json"
+        path = os.path.join(cls._get_report_folder(report_id), safe_name)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    @classmethod
+    def load_json_artifact(cls, report_id: str, filename: str) -> Optional[Dict[str, Any]]:
+        """Carrega artefato JSON auxiliar salvo junto ao relatorio."""
+        safe_name = os.path.basename(filename)
+        if not safe_name.endswith(".json"):
+            safe_name += ".json"
+        path = os.path.join(cls._get_report_folder(report_id), safe_name)
+        if not os.path.exists(path):
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {"items": data}
+
+    @classmethod
+    def list_json_artifacts(cls, report_id: str) -> List[Dict[str, Any]]:
+        """Lista artefatos JSON auxiliares disponiveis para auditoria do relatorio."""
+        folder = cls._get_report_folder(report_id)
+        if not os.path.isdir(folder):
+            return []
+
+        internal_files = {"meta.json", "outline.json", "progress.json"}
+        artifacts: List[Dict[str, Any]] = []
+        for filename in sorted(os.listdir(folder)):
+            if not filename.endswith(".json") or filename in internal_files:
+                continue
+            path = os.path.join(folder, filename)
+            if not os.path.isfile(path):
+                continue
+            artifacts.append({
+                "name": filename,
+                "size": os.path.getsize(path),
+                "updated_at": datetime.fromtimestamp(os.path.getmtime(path)).isoformat(),
+            })
+        return artifacts
     
     @classmethod
     def get_console_log(cls, report_id: str, from_line: int = 0) -> Dict[str, Any]:
@@ -2748,7 +2904,9 @@ class ReportManager:
             markdown_content=markdown_content,
             created_at=data.get('created_at', ''),
             completed_at=data.get('completed_at', ''),
-            error=data.get('error')
+            error=data.get('error'),
+            quality_gate=data.get('quality_gate'),
+            evidence_audit=data.get('evidence_audit'),
         )
     
     @classmethod

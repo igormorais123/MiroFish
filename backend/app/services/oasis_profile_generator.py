@@ -1048,6 +1048,26 @@ Importante:
         else:
             self._save_reddit_json(profiles, file_path)
 
+    @staticmethod
+    def _social_behavior_contract(profile: OasisAgentProfile) -> str:
+        stance = getattr(profile, "stance", "") or "default"
+        return (
+            "Contrato de simulacao social: aja como participante do debate, nao como narrador. "
+            "Quando um conteudo afetar seus interesses, escolha acoes publicas coerentes com seu perfil: "
+            "CREATE_COMMENT para responder com argumento, LIKE_POST ou DISLIKE_POST para sinalizar apoio ou rejeicao, "
+            "REPOST ou QUOTE_POST para ampliar uma fala relevante, FOLLOW quando a fonte fizer sentido. "
+            "Use CREATE_POST para posicao propria nova, nao para repetir o mesmo estimulo. "
+            "Evite apenas observar, atualizar feed ou ficar em silencio quando houver tema relevante. "
+            f"Sua inclinacao narrativa nesta simulacao e: {stance}."
+        )
+
+    def _append_social_behavior_contract(self, text: str, profile: OasisAgentProfile) -> str:
+        base = (text or "").strip()
+        contract = self._social_behavior_contract(profile)
+        if "Contrato de simulacao social:" in base:
+            return base
+        return f"{base} {contract}".strip()
+
     def _save_twitter_csv(self, profiles: List[OasisAgentProfile], file_path: str):
         """
         Salva Twitter Profile em formato CSV (conforme OASIS oficial)
@@ -1082,6 +1102,7 @@ Importante:
                 user_char = profile.bio
                 if profile.persona and profile.persona != profile.bio:
                     user_char = f"{profile.bio} {profile.persona}"
+                user_char = self._append_social_behavior_contract(user_char, profile)
                 # Processa quebras de linha (substituidas por espacos no CSV)
                 user_char = user_char.replace('\n', ' ').replace('\r', ' ')
 
@@ -1150,7 +1171,10 @@ Importante:
                 "username": profile.user_name,
                 "name": profile.name,
                 "bio": profile.bio[:150] if profile.bio else f"{profile.name}",
-                "persona": profile.persona or f"{profile.name} is a participant in social discussions.",
+                "persona": self._append_social_behavior_contract(
+                    profile.persona or f"{profile.name} is a participant in social discussions.",
+                    profile,
+                ),
                 "karma": profile.karma if profile.karma else 1000,
                 "created_at": profile.created_at,
                 # Campos obrigatorios do OASIS - garante valores padrao

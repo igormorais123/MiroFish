@@ -1,6 +1,17 @@
 # Codebase Structure
 
 **Analysis Date:** 2026-04-13
+**Last update:** 2026-05-04
+
+## Atualizacao 2026-05-04
+
+A estrutura passou a incluir a camada de governanca da consultoria por simulacao:
+
+- `report_system_gate.py` bloqueia relatorio sem simulacao/evidencia suficiente.
+- `social_bootstrap.py` planeja o pulso social inicial auditavel.
+- `report_quality.py` audita citacoes diretas e renderiza bloco de evidencia.
+- `simulation_data_reader.py` mede diversidade semantica, agentes, plataformas e trace OASIS.
+- Step 3 e Step 4 no frontend agora fazem parte da governanca, nao apenas da exibicao.
 
 ## Directory Layout
 
@@ -13,8 +24,8 @@ mirofish-inteia/
 │   │   ├── api/                     # Flask blueprints (HTTP endpoints)
 │   │   │   ├── __init__.py          # Blueprint registration
 │   │   │   ├── graph.py             # /api/graph/* (ontology, graph building)
-│   │   │   ├── simulation.py        # /api/simulation/* (preparation, execution)
-│   │   │   ├── report.py            # /api/report/* (generation, interaction)
+│   │   │   ├── simulation.py        # /api/simulation/* (preparation, execution, quality)
+│   │   │   ├── report.py            # /api/report/* (generation, interaction, artifacts)
 │   │   │   └── internal.py          # /api/internal/v1/* (internal service API)
 │   │   ├── models/                  # Data classes, state management
 │   │   │   ├── project.py           # Project state, persistence
@@ -31,8 +42,10 @@ mirofish-inteia/
 │   │   │   ├── simulation_manager.py       # Step 3: Simulation orchestration
 │   │   │   ├── simulation_runner.py        # Step 3: Parallel OASIS execution
 │   │   │   ├── simulation_ipc.py           # Inter-process communication for runners
-│   │   │   ├── simulation_data_reader.py   # Read simulation output from disk
-│   │   │   ├── report_agent.py             # Step 4: ReACT report generation
+│   │   │   ├── simulation_data_reader.py   # Read simulation output, diversity and OASIS trace
+│   │   │   ├── social_bootstrap.py         # Initial social pulse planning
+│   │   │   ├── report_system_gate.py       # Structural report delivery gate
+│   │   │   ├── report_agent.py             # Step 4: gated report generation
 │   │   │   ├── zep_tools.py                # Report agent tools (search, insight, interview)
 │   │   │   ├── zep_graph_memory_updater.py # Update graph with simulation memory
 │   │   │   └── __init__.py
@@ -43,6 +56,7 @@ mirofish-inteia/
 │   │   │   ├── file_parser.py       # PDF, Markdown, TXT parsing
 │   │   │   ├── token_tracker.py     # LLM token usage tracking
 │   │   │   ├── retry.py             # Retry decorators and logic
+│   │   │   ├── report_quality.py    # Direct quote/evidence audit
 │   │   │   └── __init__.py
 │   │   └── __pycache__              # Python compiled cache (ignored in git)
 │   ├── autoresearch/                # Auto-research/optimization tools (experimental)
@@ -97,8 +111,8 @@ mirofish-inteia/
 │   │   ├── components/              # Reusable UI components
 │   │   │   ├── Step1GraphBuild.vue  # Workflow step 1 UI
 │   │   │   ├── Step2EnvSetup.vue    # Workflow step 2a UI
-│   │   │   ├── Step3Simulation.vue  # Workflow step 3 UI
-│   │   │   ├── Step4Report.vue      # Workflow step 4 UI
+│   │   │   ├── Step3Simulation.vue  # Workflow step 3 UI + quality gate
+│   │   │   ├── Step4Report.vue      # Workflow step 4 UI + evidence custody
 │   │   │   ├── Step5Interaction.vue # Workflow step 5 UI
 │   │   │   ├── GraphPanel.vue       # Knowledge graph visualization (D3)
 │   │   │   └── HistoryDatabase.vue  # Project history view
@@ -163,6 +177,7 @@ mirofish-inteia/
 - Purpose: Workflow engines and business logic
 - Contains: Ontology generation, graph building, simulation orchestration, report generation
 - Key files: Each service is a single workflow step or utility (see diagram in ARCHITECTURE.md)
+- Delivery-governance files: `report_system_gate.py`, `simulation_data_reader.py`, `social_bootstrap.py`, `report_agent.py`
 
 **backend/app/models:**
 - Purpose: Data classes and state management
@@ -173,6 +188,7 @@ mirofish-inteia/
 - Purpose: Infrastructure and HTTP clients
 - Contains: LLM client (OpenAI/OmniRoute), Graphiti client, logging, file parsing
 - Key files: `llm_client.py`, `graphiti_client.py`, `logger.py`
+- Report evidence helper: `report_quality.py`
 
 **frontend/src/views:**
 - Purpose: Page-level components (one per major workflow step)
@@ -193,6 +209,7 @@ mirofish-inteia/
 - Purpose: Runtime file storage (created at first run)
 - Contains: Uploaded documents, simulation snapshots, generated reports
 - Structure: `simulations/{sim_id}/`, `reports/{report_id}/`
+- Audit artifacts: `reports/{report_id}/system_gate.json`, `evidence_manifest.json`, `evidence_audit.json`
 
 ## Key File Locations
 
@@ -211,10 +228,12 @@ mirofish-inteia/
 - `backend/app/services/ontology_generator.py` - LLM-based ontology design
 - `backend/app/services/graph_builder.py` - Graphiti graph construction
 - `backend/app/services/simulation_manager.py` - Simulation orchestration
-- `backend/app/services/report_agent.py` - Report generation with ReACT
+- `backend/app/services/report_agent.py` - Report generation with gate/audit artifacts
+- `backend/app/services/report_system_gate.py` - Structural delivery gate
+- `backend/app/services/social_bootstrap.py` - Deterministic social interaction bootstrap
 
 **Testing:**
-- `backend/tests/` - Test suite (if present)
+- `backend/tests/` - Test suite, 70 tests passing on 2026-05-04
 
 ## Naming Conventions
 
@@ -297,4 +316,4 @@ mirofish-inteia/
 
 ---
 
-*Structure analysis: 2026-04-13*
+*Structure map updated: 2026-05-04*

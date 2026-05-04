@@ -307,6 +307,21 @@ class SimulationRunner:
             json.dump(data, f, ensure_ascii=False, indent=2)
         
         cls._run_states[state.simulation_id] = state
+        cls._sync_simulation_manager_state(state)
+
+    @classmethod
+    def _sync_simulation_manager_state(cls, state: SimulationRunState):
+        """Mantem state.json coerente com run_state.json para APIs e relatorios."""
+        if state.runner_status == RunnerStatus.IDLE:
+            return
+        try:
+            from .simulation_manager import SimulationManager
+
+            SimulationManager().apply_runner_status(state.simulation_id, state)
+        except Exception as exc:
+            logger.warning(
+                f"Falha ao sincronizar estado mestre da simulacao {state.simulation_id}: {exc}"
+            )
     
     @classmethod
     def start_simulation(

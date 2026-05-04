@@ -4,9 +4,13 @@ from __future__ import annotations
 import pytest
 
 from app.utils.report_quality import (
+    audit_report_evidence,
     evaluate_section_grounding,
+    extract_direct_quotes,
     jaccard_similarity,
     measure_overlap,
+    quote_supported_by_evidence,
+    render_evidence_audit_block,
     render_qc_block,
 )
 
@@ -103,3 +107,42 @@ def test_render_qc_block_lista_secoes_quando_fornecidas():
     md = render_qc_block(overlap, sections)
     assert "1/2" in md
     assert "Gate editorial" in md
+
+
+def test_extract_direct_quotes_ignora_blocos_de_codigo():
+    text = 'Relatorio cita "fala real do agente".\n\n```md\n"exemplo falso no prompt"\n```'
+    assert extract_direct_quotes(text) == ["fala real do agente"]
+
+
+def test_quote_supported_by_evidence_exige_corpus():
+    evidence = ['Agent A escreveu: "precisamos testar antes de decidir" no round 2.']
+    assert quote_supported_by_evidence("precisamos testar antes de decidir", evidence) is True
+    assert quote_supported_by_evidence("frase inventada sem lastro", evidence) is False
+
+
+def test_audit_report_evidence_bloqueia_citacao_inventada():
+    report = 'A simulacao mostrou: "frase inventada sem lastro".'
+    audit = audit_report_evidence(report, ["conteudo real da simulacao"])
+    assert audit["passes_gate"] is False
+    assert audit["quotes_unsupported"] == 1
+
+
+def test_audit_report_evidence_aprova_citacoes_presentes():
+    evidence = ["Maria (twitter, round 1): precisamos testar antes de decidir"]
+    report = 'A reacao central foi: "precisamos testar antes de decidir".'
+    audit = audit_report_evidence(report, evidence)
+    assert audit["passes_gate"] is True
+    assert audit["quotes_supported"] == 1
+
+
+def test_render_evidence_audit_block_mostra_bloqueio():
+    audit = {
+        "passes_gate": False,
+        "quotes_total": 1,
+        "quotes_supported": 0,
+        "evidence_documents": 2,
+        "unsupported_quotes": ["frase inventada sem lastro"],
+    }
+    md = render_evidence_audit_block(audit)
+    assert "BLOQUEADO" in md
+    assert "frase inventada" in md

@@ -51,9 +51,13 @@ Relatório analítico → Conversa com agentes → Insights
 | **Mobile** | — | Responsivo (breakpoints 480px) |
 | **Enriquecimento** | — | Apify (Google SERP + Instagram) para contexto factual |
 | **QC do relatório** | — | Overlap upload×relatório (jaccard 5-gram, alerta >30%) + gate editorial por seção |
+| **Gate de entrega** | — | Bloqueio estrutural de relatório sem simulação concluída, evidência local, diversidade mínima, trace OASIS com ação social real e auditoria de citações |
+| **Interface de gate** | — | Step 03 consulta qualidade sistêmica e bloqueia o botão de relatório quando o gate reprova |
+| **Dinâmica social** | — | Pulso social inicial configurável no OASIS para gerar comentários, curtidas, rejeições, reposts e citações auditáveis |
+| **Governança cliente/demo** | — | Modo `client` é estrito e publicável só com gate completo; `demo/smoke` fica sempre como `diagnostic_only` |
 | **Anti-viés** | — | Devil's advocate em ~20% dos perfis + diversidade intra-grupo |
 | **Helena cenários** | Análise narrativa | Tabela obrigatória de 3 cenários probabilísticos (Base/Otimista/Contrário, soma=100%) |
-| **Testes** | — | Suite pytest com 53 testes em utils críticos |
+| **Testes** | — | Suite pytest com 70 testes em contratos críticos |
 
 ### Aplicações
 
@@ -217,6 +221,12 @@ Requer conta Apify com token em `APIFY_TOKEN`. O Mirofish prossegue normalmente 
 | [PRD v2](PRD_MIROFISH_INTEIA_V2.md) | Requisitos do produto |
 | [Backlog Técnico](BACKLOG_TECNICO_MIROFISH_INTEIA_V2.md) | Tasks técnicas pendentes |
 | [Plano de Adaptação](PLANO_ADAPTACAO_MIROFISH_INTEIA_V2.md) | Roadmap do fork |
+| [Estado Atual](.planning/STATE.md) | Status real da implementação, validações e pendências |
+| [Roadmap Atual](.planning/ROADMAP.md) | Próximas fases após o gate estrutural |
+| [Mapa de Documentação](.planning/DOCUMENTATION_MAP.md) | Onde ficam planos, mapas técnicos, memória e arquivos históricos |
+| [Plano Consultoria Simulada](.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md) | Implementação estrutural da promessa INTEIA de simular, verificar e entregar |
+| [Mapas Técnicos](.planning/codebase/STRUCTURE.md) | Estrutura, arquitetura, integrações, testes e riscos do código |
+| [Aprendizados Consultoria Auditável](.planning/LEARNINGS_CONSULTORIA_SIMULADA.md) | Aprendizados e decisões da fase v1.3 |
 | [Mapeamento PT-BR](MAPEAMENTO_PT-BR.md) | Referência de tradução |
 | [Integração Lenia](LENIA_MIROFISH_INTEGRACAO.md) | Ponte com sistema eleitoral |
 

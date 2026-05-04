@@ -1019,12 +1019,15 @@ def run_preset():
 
                 # 6. Relatorio
                 import uuid
-                from ..services.report_agent import ReportAgent, ReportManager
+                from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
                 report_id = f"report_{uuid.uuid4().hex[:12]}"
                 agent = ReportAgent(graph_id=graph_id, simulation_id=state.simulation_id,
                                     simulation_requirement=project.simulation_requirement)
-                report = agent.generate_report(report_id=report_id)
+                report = agent.generate_report(report_id=report_id, source_text=text)
                 ReportManager.save_report(report)
+
+                if report.status != ReportStatus.COMPLETED:
+                    raise RuntimeError(report.error or "Relatorio nao passou no gate estrutural")
 
                 task_manager.update_task(
                     task_id, status=TaskStatus.COMPLETED, progress=100,

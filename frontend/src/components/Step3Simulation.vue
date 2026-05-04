@@ -91,13 +91,28 @@
       </div>
 
       <div class="action-controls">
+        <div v-if="phase === 2" class="quality-gate" :class="qualityGateClass">
+          <div class="quality-gate-main">
+            <span class="gate-dot"></span>
+            <span class="quality-title">{{ qualityGateTitle }}</span>
+          </div>
+          <div v-if="reportGate" class="quality-metrics">
+            <span>D2 {{ formatMetric(diversityMetrics.distinct_2) }}</span>
+            <span>EA {{ formatMetric(diversityMetrics.action_type_entropy) }}</span>
+            <span>INT {{ oasisTraceMetrics.interactive_actions_total || 0 }}</span>
+          </div>
+          <div v-if="gateBlocked && primaryGateIssue" class="gate-issue">
+            {{ primaryGateIssue }}
+          </div>
+        </div>
         <button 
           class="action-btn primary"
-          :disabled="phase !== 2 || isGeneratingReport"
+          :disabled="!canGenerateReport"
+          :title="reportButtonTitle"
           @click="handleNextStep"
         >
           <span v-if="isGeneratingReport" class="loading-spinner-small"></span>
-          {{ isGeneratingReport ? 'Iniciando...' : 'Gerar relatório final' }} 
+          {{ reportButtonText }}
           <span v-if="!isGeneratingReport" class="arrow-icon">→</span>
         </button>
       </div>
@@ -293,7 +308,8 @@ import {
   startSimulation, 
   stopSimulation,
   getRunStatus, 
-  getRunStatusDetail
+  getRunStatusDetail,
+  getSimulationQuality
 } from '../api/simulation'
 import { generateReport } from '../api/report'
 
@@ -320,6 +336,10 @@ const isStarting = ref(false)
 const isStopping = ref(false)
 const startError = ref(null)
 const runStatus = ref({})
+const qualityCheck = ref(null)
+const isCheckingQuality = ref(false)
+const qualityError = ref(null)
+const qualityLoadedFor = ref(null)
 const allActions = ref([]) // todas as ações acumuladas incrementalmente
 const actionIds = ref(new Set()) // ids de ações para deduplicação
 const scrollContainer = ref(null)
@@ -337,6 +357,71 @@ const twitterActionsCount = computed(() => {
 
 const redditActionsCount = computed(() => {
   return allActions.value.filter(a => a.platform === 'reddit').length
+})
+
+const reportGate = computed(() => {
+  return qualityCheck.value?.report_gate || null
+})
+
+const diversityMetrics = computed(() => {
+  return qualityCheck.value?.diversity_metrics || {}
+})
+
+const oasisTraceMetrics = computed(() => {
+  return diversityMetrics.value?.oasis_trace || {}
+})
+
+const gatePasses = computed(() => {
+  return reportGate.value?.passes_gate === true
+})
+
+const gateBlocked = computed(() => {
+  return reportGate.value?.passes_gate === false
+})
+
+const gateIssues = computed(() => {
+  return reportGate.value?.issues || []
+})
+
+const primaryGateIssue = computed(() => {
+  const issue = gateIssues.value[0]
+  if (!issue) return ''
+  if (typeof issue === 'string') return issue
+  return issue.message || issue.code || JSON.stringify(issue)
+})
+
+const qualityGateTitle = computed(() => {
+  if (isCheckingQuality.value) return 'Verificando gate'
+  if (gatePasses.value) return 'Gate aprovado'
+  if (gateBlocked.value) return 'Gate bloqueado'
+  if (qualityError.value) return 'Gate indisponível'
+  return 'Gate pendente'
+})
+
+const qualityGateClass = computed(() => ({
+  approved: gatePasses.value,
+  blocked: gateBlocked.value,
+  checking: isCheckingQuality.value,
+  unavailable: !!qualityError.value && !reportGate.value
+}))
+
+const canGenerateReport = computed(() => {
+  return phase.value === 2 && !isGeneratingReport.value && !isCheckingQuality.value && gatePasses.value
+})
+
+const reportButtonText = computed(() => {
+  if (isGeneratingReport.value) return 'Iniciando...'
+  if (phase.value !== 2) return 'Gerar relatório final'
+  if (isCheckingQuality.value) return 'Verificando gate...'
+  if (gateBlocked.value) return 'Relatório bloqueado'
+  if (!gatePasses.value) return 'Aguardando gate'
+  return 'Gerar relatório final'
+})
+
+const reportButtonTitle = computed(() => {
+  if (gateBlocked.value && primaryGateIssue.value) return primaryGateIssue.value
+  if (qualityError.value) return qualityError.value
+  return ''
 })
 
 // Formatar tempo decorrido na simulação (calculado por rodadas e minutos por rodada)
@@ -369,6 +454,9 @@ const resetAllState = () => {
   runStatus.value = {}
   allActions.value = []
   actionIds.value = new Set()
+  qualityCheck.value = null
+  qualityError.value = null
+  qualityLoadedFor.value = null
   prevTwitterRound.value = 0
   prevRedditRound.value = 0
   roundTimes.value = []
@@ -452,6 +540,7 @@ const handleStopSimulation = async () => {
       phase.value = 2
       stopPolling()
       emit('update-status', 'completed')
+      await loadQualityGate({ force: true })
     } else {
       addLog(`Falha ao encerrar: ${res.error || 'erro desconhecido'}`)
     }
@@ -562,6 +651,7 @@ const fetchRunStatus = async () => {
         phase.value = 2
         stopPolling()
         emit('update-status', 'completed')
+        await loadQualityGate({ force: true })
       }
     }
   } catch (err) {
@@ -701,6 +791,67 @@ const formatActionTime = (timestamp) => {
   }
 }
 
+const formatMetric = (value, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
+  return Number(value).toFixed(digits)
+}
+
+const summarizeIssue = (issue) => {
+  if (!issue) return ''
+  if (typeof issue === 'string') return issue
+  return issue.message || issue.code || JSON.stringify(issue)
+}
+
+const getGateIssuesFromError = (err) => {
+  const data = err?.response?.data?.data || err?.response?.data
+  const issues = data?.issues || data?.report_gate?.issues || []
+  return Array.isArray(issues) ? issues.map(summarizeIssue).filter(Boolean) : []
+}
+
+const loadQualityGate = async ({ force = false } = {}) => {
+  if (!props.simulationId) return false
+  if (isCheckingQuality.value) return gatePasses.value
+  if (!force && qualityLoadedFor.value === props.simulationId && reportGate.value) {
+    return gatePasses.value
+  }
+
+  isCheckingQuality.value = true
+  qualityError.value = null
+  addLog('Verificando qualidade sistêmica antes do relatório...')
+
+  try {
+    const res = await getSimulationQuality(props.simulationId, { require_completed: true })
+    if (res.success && res.data) {
+      qualityCheck.value = res.data
+      qualityLoadedFor.value = props.simulationId
+
+      if (res.data.report_gate?.passes_gate) {
+        addLog('✓ Gate sistêmico aprovado: relatório liberado')
+        return true
+      }
+
+      const issue = summarizeIssue(res.data.report_gate?.issues?.[0])
+      addLog(`Relatório bloqueado pelo gate: ${issue || 'evidência insuficiente'}`)
+      return false
+    }
+
+    qualityError.value = res.error || 'Não foi possível verificar o gate'
+    addLog(`Relatório bloqueado: ${qualityError.value}`)
+    return false
+  } catch (err) {
+    const issues = getGateIssuesFromError(err)
+    qualityError.value = issues[0] || err.message || 'Não foi possível verificar o gate'
+    if (issues.length) {
+      const gateData = err.response?.data?.data
+      qualityCheck.value = gateData?.report_gate ? gateData : { ...(qualityCheck.value || {}), report_gate: gateData }
+    }
+    addLog(`Relatório bloqueado: ${qualityError.value}`)
+    return false
+  } finally {
+    isCheckingQuality.value = false
+  }
+}
+
 const handleNextStep = async () => {
   if (!props.simulationId) {
     addLog('Erro: simulationId ausente')
@@ -709,6 +860,12 @@ const handleNextStep = async () => {
   
   if (isGeneratingReport.value) {
     addLog('A solicitação de geração do relatório já foi enviada. Aguarde...')
+    return
+  }
+
+  const approved = await loadQualityGate()
+  if (!approved) {
+    addLog('A geração foi interrompida para evitar relatório fora do sistema consolidado.')
     return
   }
   
@@ -732,7 +889,12 @@ const handleNextStep = async () => {
       isGeneratingReport.value = false
     }
   } catch (err) {
-    addLog(`✗ Erro ao iniciar a geração do relatório: ${err.message}`)
+    const issues = getGateIssuesFromError(err)
+    if (issues.length) {
+      addLog(`✗ Relatório bloqueado pelo gate do backend: ${issues[0]}`)
+    } else {
+      addLog(`✗ Erro ao iniciar a geração do relatório: ${err.message}`)
+    }
     isGeneratingReport.value = false
   }
 }
@@ -780,12 +942,90 @@ onUnmounted(() => {
   align-items: center;
   border-bottom: 1px solid rgba(15, 39, 71, 0.1);
   z-index: 10;
-  height: 64px;
+  min-height: 64px;
+  gap: 16px;
 }
 
 .status-group {
   display: flex;
   gap: 12px;
+}
+
+.action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 280px;
+}
+
+.quality-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0f2747;
+}
+
+.quality-gate.approved {
+  border-color: rgba(94, 122, 52, 0.34);
+  background: rgba(94, 122, 52, 0.08);
+}
+
+.quality-gate.blocked {
+  border-color: rgba(149, 57, 46, 0.26);
+  background: rgba(149, 57, 46, 0.08);
+}
+
+.quality-gate.checking {
+  border-color: rgba(212, 160, 23, 0.34);
+  background: rgba(212, 160, 23, 0.08);
+}
+
+.quality-gate-main,
+.quality-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gate-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8b95a7;
+  flex: 0 0 auto;
+}
+
+.quality-gate.approved .gate-dot { background: #5e7a34; }
+.quality-gate.blocked .gate-dot { background: #95392e; }
+.quality-gate.checking .gate-dot { background: #d4a017; }
+
+.quality-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.quality-metrics {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #4b5563;
+}
+
+.gate-issue {
+  font-size: 10px;
+  line-height: 1.25;
+  color: #95392e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Platform Status Cards */
@@ -1336,5 +1576,41 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-right: 6px;
+}
+
+@media (max-width: 960px) {
+  .control-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+
+  .status-group,
+  .action-controls {
+    width: 100%;
+  }
+
+  .status-group {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .action-controls {
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .quality-gate {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .action-btn {
+    flex: 0 0 auto;
+    max-width: 190px;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+  }
 }
 </style>

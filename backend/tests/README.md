@@ -1,42 +1,55 @@
 # Backend tests
 
-Suite pytest cobrindo as utilities críticas do MiroFish INTEIA.
+Atualizado em: 2026-05-04
+
+Suite pytest cobrindo contratos criticos do MiroFish INTEIA.
 
 ## Como rodar
 
-```bash
-cd backend
-PYTHONPATH=. python -m pytest tests/ -v
-```
-
-Ou com cobertura:
+Da raiz do repositorio:
 
 ```bash
-PYTHONPATH=. python -m pytest tests/ --cov=app --cov-report=term-missing
+python -m pytest backend\tests
 ```
 
-## Cobertura atual (2026-04-27)
+Ou a partir de `backend/`:
 
-| Módulo | Testes | Notas |
+```bash
+python -m pytest tests
+```
+
+Com cobertura:
+
+```bash
+python -m pytest backend\tests --cov=backend/app --cov-report=term-missing
+```
+
+## Cobertura atual
+
+Validacao mais recente: **70 testes aprovados** em 2026-05-04.
+
+| Area | Arquivos | Notas |
 |---|---|---|
-| `utils/translation.py` | 12 | mapa EN→PT de relações de grafo |
-| `utils/report_quality.py` | 13 | jaccard, overlap, gate editorial (Phase 3) |
-| `utils/retry.py` | 8 | decorator + RetryableAPIClient (Phase 10) |
-| `utils/pagination.py` | 9 | clamps, defaults, bounds (Phase 10) |
-| `utils/token_tracker.py` | 11 | singleton, sessions, custos (Phase 10) |
-| **TOTAL** | **53** | passa em ~0.7s |
+| Tradução PT-BR | `test_translation.py` | mapa EN->PT de relações de grafo |
+| Qualidade do relatório | `test_report_quality.py` | overlap, gate editorial, auditoria de citações |
+| Artefatos de relatório | `test_report_manager_artifacts.py` | `system_gate`, auditoria e status publicável |
+| Diversidade/trace | `test_simulation_data_reader.py` | Distinct, entropia e ações OASIS |
+| Estado de simulação | `test_simulation_manager.py` | sincronização de runner/status |
+| Pulso social | `test_social_bootstrap.py` | plano determinístico de interações iniciais |
+| Perfis OASIS | `test_oasis_profile_generator.py` | contrato comportamental dos agentes |
+| Retry/paginação/tokens | `test_retry.py`, `test_pagination.py`, `test_token_tracker.py` | utilitários críticos |
+| Graph builder | `test_graph_builder.py` | materialização e degradação graciosa |
 
-## Roadmap de cobertura
+## Lacunas restantes
 
-Pendente Phase 10 (target 60% em `services/`):
-- `services/simulation_manager.py` — requer mocks de Zep/Graphiti
-- `services/report_agent.py` — testar `_parse_tool_calls`, `_fix_truncated_json`
-- `services/oasis_profile_generator.py` — testar geração de perfis (mock LLM)
-- `services/apify_enricher.py` — mock de subprocess
+- Testes de rotas Flask para `/api/report/generate`, artefatos e `/api/simulation/<id>/quality`.
+- Teste end-to-end com simulação nova e LLM ativo.
+- Testes de frontend para Step 3 gate e Step 4 cadeia de custódia.
+- Cobertura de encerramento de subprocessos no runner.
 
 ## Convenções
 
-- Português brasileiro nos nomes de teste e docstrings
-- Sem emojis (CLAUDE.md global)
-- Fixtures pytest isoladas (`autouse=True` quando há estado global)
-- Mocks via `unittest.mock` ou `pytest-mock` (já em deps)
+- Português brasileiro nos nomes de teste quando fizer sentido.
+- Fixtures isoladas em `conftest.py`.
+- Mocks via `monkeypatch`, `unittest.mock` ou `pytest-mock`.
+- Preferir testar contrato observável: status, artefato, métrica e bloqueio.

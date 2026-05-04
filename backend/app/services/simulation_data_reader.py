@@ -5,6 +5,10 @@ Substitui buscas no Graphiti quando este esta indisponivel.
 
 import os
 import json
+import math
+import re
+import sqlite3
+import unicodedata
 from typing import Dict, Any, List, Optional
 from collections import Counter, defaultdict
 
@@ -13,9 +17,57 @@ from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.sim_data_reader')
 
+_WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]+", re.UNICODE)
+
+
+def _normalize_words(text: str) -> list[str]:
+    if not text:
+        return []
+    nfkd = unicodedata.normalize("NFKD", text)
+    cleaned = "".join(c for c in nfkd if not unicodedata.combining(c))
+    return [tok.lower() for tok in _WORD_RE.findall(cleaned) if len(tok) > 1]
+
+
+def _normalized_entropy(counts: Counter) -> float:
+    total = sum(counts.values())
+    if total <= 0 or len(counts) <= 1:
+        return 0.0
+    entropy = 0.0
+    for value in counts.values():
+        if value <= 0:
+            continue
+        p = value / total
+        entropy -= p * math.log(p)
+    return entropy / math.log(len(counts))
+
+
+def _distinct_n(texts: list[str], n: int) -> float:
+    ngrams: list[tuple[str, ...]] = []
+    for text in texts:
+        words = _normalize_words(text)
+        if len(words) < n:
+            continue
+        ngrams.extend(tuple(words[i:i + n]) for i in range(len(words) - n + 1))
+    if not ngrams:
+        return 0.0
+    return len(set(ngrams)) / len(ngrams)
+
 
 class SimulationDataReader:
     """Le e analisa dados da simulacao direto dos arquivos JSONL."""
+
+    TRACE_FILTERED_ACTIONS = {"sign_up", "refresh", "interview"}
+    TRACE_INTERACTIVE_ACTIONS = {
+        "like_post",
+        "dislike_post",
+        "repost",
+        "quote_post",
+        "follow",
+        "mute",
+        "create_comment",
+        "like_comment",
+        "dislike_comment",
+    }
 
     def __init__(self, simulation_id: str):
         self.simulation_id = simulation_id
@@ -152,3 +204,128 @@ class SimulationDataReader:
                 'Action': len(actions),
             },
         }
+
+    def get_diversity_metrics(self) -> Dict[str, Any]:
+        """Mede diversidade comportamental e semantica da simulacao.
+
+        Inspirado no estudo de Lan et al. (Scientific Reports, 2026): usa
+        entropia normalizada para distribuicao de comportamento/agentes e
+        Distinct-1/2 para repeticao lexical dos textos gerados.
+        """
+        actions = self.get_agent_actions()
+        action_types = Counter(a.get('action_type', '') for a in actions if a.get('action_type'))
+        agents = Counter(a.get('agent_name', '') for a in actions if a.get('agent_name'))
+        platforms = Counter(a.get('platform', '') for a in actions if a.get('platform'))
+
+        texts: list[str] = []
+        for action in actions:
+            content = action.get('action_args', {}).get('content', '')
+            if content:
+                texts.append(content)
+
+        words_per_text = [len(_normalize_words(text)) for text in texts]
+        avg_text_length = sum(words_per_text) / len(words_per_text) if words_per_text else 0.0
+
+        role_counts = self._get_entity_type_action_counts(actions)
+        oasis_trace = self.get_oasis_trace_metrics()
+
+        return {
+            "total_actions": len(actions),
+            "generated_texts_count": len(texts),
+            "active_agents_count": len(agents),
+            "action_type_counts": dict(action_types),
+            "action_type_entropy_norm": round(_normalized_entropy(action_types), 4),
+            "agent_activity_entropy_norm": round(_normalized_entropy(agents), 4),
+            "platform_counts": dict(platforms),
+            "distinct_1": round(_distinct_n(texts, 1), 4),
+            "distinct_2": round(_distinct_n(texts, 2), 4),
+            "avg_text_length_words": round(avg_text_length, 2),
+            "entity_type_action_counts": dict(role_counts),
+            "entity_type_coverage": len(role_counts),
+            "oasis_trace": oasis_trace,
+        }
+
+    def get_oasis_trace_metrics(self) -> Dict[str, Any]:
+        """Resume a tabela trace dos bancos OASIS por plataforma.
+
+        O actions.jsonl e o contrato de auditoria do sistema; a tabela trace e
+        usada como contraprova para detectar duplicidade ou ausencia de
+        comportamento social real.
+        """
+        platform_counts: dict[str, dict[str, int]] = {}
+        total_counts: Counter = Counter()
+        db_files_found = 0
+
+        for platform in ["twitter", "reddit"]:
+            db_path = os.path.join(self.sim_dir, f"{platform}_simulation.db")
+            counts = Counter()
+            if os.path.exists(db_path):
+                db_files_found += 1
+                try:
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT action, COUNT(*) FROM trace GROUP BY action")
+                    counts.update({str(action): int(count) for action, count in cursor.fetchall() if action})
+                    conn.close()
+                except Exception as exc:
+                    logger.warning(f"Falha ao ler trace OASIS {db_path}: {exc}")
+            platform_counts[platform] = dict(counts)
+            total_counts.update(counts)
+
+        behavioral_counts = Counter({
+            action: count
+            for action, count in total_counts.items()
+            if action not in self.TRACE_FILTERED_ACTIONS
+        })
+        interactive_total = sum(
+            count for action, count in total_counts.items()
+            if action in self.TRACE_INTERACTIVE_ACTIONS
+        )
+        configured_initial_posts = self._get_initial_posts_count()
+        expected_initial_posts = configured_initial_posts * db_files_found
+        dynamic_create_posts = max(0, total_counts.get("create_post", 0) - expected_initial_posts)
+
+        return {
+            "db_files_found": db_files_found,
+            "platform_action_counts": platform_counts,
+            "total_action_counts": dict(total_counts),
+            "behavioral_action_counts": dict(behavioral_counts),
+            "behavioral_entropy_norm": round(_normalized_entropy(behavioral_counts), 4),
+            "configured_initial_posts": configured_initial_posts,
+            "expected_initial_posts_total": expected_initial_posts,
+            "dynamic_create_posts_estimate": dynamic_create_posts,
+            "interactive_actions_total": interactive_total,
+        }
+
+    def _get_initial_posts_count(self) -> int:
+        config_path = os.path.join(self.sim_dir, "simulation_config.json")
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return len((config.get("event_config") or {}).get("initial_posts", []) or [])
+        except Exception:
+            return 0
+
+    def _get_entity_type_action_counts(self, actions: List[Dict[str, Any]]) -> Counter:
+        """Conta acoes por entity_type usando simulation_config.json quando existir."""
+        config_path = os.path.join(self.sim_dir, "simulation_config.json")
+        id_to_type: dict[int, str] = {}
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            for item in config.get("agent_configs", []) or []:
+                agent_id = item.get("agent_id")
+                entity_type = item.get("entity_type") or "unknown"
+                if agent_id is not None:
+                    id_to_type[int(agent_id)] = str(entity_type)
+        except Exception:
+            return Counter()
+
+        counts = Counter()
+        for action in actions:
+            agent_id = action.get("agent_id")
+            if agent_id is None:
+                continue
+            entity_type = id_to_type.get(int(agent_id), "unknown")
+            counts[entity_type] += 1
+        return counts

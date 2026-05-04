@@ -171,6 +171,7 @@ def init_logging_for_simulation(simulation_dir: str):
 
 
 from action_logger import SimulationLogManager, PlatformActionLogger
+from app.services.social_bootstrap import build_social_bootstrap_plan
 
 try:
     from camel.models import ModelFactory
@@ -669,6 +670,116 @@ def get_agent_names_from_config(config: Dict[str, Any]) -> Dict[int, str]:
     return agent_names
 
 
+def get_seed_posts_from_db(
+    db_path: str,
+    agent_names: Dict[int, str],
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
+    """Obter postagens ja criadas no ambiente OASIS para receber reacoes."""
+    seed_posts = []
+    if not os.path.exists(db_path):
+        return seed_posts
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.post_id, p.content, p.user_id, u.agent_id
+            FROM post p
+            LEFT JOIN user u ON p.user_id = u.user_id
+            ORDER BY p.post_id ASC
+            LIMIT ?
+        """, (limit,))
+
+        for post_id, content, user_id, agent_id in cursor.fetchall():
+            resolved_agent_id = agent_id if agent_id is not None else user_id
+            seed_posts.append({
+                "post_id": post_id,
+                "agent_id": resolved_agent_id,
+                "agent_name": agent_names.get(resolved_agent_id, f"Agent_{resolved_agent_id}"),
+                "content": content or "",
+            })
+
+        conn.close()
+    except Exception as e:
+        print(f"Falha ao ler postagens iniciais do banco de dados: {e}")
+
+    return seed_posts
+
+
+def add_manual_action(actions: Dict[Any, Any], agent: Any, action: ManualAction) -> None:
+    """Adicionar acao manual preservando multiplas acoes para o mesmo agente."""
+    if agent in actions:
+        if not isinstance(actions[agent], list):
+            actions[agent] = [actions[agent]]
+        actions[agent].append(action)
+    else:
+        actions[agent] = action
+
+
+def count_manual_actions(actions: Dict[Any, Any]) -> int:
+    """Contar acoes manuais, considerando listas por agente."""
+    total = 0
+    for value in actions.values():
+        total += len(value) if isinstance(value, list) else 1
+    return total
+
+
+async def execute_social_bootstrap(
+    env,
+    config: Dict[str, Any],
+    platform: str,
+    db_path: str,
+    last_rowid: int,
+    agent_names: Dict[int, str],
+    action_logger: Optional[PlatformActionLogger] = None,
+    round_num: int = 0,
+) -> Tuple[int, int]:
+    """Executar pulso social inicial e registrar apenas acoes persistidas no OASIS."""
+    seed_posts = get_seed_posts_from_db(db_path, agent_names)
+    plan = build_social_bootstrap_plan(config, platform, seed_posts)
+    if not plan:
+        return last_rowid, 0
+
+    manual_actions: Dict[Any, Any] = {}
+    for item in plan:
+        try:
+            agent = env.agent_graph.get_agent(item["agent_id"])
+            action_type = getattr(ActionType, item["action_type"])
+            add_manual_action(
+                manual_actions,
+                agent,
+                ManualAction(
+                    action_type=action_type,
+                    action_args=item["action_args"],
+                ),
+            )
+        except Exception:
+            continue
+
+    if not manual_actions:
+        return last_rowid, 0
+
+    await env.step(manual_actions)
+    bootstrap_actions, new_last_rowid = fetch_new_actions_from_db(
+        db_path, last_rowid, agent_names
+    )
+
+    logged_count = 0
+    for action_data in bootstrap_actions:
+        if action_logger:
+            action_logger.log_action(
+                round_num=round_num,
+                agent_id=action_data['agent_id'],
+                agent_name=action_data['agent_name'],
+                action_type=action_data['action_type'],
+                action_args=action_data['action_args']
+            )
+        logged_count += 1
+
+    return new_last_rowid, logged_count
+
+
 def fetch_new_actions_from_db(
     db_path: str,
     last_rowid: int,
@@ -730,6 +841,8 @@ def fetch_new_actions_from_db(
                 simplified_args['comment_id'] = action_args['comment_id']
             if 'quoted_id' in action_args:
                 simplified_args['quoted_id'] = action_args['quoted_id']
+            if 'reposted_id' in action_args:
+                simplified_args['reposted_id'] = action_args['reposted_id']
             if 'new_post_id' in action_args:
                 simplified_args['new_post_id'] = action_args['new_post_id']
             if 'follow_id' in action_args:
@@ -788,7 +901,7 @@ def _enrich_action_context(
         
         # Repostagem: complementar conteudo e autor do post original
         elif action_type == 'REPOST':
-            new_post_id = action_args.get('new_post_id')
+            new_post_id = action_args.get('new_post_id') or action_args.get('reposted_id')
             if new_post_id:
                 # O original_post_id da repostagem aponta para o post original
                 cursor.execute("""
@@ -858,6 +971,14 @@ def _enrich_action_context(
         # Criar comentario: complementar informacoes da postagem comentada
         elif action_type == 'CREATE_COMMENT':
             post_id = action_args.get('post_id')
+            if not post_id and action_args.get('comment_id'):
+                cursor.execute("""
+                    SELECT post_id FROM comment WHERE comment_id = ?
+                """, (action_args.get('comment_id'),))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    post_id = row[0]
+                    action_args['post_id'] = post_id
             if post_id:
                 post_info = _get_post_info(cursor, post_id, agent_names)
                 if post_info:
@@ -1192,6 +1313,7 @@ async def run_twitter_simulation(
         action_logger.log_round_start(0, 0)  # round 0, simulated_hour 0
     
     initial_action_count = 0
+    pending_initial_logs = []
     if initial_posts:
         initial_actions = {}
         for post in initial_posts:
@@ -1199,27 +1321,56 @@ async def run_twitter_simulation(
             content = post.get("content", "")
             try:
                 agent = result.env.agent_graph.get_agent(agent_id)
-                initial_actions[agent] = ManualAction(
-                    action_type=ActionType.CREATE_POST,
-                    action_args={"content": content}
-                )
-                
-                if action_logger:
-                    action_logger.log_action(
-                        round_num=0,
-                        agent_id=agent_id,
-                        agent_name=agent_names.get(agent_id, f"Agent_{agent_id}"),
-                        action_type="CREATE_POST",
+                add_manual_action(
+                    initial_actions,
+                    agent,
+                    ManualAction(
+                        action_type=ActionType.CREATE_POST,
                         action_args={"content": content}
                     )
-                    total_actions += 1
-                    initial_action_count += 1
+                )
+                pending_initial_logs.append({
+                    'agent_id': agent_id,
+                    'agent_name': agent_names.get(agent_id, f"Agent_{agent_id}"),
+                    'action_type': "CREATE_POST",
+                    'action_args': {"content": content},
+                })
             except Exception:
                 pass
         
         if initial_actions:
             await result.env.step(initial_actions)
-            log_info(f"{len(initial_actions)} postagens iniciais publicadas")
+            db_initial_actions, last_rowid = fetch_new_actions_from_db(
+                db_path, last_rowid, agent_names
+            )
+            initial_logs = db_initial_actions or pending_initial_logs
+            for action_data in initial_logs:
+                if action_logger:
+                    action_logger.log_action(
+                        round_num=0,
+                        agent_id=action_data['agent_id'],
+                        agent_name=action_data['agent_name'],
+                        action_type=action_data['action_type'],
+                        action_args=action_data['action_args']
+                    )
+                total_actions += 1
+                initial_action_count += 1
+            log_info(f"{count_manual_actions(initial_actions)} postagens iniciais publicadas")
+
+            last_rowid, bootstrap_count = await execute_social_bootstrap(
+                result.env,
+                config,
+                "twitter",
+                db_path,
+                last_rowid,
+                agent_names,
+                action_logger,
+                round_num=0,
+            )
+            if bootstrap_count:
+                total_actions += bootstrap_count
+                initial_action_count += bootstrap_count
+                log_info(f"Pulso social inicial executado: {bootstrap_count} interacoes")
     
     # Registrar fim da rodada 0
     if action_logger:
@@ -1283,8 +1434,8 @@ async def run_twitter_simulation(
                     action_type=action_data['action_type'],
                     action_args=action_data['action_args']
                 )
-                total_actions += 1
-                round_action_count += 1
+            total_actions += 1
+            round_action_count += 1
         
         if action_logger:
             action_logger.log_round_end(round_num + 1, round_action_count)
@@ -1383,6 +1534,7 @@ async def run_reddit_simulation(
         action_logger.log_round_start(0, 0)  # round 0, simulated_hour 0
     
     initial_action_count = 0
+    pending_initial_logs = []
     if initial_posts:
         initial_actions = {}
         for post in initial_posts:
@@ -1390,35 +1542,56 @@ async def run_reddit_simulation(
             content = post.get("content", "")
             try:
                 agent = result.env.agent_graph.get_agent(agent_id)
-                if agent in initial_actions:
-                    if not isinstance(initial_actions[agent], list):
-                        initial_actions[agent] = [initial_actions[agent]]
-                    initial_actions[agent].append(ManualAction(
-                        action_type=ActionType.CREATE_POST,
-                        action_args={"content": content}
-                    ))
-                else:
-                    initial_actions[agent] = ManualAction(
+                add_manual_action(
+                    initial_actions,
+                    agent,
+                    ManualAction(
                         action_type=ActionType.CREATE_POST,
                         action_args={"content": content}
                     )
-                
-                if action_logger:
-                    action_logger.log_action(
-                        round_num=0,
-                        agent_id=agent_id,
-                        agent_name=agent_names.get(agent_id, f"Agent_{agent_id}"),
-                        action_type="CREATE_POST",
-                        action_args={"content": content}
-                    )
-                    total_actions += 1
-                    initial_action_count += 1
+                )
+                pending_initial_logs.append({
+                    'agent_id': agent_id,
+                    'agent_name': agent_names.get(agent_id, f"Agent_{agent_id}"),
+                    'action_type': "CREATE_POST",
+                    'action_args': {"content": content},
+                })
             except Exception:
                 pass
         
         if initial_actions:
             await result.env.step(initial_actions)
-            log_info(f"{len(initial_actions)} postagens iniciais publicadas")
+            db_initial_actions, last_rowid = fetch_new_actions_from_db(
+                db_path, last_rowid, agent_names
+            )
+            initial_logs = db_initial_actions or pending_initial_logs
+            for action_data in initial_logs:
+                if action_logger:
+                    action_logger.log_action(
+                        round_num=0,
+                        agent_id=action_data['agent_id'],
+                        agent_name=action_data['agent_name'],
+                        action_type=action_data['action_type'],
+                        action_args=action_data['action_args']
+                    )
+                total_actions += 1
+                initial_action_count += 1
+            log_info(f"{count_manual_actions(initial_actions)} postagens iniciais publicadas")
+
+            last_rowid, bootstrap_count = await execute_social_bootstrap(
+                result.env,
+                config,
+                "reddit",
+                db_path,
+                last_rowid,
+                agent_names,
+                action_logger,
+                round_num=0,
+            )
+            if bootstrap_count:
+                total_actions += bootstrap_count
+                initial_action_count += bootstrap_count
+                log_info(f"Pulso social inicial executado: {bootstrap_count} interacoes")
     
     # Registrar fim da rodada 0
     if action_logger:
@@ -1482,8 +1655,8 @@ async def run_reddit_simulation(
                     action_type=action_data['action_type'],
                     action_args=action_data['action_args']
                 )
-                total_actions += 1
-                round_action_count += 1
+            total_actions += 1
+            round_action_count += 1
         
         if action_logger:
             action_logger.log_round_end(round_num + 1, round_action_count)

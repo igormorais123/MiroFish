@@ -804,6 +804,66 @@ def get_simulation(simulation_id: str):
         }), 500
 
 
+@simulation_bp.route('/<simulation_id>/quality', methods=['GET'])
+def get_simulation_quality(simulation_id: str):
+    """
+    Obter diagnostico de qualidade da simulacao para relatorio.
+
+    Consolida diversidade comportamental, diversidade semantica e gate estrutural
+    antes de permitir entrega conclusiva.
+    """
+    try:
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": f"Simulação não encontrada: {simulation_id}"
+            }), 404
+
+        source_text = None
+        try:
+            source_text = ProjectManager.get_extracted_text(state.project_id)
+        except Exception:
+            pass
+
+        require_completed_arg = request.args.get('require_completed')
+        require_completed = None
+        if require_completed_arg is not None:
+            require_completed = require_completed_arg.lower() in {"1", "true", "sim", "yes"}
+
+        from ..services.report_system_gate import evaluate_report_system_gate
+
+        gate_result = evaluate_report_system_gate(
+            simulation_id=simulation_id,
+            graph_id=request.args.get('graph_id') or state.graph_id,
+            source_text=source_text,
+            require_completed_simulation=require_completed,
+            delivery_mode=request.args.get('delivery_mode'),
+        )
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "simulation_id": simulation_id,
+                "simulation_status": state.status.value,
+                "project_id": state.project_id,
+                "graph_id": state.graph_id,
+                "diversity": gate_result.metrics.get("diversity", {}),
+                "report_gate": gate_result.to_dict(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao obter diagnostico de qualidade da simulacao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 @simulation_bp.route('/list', methods=['GET'])
 def list_simulations():
     """

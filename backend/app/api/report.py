@@ -57,6 +57,7 @@ def generate_report():
             }), 400
 
         force_regenerate = data.get('force_regenerate', False)
+        delivery_mode = data.get('delivery_mode')
 
         # Obter informacoes da simulacao
         manager = SimulationManager()
@@ -105,6 +106,29 @@ def generate_report():
                 "error": "Descrição do objetivo da simulação ausente"
             }), 400
 
+        # Gate estrutural: evita iniciar tarefa de relatorio quando a simulacao
+        # ainda nao tem evidencias suficientes para sustentar conclusoes.
+        source_text = None
+        try:
+            source_text = ProjectManager.get_extracted_text(state.project_id)
+        except Exception:
+            pass
+
+        from ..services.report_system_gate import evaluate_report_system_gate
+
+        gate_result = evaluate_report_system_gate(
+            simulation_id=simulation_id,
+            graph_id=graph_id,
+            source_text=source_text,
+            delivery_mode=delivery_mode,
+        )
+        if not gate_result.passes_gate:
+            return jsonify({
+                "success": False,
+                "error": "Relatório bloqueado pelo gate estrutural INTEIA",
+                "data": gate_result.to_dict(),
+            }), 409
+
         # Gerar report_id antecipadamente para retornar ao frontend imediatamente
         import uuid
         report_id = f"report_{uuid.uuid4().hex[:12]}"
@@ -116,7 +140,8 @@ def generate_report():
             metadata={
                 "simulation_id": simulation_id,
                 "graph_id": graph_id,
-                "report_id": report_id
+                "report_id": report_id,
+                "delivery_mode": gate_result.metrics.get("delivery_mode"),
             }
         )
 
@@ -145,18 +170,12 @@ def generate_report():
                         message=f"[{stage}] {message}"
                     )
 
-                # Tenta carregar texto-base do projeto para QC overlap (Phase 3)
-                source_text = None
-                try:
-                    source_text = ProjectManager.get_extracted_text(state.project_id)
-                except Exception:
-                    pass
-
                 # Gerar relatorio (passando o report_id pre-gerado)
                 report = agent.generate_report(
                     progress_callback=progress_callback,
                     report_id=report_id,
                     source_text=source_text,
+                    delivery_mode=delivery_mode,
                 )
 
                 # Salvar relatorio
@@ -393,6 +412,79 @@ def list_reports():
 
     except Exception as e:
         logger.error(f"Falha ao listar relatorios: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@report_bp.route('/<report_id>/artifacts', methods=['GET'])
+def list_report_artifacts(report_id: str):
+    """Listar artefatos de gate, manifesto e auditoria do relatorio."""
+    try:
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({
+                "success": False,
+                "error": f"Relatório não encontrado: {report_id}"
+            }), 404
+
+        include_content = request.args.get('include_content', 'false').lower() == 'true'
+        artifacts = ReportManager.list_json_artifacts(report_id)
+
+        if include_content:
+            for artifact in artifacts:
+                artifact["content"] = ReportManager.load_json_artifact(report_id, artifact["name"])
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "report_id": report_id,
+                "simulation_id": report.simulation_id,
+                "artifacts": artifacts,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao listar artefatos do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@report_bp.route('/<report_id>/artifacts/<artifact_name>', methods=['GET'])
+def get_report_artifact(report_id: str, artifact_name: str):
+    """Obter um artefato JSON especifico do relatorio."""
+    try:
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({
+                "success": False,
+                "error": f"Relatório não encontrado: {report_id}"
+            }), 404
+
+        artifact = ReportManager.load_json_artifact(report_id, artifact_name)
+        if artifact is None:
+            return jsonify({
+                "success": False,
+                "error": f"Artefato não encontrado: {artifact_name}"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "report_id": report_id,
+                "simulation_id": report.simulation_id,
+                "artifact_name": os.path.basename(artifact_name),
+                "artifact": artifact,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao obter artefato do relatorio: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,

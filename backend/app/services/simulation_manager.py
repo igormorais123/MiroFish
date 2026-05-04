@@ -487,6 +487,79 @@ class SimulationManager:
     def get_simulation(self, simulation_id: str) -> Optional[SimulationState]:
         """Obtem estado da simulacao"""
         return self._load_simulation_state(simulation_id)
+
+    def apply_runner_status(self, simulation_id: str, runner_state: Any) -> Optional[SimulationState]:
+        """Sincroniza o estado mestre da simulacao com o estado auditavel do runner."""
+        state = self._load_simulation_state(simulation_id)
+        if not state:
+            logger.warning(f"Simulacao nao encontrada para sincronizar runner: {simulation_id}")
+            return None
+
+        raw_status = getattr(runner_state, "runner_status", runner_state)
+        runner_status = getattr(raw_status, "value", str(raw_status))
+
+        status_map = {
+            "starting": SimulationStatus.RUNNING,
+            "running": SimulationStatus.RUNNING,
+            "paused": SimulationStatus.PAUSED,
+            "stopped": SimulationStatus.STOPPED,
+            "completed": SimulationStatus.COMPLETED,
+            "failed": SimulationStatus.FAILED,
+        }
+        if runner_status in status_map:
+            state.status = status_map[runner_status]
+
+        current_round = getattr(runner_state, "current_round", None)
+        if current_round is not None:
+            state.current_round = max(state.current_round or 0, int(current_round or 0))
+
+        state.twitter_status = self._derive_platform_status(
+            enabled=state.enable_twitter,
+            running=bool(getattr(runner_state, "twitter_running", False)),
+            completed=bool(getattr(runner_state, "twitter_completed", False)),
+            runner_status=runner_status,
+            previous=state.twitter_status,
+        )
+        state.reddit_status = self._derive_platform_status(
+            enabled=state.enable_reddit,
+            running=bool(getattr(runner_state, "reddit_running", False)),
+            completed=bool(getattr(runner_state, "reddit_completed", False)),
+            runner_status=runner_status,
+            previous=state.reddit_status,
+        )
+
+        error = getattr(runner_state, "error", None)
+        if runner_status == "failed" and error:
+            state.error = error
+        elif runner_status in {"starting", "running", "completed"}:
+            state.error = None
+
+        self._save_simulation_state(state)
+        return state
+
+    @staticmethod
+    def _derive_platform_status(
+        *,
+        enabled: bool,
+        running: bool,
+        completed: bool,
+        runner_status: str,
+        previous: str,
+    ) -> str:
+        """Converte sinais do runner em status persistente por plataforma."""
+        if not enabled:
+            return "disabled"
+        if completed or runner_status == "completed":
+            return "completed"
+        if runner_status == "failed":
+            return "failed"
+        if runner_status == "stopped":
+            return "stopped"
+        if running or runner_status in {"starting", "running"}:
+            return "running"
+        if runner_status == "paused":
+            return "paused"
+        return previous or "not_started"
     
     def list_simulations(self, project_id: Optional[str] = None) -> List[SimulationState]:
         """Listar todas as simulacoes"""

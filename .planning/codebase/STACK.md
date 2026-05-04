@@ -1,6 +1,7 @@
 # Technology Stack
 
 **Analysis Date:** 2026-04-13
+**Last update:** 2026-05-04
 
 ## Languages
 
@@ -34,6 +35,7 @@
 **Testing:**
 - pytest 8.0.0+ - Python test runner
 - pytest-asyncio 0.23.0+ - Async test support
+- Current backend suite: 70 tests passing on 2026-05-04
 
 **Build/Dev:**
 - @vitejs/plugin-vue 6.0.1 - Vue SFC compilation in Vite
@@ -45,6 +47,7 @@
 - openai 1.0.0+ - LLM client (OpenAI-compatible API)
 - camel-ai 0.2.78 - CAMEL agent framework
 - camel-oasis 0.2.5 - OASIS social simulation engine
+- sqlite3 (stdlib) - Local OASIS trace/post/comment audit
 - flask-cors 6.0.0 - Cross-origin resource sharing
 - pydantic 2.0.0 - Data validation, configuration management
 
@@ -94,4 +97,4 @@
 
 ---
 
-*Stack analysis: 2026-04-13*
+*Stack map updated: 2026-05-04*
