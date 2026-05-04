@@ -6,6 +6,7 @@ import pytest
 from app.utils.report_quality import (
     audit_report_evidence,
     evaluate_section_grounding,
+    extract_numeric_claims,
     extract_direct_quotes,
     jaccard_similarity,
     measure_overlap,
@@ -133,6 +134,38 @@ def test_audit_report_evidence_aprova_citacoes_presentes():
     audit = audit_report_evidence(report, evidence)
     assert audit["passes_gate"] is True
     assert audit["quotes_supported"] == 1
+
+
+def test_extract_numeric_claims_ignora_blocos_de_qc_gerados():
+    claims = extract_numeric_claims(
+        "Resultado principal: 40%.\n\n---\n\n## QC — Cobertura e Grounding\n- limite 30%"
+    )
+
+    assert [claim["number"] for claim in claims] == ["40%"]
+
+
+def test_audit_report_evidence_bloqueia_numero_sem_suporte():
+    audit = audit_report_evidence(
+        "Cenario Base tem 68% de probabilidade.",
+        ["A simulacao registrou 10 acoes."],
+        fail_on_unsupported_quotes=True,
+        fail_on_unsupported_numbers=True,
+    )
+
+    assert audit["passes_gate"] is False
+    assert audit["numbers_unsupported"] == 1
+    assert audit["unsupported_numbers"][0]["number"] == "68%"
+
+
+def test_audit_report_evidence_aceita_numero_rotulado_como_inferencia():
+    audit = audit_report_evidence(
+        "[Inferencia calibrada] Cenario Base tem 68% de probabilidade.",
+        ["A simulacao registrou 10 acoes."],
+        fail_on_unsupported_numbers=True,
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_labeled_inference"] == 1
 
 
 def test_render_evidence_audit_block_mostra_bloqueio():

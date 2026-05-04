@@ -24,10 +24,11 @@ Entregue:
 - Status `publishable`, `legacy_unverified`, `blocked_by_system_gate` e `blocked_by_evidence_audit`.
 - Pulso social inicial configuravel no OASIS.
 - Governanca cliente vs demo/smoke com status `diagnostic_only`.
+- Auditoria numerica para percentuais, probabilidades e contagens.
 
 UAT local:
 
-- Backend: 73 testes aprovados.
+- Backend: 76 testes aprovados.
 - Frontend: build aprovado.
 - Backend/frontend locais responderam 200.
 
@@ -59,15 +60,16 @@ Entregue:
 
 ### P0.3 — Auditoria numerica
 
-**Status:** pendente.
+**Status:** concluido.
 
 Objetivo: percentuais, probabilidades e contagens precisam vir de metrica ou ser rotulados como inferencia calibrada.
 
-Escopo:
+Entregue:
 
-- Extrator de numeros e percentuais do relatorio.
-- Manifesto de origem da metrica.
-- Bloqueio de numeros sem fonte em modo cliente.
+- Extrator de numeros, percentuais e contagens do relatorio.
+- Verificacao literal no corpus de evidencias.
+- Aceite de numeros rotulados como inferencia/simulacao/calibracao.
+- Bloqueio de numeros sem suporte em modo cliente via `REPORT_FAIL_ON_UNSUPPORTED_NUMBERS`.
 
 ## P1 — Consolidar conhecimento INTEIA
 

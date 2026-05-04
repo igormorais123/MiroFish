@@ -7,8 +7,8 @@
 
 2026-05-04:
 
-- Backend suite: `python -m pytest backend\tests` — 73 passed.
-- Focused gate suite: report artifacts, delivery governance, report quality and social bootstrap passed.
+- Backend suite: `python -m pytest backend\tests` — 76 passed.
+- Focused gate suite: report artifacts, delivery governance, report quality with numeric audit and social bootstrap passed.
 - Frontend build: `npm run build` in `frontend/` — passed.
 - Consistency: `git diff --check` — no whitespace errors, only Windows CRLF warnings.
 - Local health: backend `http://localhost:5001/health` and frontend `http://localhost:5173` responded 200.
@@ -268,7 +268,7 @@ pytest                   # Run tests
 **Untested Áreas:**
 - API endpoints: No tests for Flask routes (`api/graph.py`, `api/simulation.py`, etc.)
 - Frontend: No Vue component tests
-- Services: Core contracts now cover report quality, artifacts, delivery governance, social bootstrap, simulation data reader and state sync; API route coverage remains limited
+- Services: Core contracts now cover report quality including numeric audit, artifacts, delivery governance, social bootstrap, simulation data reader and state sync; API route coverage remains limited
 - Error paths: Very limited exception testing
 - Integration: No multi-service workflows tested
 

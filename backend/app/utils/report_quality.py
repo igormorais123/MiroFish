@@ -13,9 +13,15 @@ import unicodedata
 from typing import Iterable
 
 _WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]+", re.UNICODE)
-_NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:%|R\$|reais|mil|milh[oõ]es|bilh[oõ]es|pp|p\.p\.|nós|n[oó]s|fatos|agentes|rodadas|dias|horas|minutos)?\b", re.IGNORECASE)
+_NUMBER_RE = re.compile(r"(?<!\w)\d+(?:[.,]\d+)?\s*(?:%|R\$|reais|mil|milh[oõ]es|bilh[oõ]es|pp|p\.p\.|nós|n[oó]s|fatos|agentes|rodadas|dias|horas|minutos)?", re.IGNORECASE)
 _QUOTE_RE = re.compile(r'"([^"\n]{8,})"|“([^”\n]{8,})”|‘([^’\n]{8,})’')
 _MARKDOWN_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+_AUDIT_BLOCK_RE = re.compile(r"\n---\n\n## QC[\s\S]*$", re.IGNORECASE)
+_INFERENCE_MARKER_RE = re.compile(
+    r"\[(?:inferencia|simulacao|estimativa|campo necessario|calibracao)[^\]]*\]"
+    r"|inferencia|simulacao|estimad[ao]s?|calibrad[ao]s?|nao estimavel|sem dados suficientes",
+    re.IGNORECASE,
+)
 
 
 def _normalize(text: str) -> list[str]:
@@ -35,6 +41,11 @@ def _normalize_text_for_match(text: str) -> str:
 def _strip_code_fences(text: str) -> str:
     """Remove blocos de codigo para nao auditar exemplos como se fossem claims."""
     return _MARKDOWN_FENCE_RE.sub(" ", text or "")
+
+
+def _strip_generated_audit_blocks(text: str) -> str:
+    """Remove blocos QC/auditoria acrescentados pelo proprio sistema."""
+    return _AUDIT_BLOCK_RE.sub("", text or "")
 
 
 def _ngrams(tokens: list[str], n: int) -> set[tuple[str, ...]]:
@@ -169,11 +180,47 @@ def quote_supported_by_evidence(quote: str, evidence_texts: Iterable[str]) -> bo
     return False
 
 
+def extract_numeric_claims(text: str) -> list[dict]:
+    """Extrai numeros em linhas de conteudo para auditoria conservadora."""
+    cleaned = _strip_generated_audit_blocks(_strip_code_fences(text))
+    claims: list[dict] = []
+    for line_no, line in enumerate(cleaned.splitlines(), 1):
+        stripped = line.strip()
+        if not stripped or set(stripped.replace(" ", "")) <= {"|", "-", ":"}:
+            continue
+        for match in _NUMBER_RE.finditer(stripped):
+            raw = match.group(0).strip()
+            if raw:
+                claims.append({
+                    "number": raw,
+                    "line": line_no,
+                    "context": stripped[:240],
+                    "labeled_inference": bool(_INFERENCE_MARKER_RE.search(stripped)),
+                })
+    return claims
+
+
+def number_supported_by_evidence(number: str, evidence_texts: Iterable[str]) -> bool:
+    """Retorna True quando o numero literal aparece no corpus local."""
+    normalized_number = re.sub(r"\s+", " ", (number or "").strip()).lower()
+    if not normalized_number:
+        return False
+
+    compact_number = normalized_number.replace(" ", "")
+    for evidence in evidence_texts or []:
+        normalized_evidence = re.sub(r"\s+", " ", (evidence or "").lower())
+        compact_evidence = normalized_evidence.replace(" ", "")
+        if normalized_number in normalized_evidence or compact_number in compact_evidence:
+            return True
+    return False
+
+
 def audit_report_evidence(
     report_md: str,
     evidence_texts: Iterable[str],
     *,
     fail_on_unsupported_quotes: bool = True,
+    fail_on_unsupported_numbers: bool = True,
 ) -> dict:
     """Audita se o relatorio usa citacoes sustentadas pelo sistema.
 
@@ -195,7 +242,24 @@ def audit_report_evidence(
         if not quote_supported_by_evidence(quote, evidence_list)
     ]
 
-    passes_gate = not (fail_on_unsupported_quotes and unsupported)
+    numeric_claims = extract_numeric_claims(report_md)
+    unsupported_numbers = [
+        claim
+        for claim in numeric_claims
+        if not claim.get("labeled_inference")
+        and not number_supported_by_evidence(claim.get("number", ""), evidence_list)
+    ]
+    supported_numbers = [
+        claim
+        for claim in numeric_claims
+        if number_supported_by_evidence(claim.get("number", ""), evidence_list)
+    ]
+    labeled_numbers = [claim for claim in numeric_claims if claim.get("labeled_inference")]
+
+    passes_gate = not (
+        (fail_on_unsupported_quotes and unsupported)
+        or (fail_on_unsupported_numbers and unsupported_numbers)
+    )
 
     return {
         "passes_gate": passes_gate,
@@ -204,6 +268,12 @@ def audit_report_evidence(
         "quotes_unsupported": len(unsupported),
         "unsupported_quotes": unsupported[:20],
         "fail_on_unsupported_quotes": fail_on_unsupported_quotes,
+        "numbers_total": len(numeric_claims),
+        "numbers_supported": len(supported_numbers),
+        "numbers_labeled_inference": len(labeled_numbers),
+        "numbers_unsupported": len(unsupported_numbers),
+        "unsupported_numbers": unsupported_numbers[:20],
+        "fail_on_unsupported_numbers": fail_on_unsupported_numbers,
         "evidence_documents": len(evidence_list),
     }
 
@@ -217,6 +287,7 @@ def render_evidence_audit_block(audit: dict) -> str:
         "",
         f"- **Gate de citacoes:** {status}",
         f"- **Citacoes diretas:** {audit.get('quotes_supported', 0)}/{audit.get('quotes_total', 0)} sustentadas pelo corpus",
+        f"- **Numeros:** {audit.get('numbers_supported', 0)} sustentados, {audit.get('numbers_labeled_inference', 0)} rotulados como inferencia, {audit.get('numbers_unsupported', 0)} sem suporte",
         f"- **Documentos de evidencia auditados:** {audit.get('evidence_documents', 0)}",
     ]
 
@@ -226,6 +297,14 @@ def render_evidence_audit_block(audit: dict) -> str:
         for quote in unsupported[:5]:
             clipped = quote[:180] + ("..." if len(quote) > 180 else "")
             lines.append(f"  - {clipped}")
+
+    unsupported_numbers = audit.get("unsupported_numbers") or []
+    if unsupported_numbers:
+        lines.append("- **Numeros sem suporte encontrados:**")
+        for item in unsupported_numbers[:5]:
+            lines.append(
+                f"  - linha {item.get('line')}: {item.get('number')} em `{item.get('context')}`"
+            )
 
     lines.append("")
     return "\n".join(lines)

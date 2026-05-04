@@ -27,6 +27,7 @@ Fontes-base:
 
 - Gate estrutural de relatorio.
 - Auditoria local de evidencias e citacoes.
+- Auditoria numerica para percentuais, probabilidades e contagens.
 - Manifesto de evidencias por relatorio.
 - API de artefatos auditaveis.
 - API de qualidade da simulacao.
@@ -40,7 +41,7 @@ Fontes-base:
 
 Relatorio cliente INTEIA so e publicavel se atravessar:
 
-`briefing -> grafo -> perfis -> config -> simulacao -> diversidade -> trace OASIS -> auditoria -> relatorio`
+`briefing -> grafo -> perfis -> config -> simulacao -> diversidade -> trace OASIS -> auditoria de citacoes/numeros -> relatorio`
 
 Se qualquer etapa falhar, a saida deve ser diagnostico tecnico ou bloqueio, nao recomendacao consultiva.
 

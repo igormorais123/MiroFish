@@ -138,7 +138,7 @@ O pipeline ganhou uma camada explicita de governanca: relatorio cliente so e ent
      - Calls tools: `search_entities()`, `insight_forge()`, `panorama()`, `interview_agents()`
      - LLM generates report sections (intro, analysis, predictions, etc.)
      - Each section goes through multiple reflection rounds
-   - Direct quotes are audited against local evidence
+   - Direct quotes and numeric claims are audited against local evidence
    - `system_gate.json`, `evidence_manifest.json` and `evidence_audit.json` are persisted
    - Logs all actions to `agent_log.jsonl` for debugging
    - Returns report only if status is compatible with delivery rules
@@ -189,9 +189,9 @@ O pipeline ganhou uma camada explicita de governanca: relatorio cliente so e ent
 - Pattern: Unknown modes fall back to strict `client`; `demo/smoke` always returns non-publicable policy
 
 **Evidence Audit:**
-- Purpose: Prove direct quotes and local evidence support report text
+- Purpose: Prove direct quotes, numeric claims and local evidence support report text
 - Examples: `backend/app/utils/report_quality.py`
-- Pattern: Extract direct quotes, match against evidence corpus, mark unsupported quotes
+- Pattern: Extract direct quotes and numeric claims, match against evidence corpus, mark unsupported claims; numeric inference must be labeled
 
 **OasisAgentProfile:**
 - Purpose: Agent definition for OASIS simulation
@@ -251,7 +251,7 @@ O pipeline ganhou uma camada explicita de governanca: relatorio cliente so e ent
 - Config validation: `Config.validate()` called at startup
 - File upload: Extension whitelist (`ALLOWED_EXTENSIONS`)
 - LLM model names: Alias resolution via `Config.resolve_model_name()`
-- Report delivery: hard gate plus delivery governance and quote audit in `report_system_gate.py`, `delivery_governance.py` and `report_quality.py`
+- Report delivery: hard gate plus delivery governance, quote audit and numeric audit in `report_system_gate.py`, `delivery_governance.py` and `report_quality.py`
 
 **Authentication:**
 - Approach: None for user-facing API (open access)

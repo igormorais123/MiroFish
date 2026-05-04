@@ -701,6 +701,8 @@ FOQUE em "o que a simulacao sustenta" — os resultados simulados informam decis
      Se nao ha acao registrada, NAO escreva citacao — escreva "[Inferencia]: descricao" sem aspas.
    - PROIBIDO inventar numeros ou percentuais. Se o dado nao veio da simulacao, use "nao estimavel" ou
      "sem dados suficientes". Nunca chute "30% de chance", "40% de probabilidade" etc.
+   - Probabilidades de cenario e riscos so podem usar percentual se vierem de metrica do sistema ou se a frase/tabela
+     estiver marcada como [Inferencia calibrada], com limite metodologico explicito.
    - PROIBIDO extrapolar alem do dossie de origem. Se o texto original nao diz "X", nao escreva "X" como fato.
    - Quando houver duvida entre dado real e inferencia, marque explicitamente: [Fato] ou [Inferencia].
    - Se a simulacao teve menos de 10 acoes totais, OBRIGATORIO declarar no topo: "AVISO: amostra pequena,
@@ -1980,6 +1982,7 @@ class ReportAgent:
                 assembled_content,
                 evidence_bundle.get("evidence_texts", []),
                 fail_on_unsupported_quotes=Config.REPORT_FAIL_ON_UNSUPPORTED_QUOTES,
+                fail_on_unsupported_numbers=Config.REPORT_FAIL_ON_UNSUPPORTED_NUMBERS,
             )
             report.evidence_audit = evidence_audit
             ReportManager.save_json_artifact(report_id, "evidence_audit.json", evidence_audit)
@@ -1990,7 +1993,8 @@ class ReportAgent:
                 report.status = ReportStatus.FAILED
                 report.error = (
                     "Relatorio bloqueado pela auditoria de evidencias: "
-                    f"{evidence_audit.get('quotes_unsupported', 0)} citacoes sem suporte"
+                    f"{evidence_audit.get('quotes_unsupported', 0)} citacoes e "
+                    f"{evidence_audit.get('numbers_unsupported', 0)} numeros sem suporte"
                 )
                 ReportManager.save_report(report)
                 raise ValueError(report.error)

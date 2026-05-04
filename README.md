@@ -52,6 +52,7 @@ Relatório analítico → Conversa com agentes → Insights
 | **Enriquecimento** | — | Apify (Google SERP + Instagram) para contexto factual |
 | **QC do relatório** | — | Overlap upload×relatório (jaccard 5-gram, alerta >30%) + gate editorial por seção |
 | **Gate de entrega** | — | Bloqueio estrutural de relatório sem simulação concluída, evidência local, diversidade mínima, trace OASIS com ação social real e auditoria de citações |
+| **Auditoria numérica** | — | Percentuais, probabilidades e contagens precisam estar no corpus ou marcados como inferência calibrada |
 | **Interface de gate** | — | Step 03 consulta qualidade sistêmica e bloqueia o botão de relatório quando o gate reprova |
 | **Dinâmica social** | — | Pulso social inicial configurável no OASIS para gerar comentários, curtidas, rejeições, reposts e citações auditáveis |
 | **Governança cliente/demo** | — | Modo `client` é estrito e publicável só com gate completo; `demo/smoke` fica sempre como `diagnostic_only` |

@@ -169,6 +169,9 @@ class Config:
         os.environ.get('REPORT_DEMO_REQUIRE_COMPLETED_SIMULATION', 'false').lower() == 'true'
     )
     REPORT_DEMO_REQUIRE_SOURCE_TEXT = os.environ.get('REPORT_DEMO_REQUIRE_SOURCE_TEXT', 'false').lower() == 'true'
+    REPORT_FAIL_ON_UNSUPPORTED_NUMBERS = (
+        os.environ.get('REPORT_FAIL_ON_UNSUPPORTED_NUMBERS', 'true').lower() == 'true'
+    )
 
     @classmethod
     def resolve_model_name(cls, model_name=None) -> str:
