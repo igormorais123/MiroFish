@@ -94,7 +94,7 @@ const projectData = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
 const systemLogs = ref([])
-const currentStatus = ref('processing') // processing | completed | error
+const currentStatus = ref('processing') // processing | completed | blocked | error
 
 // --- Computed Layout Styles ---
 const leftPanelStyle = computed(() => {
@@ -111,10 +111,12 @@ const rightPanelStyle = computed(() => {
 
 // --- Status Computed ---
 const statusClass = computed(() => {
+  if (currentStatus.value === 'blocked') return 'error'
   return currentStatus.value
 })
 
 const statusText = computed(() => {
+  if (currentStatus.value === 'blocked') return 'Bloqueado'
   if (currentStatus.value === 'error') return 'Erro'
   if (currentStatus.value === 'completed') return 'Concluído'
   return 'Gerando'
@@ -152,6 +154,11 @@ const loadReportData = async () => {
     if (reportRes.success && reportRes.data) {
       const reportData = reportRes.data
       simulationId.value = reportData.simulation_id
+      if (reportData.status === 'failed' || reportData.delivery_status === 'failed') {
+        currentStatus.value = 'blocked'
+      } else if (reportData.status === 'completed' || reportData.delivery_status === 'completed') {
+        currentStatus.value = 'completed'
+      }
       
       if (simulationId.value) {
         // Obter informações da simulação

@@ -189,9 +189,6 @@ def evaluate_report_system_gate(
         if not project.graph_id:
             warnings.append("Projeto sem graph_id persistido")
 
-    if require_source and not (source_text or "").strip():
-        issues.append("Texto-base do projeto ausente; relatorio ficaria sem corpus factual de referencia")
-
     sim_dir = _simulation_dir(simulation_id)
     config_path = os.path.join(sim_dir, "simulation_config.json")
     reddit_profiles_path = os.path.join(sim_dir, "reddit_profiles.json")
@@ -232,6 +229,9 @@ def evaluate_report_system_gate(
         warnings.append(
             "Modo diagnostico/smoke: resultado permitido apenas para avaliacao tecnica interna; nao publicavel."
         )
+
+    if require_source and not (source_text or "").strip():
+        issues.append("Texto-base do projeto ausente; relatorio ficaria sem corpus factual de referencia")
 
     artifacts.update({
         "simulation_dir": _file_info(sim_dir),

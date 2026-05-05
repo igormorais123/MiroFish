@@ -466,6 +466,7 @@ const expandedContent = ref(new Set())
 const expandedLogs = ref(new Set())
 const collapsedSections = ref(new Set())
 const isComplete = ref(false)
+const isBlocked = ref(false)
 const startTime = ref(null)
 const leftPanel = ref(null)
 const rightPanel = ref(null)
@@ -1748,12 +1749,14 @@ const QuickSearchDisplay = {
 
 // Computed
 const statusClass = computed(() => {
+  if (isBlocked.value) return 'blocked'
   if (isComplete.value) return 'completed'
   if (agentLogs.value.length > 0) return 'processing'
   return 'pending'
 })
 
 const statusText = computed(() => {
+  if (isBlocked.value) return 'Bloqueado'
   if (isComplete.value) return 'Concluído'
   if (agentLogs.value.length > 0) return 'Gerando...'
   return 'Aguardando'
@@ -1879,6 +1882,7 @@ const quoteAuditLabel = computed(() => {
 
 // Workflow steps overview (status-based, no nested cards)
 const activeSectionIndex = computed(() => {
+  if (isBlocked.value) return null
   if (isComplete.value) return null
   if (currentSectionIndex.value) return currentSectionIndex.value
   if (totalSections.value > 0 && completedSections.value < totalSections.value) return completedSections.value + 1
@@ -1894,7 +1898,7 @@ const isPlanningStarted = computed(() => {
 })
 
 const isFinalizing = computed(() => {
-  return !isComplete.value && isPlanningDone.value && totalSections.value > 0 && completedSections.value >= totalSections.value
+  return !isBlocked.value && !isComplete.value && isPlanningDone.value && totalSections.value > 0 && completedSections.value >= totalSections.value
 })
 
 // Etapa ativa atualmente (para exibição no topo)
@@ -2300,6 +2304,13 @@ const fetchReportAudit = async () => {
 
     if (reportRes.success && reportRes.data) {
       reportRecord.value = reportRes.data
+      const blocked = reportRes.data.status === 'failed' || reportRes.data.delivery_status === 'failed'
+      if (blocked) {
+        isBlocked.value = true
+        currentSectionIndex.value = null
+        emit('update-status', 'blocked')
+        stopPolling()
+      }
     }
 
     if (artifactsRes.success && artifactsRes.data) {
@@ -2364,6 +2375,7 @@ watch(() => props.reportId, (newId) => {
     expandedLogs.value = new Set()
     collapsedSections.value = new Set()
     isComplete.value = false
+    isBlocked.value = false
     startTime.value = null
     reportRecord.value = null
     reportArtifacts.value = []
@@ -2943,6 +2955,12 @@ watch(() => props.reportId, (newId) => {
   background: #ECFDF5;
   border-color: #A7F3D0;
   color: #065F46;
+}
+
+.metric-pill.pill--blocked {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #991B1B;
 }
 
 .metric-pill.pill--pending {

@@ -471,14 +471,52 @@ def prepare_simulation():
                     enrich_ig_posts = enrich_ig_posts or enrich_actors
                     logger.info(f"Apify auto: {len(enrich_queries)} queries, "
                                 f"{len(enrich_actors)} IG, {len(enrich_youtube)} YT")
-                block = enricher.build_enrichment_block(
-                    queries=enrich_queries,
-                    actors_instagram=enrich_actors,
-                    ig_posts_handles=enrich_ig_posts,
-                    ig_tagged_handles=enrich_ig_tagged,
-                    youtube_urls=enrich_youtube,
-                    project_id=state.project_id,
-                )
+                import queue
+
+                result_queue = queue.Queue(maxsize=1)
+
+                def run_enrichment():
+                    try:
+                        result_queue.put({
+                            "block": enricher.build_enrichment_block(
+                                queries=enrich_queries,
+                                actors_instagram=enrich_actors,
+                                ig_posts_handles=enrich_ig_posts,
+                                ig_tagged_handles=enrich_ig_tagged,
+                                youtube_urls=enrich_youtube,
+                                project_id=state.project_id,
+                            )
+                        })
+                    except Exception as enrich_error:
+                        result_queue.put({"error": enrich_error})
+
+                timeout_seconds = float(os.environ.get("APIFY_ENRICH_TIMEOUT_SECONDS", "45"))
+                enrich_thread = threading.Thread(target=run_enrichment, daemon=True)
+                enrich_thread.start()
+
+                try:
+                    enrich_result = result_queue.get(timeout=timeout_seconds)
+                except queue.Empty:
+                    logger.warning(
+                        "Apify enrichment excedeu %.0fs e foi ignorado; "
+                        "simulacao prossegue sem bloquear.",
+                        timeout_seconds,
+                    )
+                    enrich_result = {
+                        "block": (
+                            "# Enriquecimento Apify\n\n"
+                            "Apify foi solicitado, mas nao retornou dentro do "
+                            f"limite operacional de {timeout_seconds:.0f}s. "
+                            "A simulacao prosseguiu com o briefing consolidado "
+                            "e deve tratar a ausencia de enriquecimento externo "
+                            "como limitacao metodologica.\n"
+                        )
+                    }
+
+                if enrich_result.get("error"):
+                    raise enrich_result["error"]
+
+                block = enrich_result.get("block", "")
                 if block:
                     document_text = document_text.rstrip() + "\n\n" + block + "\n"
                     logger.info(f"Apify: {len(block)} chars anexados ao contexto")
