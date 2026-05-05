@@ -587,9 +587,13 @@ const initProject = async () => {
 // Tratar novo projeto - chamar API ontology/generate
 const handleNewProject = async () => {
   const pending = getPendingUpload()
+  const pendingFiles = pending.files || []
+  const requirement = (pending.simulationRequirement || '').trim()
   
-  if (!pending.isPending || (!pending.simulationRequirement && pending.files.length === 0)) {
-    error.value = 'Nenhum material pendente para envio. Volte para a página inicial e tente novamente.'
+  if (!pending.isPending || (!requirement && pendingFiles.length === 0)) {
+    currentPhase.value = -1
+    ontologyProgress.value = null
+    error.value = 'Nenhum objetivo de simulação encontrado. Volte para a página inicial, descreva o cenário e inicie novamente.'
     loading.value = false
     return
   }
@@ -597,14 +601,18 @@ const handleNewProject = async () => {
   try {
     loading.value = true
     currentPhase.value = 0 // etapa de geração da ontologia
-    ontologyProgress.value = { message: 'Enviando arquivos e analisando documentos...' }
+    ontologyProgress.value = {
+      message: pendingFiles.length > 0
+        ? 'Enviando arquivos e analisando documentos...'
+        : 'Gerando ontologia a partir do objetivo informado...'
+    }
     
     // Construir FormData
     const formDataObj = new FormData()
-    pending.files.forEach(file => {
+    pendingFiles.forEach(file => {
       formDataObj.append('files', file)
     })
-    formDataObj.append('simulation_requirement', pending.simulationRequirement)
+    formDataObj.append('simulation_requirement', requirement)
     
     // Chamar API de geração de ontologia
     const response = await generateOntology(formDataObj)
