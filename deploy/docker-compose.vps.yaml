@@ -38,6 +38,9 @@ services:
       - PORT=8000
     ports:
       - "8003:8000"
+    volumes:
+      - ./graphiti_patches/ingest.py:/app/graph_service/routers/ingest.py:ro
+      - ./graphiti_patches/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/healthcheck"]
       interval: 15s

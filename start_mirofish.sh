@@ -43,8 +43,8 @@ else
   say "WARN: Docker nao disponivel. Graphiti offline -> simulacao sem grafo."
 fi
 
-# 3. Ollama (so se MODE=--local-llm ou se LLM_BASE_URL apontar pra 11434)
-if grep -qE "^LLM_BASE_URL=.*11434" .env 2>/dev/null || [ "$MODE" = "--local-llm" ]; then
+# 3. Ollama (LLM local ou proxy Codex; Graphiti e embeddings dependem dele)
+if grep -qE "^LLM_BASE_URL=.*(11434|8004)" .env 2>/dev/null || [ "$MODE" = "--local-llm" ] || [ "$MODE" = "--codex" ]; then
   if ! curl -s -m 2 http://localhost:11434/api/tags >/dev/null 2>&1; then
     OLLAMA_BIN="$HOME/bin/ollama/ollama.exe"
     [ ! -x "$OLLAMA_BIN" ] && OLLAMA_BIN="$(command -v ollama || echo ollama)"

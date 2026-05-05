@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,35 @@ app = Flask(__name__)
 # Limite de body: evita MemoryError quando Flask cai pro dev server (Werkzeug)
 # 8MB cobre prompts grandes (relatorio + grafo serializado) sem dar OOM single-thread.
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
+
+ALIAS_MAP = {
+    "entities": "extracted_entities",
+    "nodes": "extracted_entities",
+    "relationships": "edges",
+    "relations": "edges",
+    "facts": "edges",
+    "extracted_edges": "edges",
+    "nome": "name",
+    "entity_name": "name",
+    "label": "name",
+    "source": "source_entity_id",
+    "target": "target_entity_id",
+    "source_id": "source_entity_id",
+    "target_id": "target_entity_id",
+    "from_id": "source_entity_id",
+    "to_id": "target_entity_id",
+    "from": "source_entity_id",
+    "to": "target_entity_id",
+    "type": "relation_type",
+    "predicate": "relation_type",
+    "relation": "relation_type",
+    "relationship": "relation_type",
+    "rel_type": "relation_type",
+    "description": "fact",
+    "statement": "fact",
+    "claim": "fact",
+    "text": "fact",
+}
 
 # ---- Cache + concorrencia (2026-04-25 timing fix) ----
 # Cache LRU em memoria: hash(prompt+model+want_json) -> (content, elapsed). TTL 30 min.
@@ -124,6 +154,228 @@ def _serialize_messages(messages: list[dict]) -> str:
             content = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
         parts.append(f"[{role}]\n{content}")
     return "\n\n".join(parts)
+
+
+def _extract_balanced_json(text: str, start: int) -> str | None:
+    depth = 0
+    end = -1
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text[start:], start=start):
+        if esc:
+            esc = False
+            continue
+        if ch == "\\":
+            esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end > 0:
+        return text[start:end]
+    return None
+
+
+def extract_schema(response_format, messages=None):
+    """Extrai JSON schema de response_format ou de schema embutido nas mensagens do Graphiti."""
+    if isinstance(response_format, dict) and response_format.get("type") == "json_schema":
+        schema = response_format.get("json_schema", {}).get("schema")
+        if schema:
+            return schema
+
+    markers = (
+        "Respond with a JSON object in the following format:",
+        "SCHEMA:",
+    )
+    for msg in messages or []:
+        if not isinstance(msg, dict):
+            continue
+        content = msg.get("content", "")
+        if not isinstance(content, str):
+            continue
+        for marker in markers:
+            pos = content.find(marker)
+            if pos < 0:
+                continue
+            tail = content[pos + len(marker):]
+            brace_start = tail.find("{")
+            if brace_start < 0:
+                continue
+            raw = _extract_balanced_json(tail, brace_start)
+            if raw:
+                try:
+                    return json.loads(raw)
+                except Exception:
+                    return None
+    return None
+
+
+def schema_to_prompt(schema) -> str:
+    return (
+        "[INSTRUCAO DO SISTEMA - JSON SCHEMA]\n"
+        "Retorne APENAS um objeto JSON valido que cumpra exatamente este schema.\n"
+        "Use os nomes de campos exatamente como aparecem no schema, sem aliases.\n"
+        "Nao use markdown, explicacoes, comentarios ou texto fora do JSON.\n"
+        "Quando um campo for lista, retorne array mesmo quando estiver vazio.\n\n"
+        "SCHEMA OBRIGATORIO:\n"
+        + json.dumps(schema, indent=2, ensure_ascii=False)
+    )
+
+
+def strip_fences(content):
+    """Remove blocos markdown e tenta extrair o primeiro JSON completo."""
+    if not isinstance(content, str):
+        return content
+    s = content.strip()
+    if s.startswith("```"):
+        m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", s, re.DOTALL)
+        if m:
+            s = m.group(1).strip()
+    if s and s[0] not in "{[":
+        obj_start = s.find("{")
+        arr_start = s.find("[")
+        starts = [i for i in (obj_start, arr_start) if i >= 0]
+        if starts:
+            i = min(starts)
+            if s[i] == "{":
+                extracted = _extract_balanced_json(s, i)
+                if extracted:
+                    return extracted
+            else:
+                depth = 0
+                in_str = False
+                esc = False
+                for j, ch in enumerate(s[i:], start=i):
+                    if esc:
+                        esc = False
+                        continue
+                    if ch == "\\":
+                        esc = True
+                        continue
+                    if ch == '"':
+                        in_str = not in_str
+                        continue
+                    if in_str:
+                        continue
+                    if ch == "[":
+                        depth += 1
+                    elif ch == "]":
+                        depth -= 1
+                        if depth == 0:
+                            return s[i:j + 1]
+    return s
+
+
+def get_required_fields(schema):
+    required = set()
+    if not isinstance(schema, dict):
+        return required
+    required.update(schema.get("required", []))
+    for key in ("$defs", "definitions"):
+        for value in schema.get(key, {}).values():
+            if isinstance(value, dict):
+                required.update(value.get("required", []))
+    return required
+
+
+def remap_dict(obj, required_fields):
+    if isinstance(obj, list):
+        return [remap_dict(item, required_fields) for item in obj]
+    if not isinstance(obj, dict):
+        return obj
+    out = {}
+    for key, value in obj.items():
+        new_key = key
+        if key in ALIAS_MAP and ALIAS_MAP[key] != key:
+            target = ALIAS_MAP[key]
+            if target in required_fields or key not in required_fields:
+                new_key = target
+        out[new_key] = remap_dict(value, required_fields)
+    return out
+
+
+def ensure_required_defaults(obj, schema):
+    if not isinstance(obj, dict) or not isinstance(schema, dict):
+        return obj
+    props = schema.get("properties", {})
+    for field in schema.get("required", []):
+        if field in obj:
+            continue
+        prop = props.get(field, {})
+        ptype = prop.get("type")
+        if ptype == "array":
+            obj[field] = []
+        elif ptype == "object":
+            obj[field] = {}
+        elif ptype == "string":
+            obj[field] = ""
+        elif ptype == "integer":
+            obj[field] = 0
+        elif ptype == "number":
+            obj[field] = 0.0
+        elif ptype == "boolean":
+            obj[field] = False
+    defs = schema.get("$defs", {}) or schema.get("definitions", {})
+    for field, value in list(obj.items()):
+        prop = props.get(field, {})
+        items = prop.get("items", {})
+        if isinstance(items, dict) and "$ref" in items:
+            ref_name = items["$ref"].split("/")[-1]
+            sub_schema = defs.get(ref_name, {})
+            if isinstance(value, list):
+                obj[field] = [
+                    ensure_required_defaults(item, sub_schema) if isinstance(item, dict) else item
+                    for item in value
+                ]
+    return obj
+
+
+def normalize_json_to_schema(content: str, schema) -> str:
+    cleaned = strip_fences(content)
+    parsed = json.loads(cleaned)
+    required = get_required_fields(schema)
+    if isinstance(parsed, list):
+        if "extracted_entities" in required:
+            parsed = {"extracted_entities": parsed}
+        elif "edges" in required:
+            parsed = {"edges": parsed}
+    parsed = remap_dict(parsed, required)
+    parsed = ensure_required_defaults(parsed, schema)
+    return json.dumps(parsed, ensure_ascii=False)
+
+
+def normalize_graphiti_json(content: str, prompt: str) -> str:
+    """Fallback para Graphiti quando ele pede json_object, mas valida depois via Pydantic."""
+    cleaned = strip_fences(content)
+    parsed = json.loads(cleaned)
+    prompt_l = prompt.lower()
+    if isinstance(parsed, list):
+        if "extractededges" in prompt_l or "extracted_edges" in prompt_l or "edges" in prompt_l:
+            parsed = {"edges": parsed}
+        elif (
+            "extractedentities" in prompt_l
+            or "extracted_entities" in prompt_l
+            or "entities" in prompt_l
+        ):
+            parsed = {"extracted_entities": parsed}
+    elif isinstance(parsed, dict):
+        required = set()
+        if "extractededges" in prompt_l or "extracted_edges" in prompt_l:
+            required.add("edges")
+        if "extractedentities" in prompt_l or "extracted_entities" in prompt_l:
+            required.add("extracted_entities")
+        if required:
+            parsed = remap_dict(parsed, required)
+    return json.dumps(parsed, ensure_ascii=False)
 
 
 def _call_codex(prompt: str, model: str, want_json: bool = False, timeout: int = 300) -> tuple[str, float]:
@@ -225,9 +477,15 @@ def chat_completions():
 
     model = _normalize_model(data.get("model"))
     response_format = data.get("response_format") or {}
-    want_json = isinstance(response_format, dict) and response_format.get("type") == "json_object"
+    schema = extract_schema(response_format, messages)
+    want_json = (
+        isinstance(response_format, dict)
+        and response_format.get("type") in {"json_object", "json_schema"}
+    ) or schema is not None
 
     prompt = _serialize_messages(messages)
+    if schema:
+        prompt += "\n\n" + schema_to_prompt(schema)
     if want_json:
         prompt += "\n\n[INSTRUCAO DO SISTEMA]\nRetorne APENAS um objeto JSON valido, sem qualquer texto antes ou depois, sem markdown."
 
@@ -237,6 +495,17 @@ def chat_completions():
         return jsonify({"error": {"message": "codex timeout", "type": "timeout"}}), 504
     except Exception as exc:
         return jsonify({"error": {"message": str(exc), "type": "codex_error"}}), 502
+
+    if schema and content:
+        try:
+            content = normalize_json_to_schema(content, schema)
+        except Exception:
+            content = strip_fences(content)
+    elif want_json and content:
+        try:
+            content = normalize_graphiti_json(content, prompt)
+        except Exception:
+            content = strip_fences(content)
 
     # Envelopa resposta no formato OpenAI
     now = int(time.time())

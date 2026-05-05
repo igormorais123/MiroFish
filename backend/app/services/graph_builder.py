@@ -487,11 +487,11 @@ class GraphBuilderService:
             stall_timeout=stall_timeout,
         )
 
-        # Verificar materializacao — 4 checks x 5s (2026-04-25 timing fix)
-        # Reduzido de 10x10s=100s para 4x5s=20s pq Graphiti consistentemente retorna 0 nos
-        # e cai pro fallback LLM extractor (mais rapido). Economiza 80s/run.
-        max_checks = 4
-        check_interval = 5
+        # Verificar materializacao. Com Codex + Graphiti, os episodios podem
+        # aparecer antes das entidades/fatos; encerrar cedo demais gera grafo
+        # "concluido" com zero nos.
+        max_checks = 12
+        check_interval = 10
         last_graph_data: Dict[str, Any] | None = None
 
         for attempt in range(max_checks):
@@ -516,7 +516,7 @@ class GraphBuilderService:
                     )
                 time.sleep(check_interval)
 
-        # Zero nos apos 100s de espera — sinal forte de falha silenciosa
+        # Zero nos apos espera estendida — sinal forte de falha silenciosa
         # Log estruturado para diagnostico e nao silencia o problema
         import logging
         _glog = logging.getLogger('mirofish.graphiti')
