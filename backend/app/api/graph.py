@@ -198,13 +198,6 @@ def generate_ontology():
                 all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
 
         if not document_texts:
-            if has_uploaded_files:
-                ProjectManager.delete_project(project.project_id)
-                return jsonify({
-                    "success": False,
-                    "error": "Nenhum documento pôde ser processado com sucesso. Use PDF, MD, MARKDOWN ou TXT."
-                }), 400
-
             fallback_text = "\n".join(
                 part.strip()
                 for part in [simulation_requirement, additional_context]
@@ -214,7 +207,10 @@ def generate_ontology():
                 ProjectManager.delete_project(project.project_id)
                 return jsonify({
                     "success": False,
-                    "error": "Envie um documento ou descreva o cenário da simulação."
+                    "error": (
+                        "Nenhum documento pôde ser processado com sucesso. "
+                        "Use PDF, MD, MARKDOWN ou TXT, ou descreva o cenário da simulação."
+                    )
                 }), 400
 
             document_texts.append(fallback_text)
@@ -223,6 +219,7 @@ def generate_ontology():
                 "filename": "cenario_da_simulacao.txt",
                 "size": len(fallback_text.encode("utf-8")),
                 "generated": True,
+                "fallback_from_invalid_upload": bool(has_uploaded_files),
             })
 
         # Salvar texto extraido
