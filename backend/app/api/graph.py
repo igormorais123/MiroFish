@@ -167,11 +167,7 @@ def generate_ontology():
 
         # Obter arquivos enviados
         uploaded_files = request.files.getlist('files')
-        if not uploaded_files or all(not f.filename for f in uploaded_files):
-            return jsonify({
-                "success": False,
-                "error": "Envie pelo menos um arquivo de documento"
-            }), 400
+        has_uploaded_files = uploaded_files and any(f.filename for f in uploaded_files)
 
         # Criar projeto
         project = ProjectManager.create_project(name=project_name)
@@ -202,11 +198,32 @@ def generate_ontology():
                 all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
 
         if not document_texts:
-            ProjectManager.delete_project(project.project_id)
-            return jsonify({
-                "success": False,
-                "error": "Nenhum documento pôde ser processado com sucesso. Verifique o formato dos arquivos."
-            }), 400
+            if has_uploaded_files:
+                ProjectManager.delete_project(project.project_id)
+                return jsonify({
+                    "success": False,
+                    "error": "Nenhum documento pôde ser processado com sucesso. Use PDF, MD, MARKDOWN ou TXT."
+                }), 400
+
+            fallback_text = "\n".join(
+                part.strip()
+                for part in [simulation_requirement, additional_context]
+                if part and part.strip()
+            )
+            if not fallback_text:
+                ProjectManager.delete_project(project.project_id)
+                return jsonify({
+                    "success": False,
+                    "error": "Envie um documento ou descreva o cenário da simulação."
+                }), 400
+
+            document_texts.append(fallback_text)
+            all_text = f"\n\n=== cenario_da_simulacao.txt ===\n{fallback_text}"
+            project.files.append({
+                "filename": "cenario_da_simulacao.txt",
+                "size": len(fallback_text.encode("utf-8")),
+                "generated": True,
+            })
 
         # Salvar texto extraido
         project.total_text_length = len(all_text)

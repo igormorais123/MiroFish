@@ -574,8 +574,8 @@ const initProject = async () => {
 const handleNewProject = async () => {
   const pending = getPendingUpload()
   
-  if (!pending.isPending || pending.files.length === 0) {
-    error.value = 'Nenhum arquivo pendente para envio. Volte para a página inicial e tente novamente.'
+  if (!pending.isPending || (!pending.simulationRequirement && pending.files.length === 0)) {
+    error.value = 'Nenhum material pendente para envio. Volte para a página inicial e tente novamente.'
     loading.value = false
     return
   }
