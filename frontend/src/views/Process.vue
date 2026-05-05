@@ -280,21 +280,21 @@
               </div>
               
               <div class="detail-section" v-if="projectData?.ontology">
-                <div class="detail-label">Tipos de relação gerados ({{ projectData.ontology.relation_types?.length || 0 }})</div>
+                <div class="detail-label">Tipos de relação gerados ({{ ontologyRelationTypes.length }})</div>
                 <div class="relation-list">
                   <div 
-                    v-for="(rel, idx) in projectData.ontology.relation_types?.slice(0, 5) || []" 
+                    v-for="(rel, idx) in ontologyRelationTypes.slice(0, 5)" 
                     :key="idx"
                     class="relation-item"
                   >
-                    <span class="rel-source">{{ rel.source_type }}</span>
+                    <span class="rel-source">{{ rel.source_type || rel.source }}</span>
                     <span class="rel-arrow">→</span>
                     <span class="rel-name">{{ rel.name }}</span>
                     <span class="rel-arrow">→</span>
-                    <span class="rel-target">{{ rel.target_type }}</span>
+                    <span class="rel-target">{{ rel.target_type || rel.target }}</span>
                   </div>
-                  <div v-if="(projectData.ontology.relation_types?.length || 0) > 5" class="relation-more">
-                    +{{ projectData.ontology.relation_types.length - 5 }} relações adicionais...
+                  <div v-if="ontologyRelationTypes.length > 5" class="relation-more">
+                    +{{ ontologyRelationTypes.length - 5 }} relações adicionais...
                   </div>
                 </div>
               </div>
@@ -479,6 +479,20 @@ const entityTypes = computed(() => {
   })
   
   return Object.values(typeMap)
+})
+
+const ontologyRelationTypes = computed(() => {
+  const ontology = projectData.value?.ontology
+  if (!ontology) return []
+  const relations = ontology.relation_types || ontology.edge_types || []
+  return relations.map((rel) => {
+    const firstPair = rel.source_targets?.[0] || {}
+    return {
+      ...rel,
+      source_type: rel.source_type || firstPair.source || '',
+      target_type: rel.target_type || firstPair.target || ''
+    }
+  })
 })
 
 // Metodos
