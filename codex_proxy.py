@@ -38,6 +38,21 @@ _CODEX_RETRIES = int(os.environ.get("CODEX_RETRIES", "2"))
 _CODEX_RETRY_BACKOFF = float(os.environ.get("CODEX_RETRY_BACKOFF", "2.0"))
 ALLOWED_MODELS = {"gpt-5.5", "gpt-5.4-mini", "gpt-5.4", "gpt-5.4-xhigh"}
 
+# OmniRoute fica como rota opcional. O padrao segue Codex porque ele ja esta
+# validado para JSON/Graphiti; OmniRoute so entra quando ha chave ativa.
+ROUTER_PRIMARY = os.environ.get("LLM_ROUTER_PRIMARY", "codex").strip().lower()
+OMNIROUTE_BASE_URL = (
+    os.environ.get("OMNIROUTE_BASE_URL")
+    or os.environ.get("OMNIROUTE_URL")
+    or "http://72.62.108.24:20128/v1"
+).rstrip("/")
+OMNIROUTE_API_KEY = os.environ.get("OMNIROUTE_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+OMNIROUTE_MODEL = os.environ.get("OMNIROUTE_MODEL", "cc/claude-sonnet-4-6")
+OMNIROUTE_FAST_MODEL = os.environ.get("OMNIROUTE_FAST_MODEL", "cc/claude-haiku-4-5")
+OMNIROUTE_PREMIUM_MODEL = os.environ.get("OMNIROUTE_PREMIUM_MODEL", "cc/claude-opus-4-6")
+OMNIROUTE_TIMEOUT = int(os.environ.get("OMNIROUTE_TIMEOUT", "120"))
+OMNIROUTE_MODELS = {OMNIROUTE_MODEL, OMNIROUTE_FAST_MODEL, OMNIROUTE_PREMIUM_MODEL}
+
 app = Flask(__name__)
 # Limite de body: evita MemoryError quando Flask cai pro dev server (Werkzeug)
 # 8MB cobre prompts grandes (relatorio + grafo serializado) sem dar OOM single-thread.
@@ -139,10 +154,33 @@ def _normalize_model(model: str | None) -> str:
     }
     if m in mapping:
         return mapping[m]
+    if m in OMNIROUTE_MODELS and _omniroute_enabled():
+        return m
     if m in ALLOWED_MODELS:
         return m
     # fallback defensivo
     return DEFAULT_MODEL
+
+
+def _omniroute_enabled() -> bool:
+    return bool(OMNIROUTE_BASE_URL and OMNIROUTE_API_KEY)
+
+
+def _select_omniroute_model(requested_model: str, want_json: bool) -> str:
+    aliases = {
+        "haiku-tasks": OMNIROUTE_FAST_MODEL,
+        "sonnet-tasks": OMNIROUTE_MODEL,
+        "opus-tasks": OMNIROUTE_PREMIUM_MODEL,
+        "helena-premium": OMNIROUTE_PREMIUM_MODEL,
+        "gpt-5.4-mini": OMNIROUTE_FAST_MODEL,
+        "gpt-5.4": OMNIROUTE_MODEL,
+        "gpt-5.5": OMNIROUTE_MODEL,
+    }
+    if requested_model in OMNIROUTE_MODELS:
+        return requested_model
+    if requested_model in aliases:
+        return aliases[requested_model]
+    return OMNIROUTE_MODEL if want_json else OMNIROUTE_FAST_MODEL
 
 
 def _serialize_messages(messages: list[dict]) -> str:
@@ -470,6 +508,68 @@ def _call_codex(prompt: str, model: str, want_json: bool = False, timeout: int =
     return content, elapsed
 
 
+def _call_omniroute(prompt: str, model: str, want_json: bool = False, timeout: int = OMNIROUTE_TIMEOUT) -> tuple[str, float]:
+    """Chama OmniRoute via API OpenAI-compat quando a chave estiver configurada."""
+    if not _omniroute_enabled():
+        raise RuntimeError("OmniRoute nao configurado: defina OMNIROUTE_API_KEY ou OPENAI_API_KEY")
+
+    cache_key = _cache_key(prompt, f"omniroute:{model}", want_json)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        content, orig_elapsed = cached
+        print(f"[codex-proxy] OMNIROUTE CACHE HIT model={model} orig_elapsed={orig_elapsed:.1f}s", flush=True)
+        return content, 0.01
+
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1 if want_json else 0.3,
+    }
+    if want_json:
+        payload["response_format"] = {"type": "json_object"}
+
+    headers = {
+        "Authorization": f"Bearer {OMNIROUTE_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    t0 = time.time()
+    r = requests.post(f"{OMNIROUTE_BASE_URL}/chat/completions", json=payload, headers=headers, timeout=timeout)
+    elapsed = time.time() - t0
+    if r.status_code >= 400:
+        with _metrics_lock:
+            _metrics["errors"] += 1
+        raise RuntimeError(f"omniroute falhou status={r.status_code}: {r.text[-300:]}")
+
+    body = r.json()
+    content = (
+        body.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content", "")
+    ).strip()
+    if want_json:
+        content = strip_fences(content)
+
+    _cache_set(cache_key, content, elapsed)
+    with _metrics_lock:
+        _metrics["calls"] += 1
+        _metrics["total_elapsed_s"] += elapsed
+    print(f"[codex-proxy] omniroute model={model} elapsed={elapsed:.1f}s json={want_json} chars_in={len(prompt)} chars_out={len(content)}", flush=True)
+    return content, elapsed
+
+
+def _call_llm(prompt: str, model: str, want_json: bool, timeout: int) -> tuple[str, float, str, str]:
+    """Roteia LLM. Codex continua fallback para nunca parar a ontologia por rota externa."""
+    if ROUTER_PRIMARY == "omniroute":
+        omni_model = _select_omniroute_model(model, want_json)
+        try:
+            content, elapsed = _call_omniroute(prompt, omni_model, want_json=want_json, timeout=min(timeout, OMNIROUTE_TIMEOUT))
+            return content, elapsed, "omniroute", omni_model
+        except Exception as exc:
+            print(f"[codex-proxy] omniroute indisponivel; fallback codex: {exc}", flush=True)
+    content, elapsed = _call_codex(prompt, _normalize_model(model), want_json=want_json, timeout=timeout)
+    return content, elapsed, "codex", _normalize_model(model)
+
+
 @app.route("/v1/chat/completions", methods=["POST"])
 def chat_completions():
     data = request.get_json(silent=True) or {}
@@ -477,7 +577,8 @@ def chat_completions():
     if not messages:
         return jsonify({"error": {"message": "messages required", "type": "invalid_request"}}), 400
 
-    model = _normalize_model(data.get("model"))
+    requested_model = (data.get("model") or DEFAULT_MODEL).strip()
+    model = _normalize_model(requested_model)
     response_format = data.get("response_format") or {}
     schema = extract_schema(response_format, messages)
     want_json = (
@@ -492,11 +593,16 @@ def chat_completions():
         prompt += "\n\n[INSTRUCAO DO SISTEMA]\nRetorne APENAS um objeto JSON valido, sem qualquer texto antes ou depois, sem markdown."
 
     try:
-        content, elapsed = _call_codex(prompt, model, want_json=want_json, timeout=int(data.get("_timeout", 300)))
+        content, elapsed, backend_name, actual_model = _call_llm(
+            prompt,
+            requested_model,
+            want_json=want_json,
+            timeout=int(data.get("_timeout", 300)),
+        )
     except subprocess.TimeoutExpired:
         return jsonify({"error": {"message": "codex timeout", "type": "timeout"}}), 504
     except Exception as exc:
-        return jsonify({"error": {"message": str(exc), "type": "codex_error"}}), 502
+        return jsonify({"error": {"message": str(exc), "type": "llm_error"}}), 502
 
     if schema and content:
         try:
@@ -515,7 +621,8 @@ def chat_completions():
         "id": f"chatcmpl-{uuid.uuid4().hex[:16]}",
         "object": "chat.completion",
         "created": now,
-        "model": model,
+        "model": actual_model,
+        "_backend": backend_name,
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": content},
@@ -555,6 +662,9 @@ def models():
         "data": [
             {"id": "gpt-5.5", "object": "model", "created": now, "owned_by": "openai-chatgpt"},
             {"id": "gpt-5.4-mini", "object": "model", "created": now, "owned_by": "openai-chatgpt"},
+            {"id": "sonnet-tasks", "object": "model", "created": now, "owned_by": "omniroute", "credential_present": _omniroute_enabled()},
+            {"id": "haiku-tasks", "object": "model", "created": now, "owned_by": "omniroute", "credential_present": _omniroute_enabled()},
+            {"id": "helena-premium", "object": "model", "created": now, "owned_by": "omniroute", "credential_present": _omniroute_enabled()},
             {"id": "text-embedding-3-small", "object": "model", "created": now, "owned_by": "ollama"},
             {"id": "nomic-embed-text", "object": "model", "created": now, "owned_by": "ollama"},
         ],
@@ -569,9 +679,20 @@ def health():
     return {
         "status": "ok",
         "backend": "codex",
+        "router_primary": ROUTER_PRIMARY,
         "codex_home": CODEX_HOME,
         "default_model": DEFAULT_MODEL,
         "reasoning_effort": CODEX_REASONING_EFFORT,
+        "omniroute": {
+            "credential_present": _omniroute_enabled(),
+            "validated": os.environ.get("OMNIROUTE_VALIDATED") == "1",
+            "base_url": OMNIROUTE_BASE_URL,
+            "models": {
+                "structured": OMNIROUTE_MODEL,
+                "fast": OMNIROUTE_FAST_MODEL,
+                "premium": OMNIROUTE_PREMIUM_MODEL,
+            },
+        },
         "cache": {"hits": _cache_hits, "misses": _cache_misses, "size": len(_cache), "max": _CACHE_MAX, "ttl_s": _CACHE_TTL},
         "concurrency": {"max": _MAX_CONCURRENT, "available": _codex_sem._value if hasattr(_codex_sem, "_value") else None},
         "metrics": {**m, "avg_elapsed_s": round(avg, 2)},
@@ -606,7 +727,7 @@ def metrics():
 
 
 if __name__ == "__main__":
-    print(f"[codex-proxy] CODEX_HOME={CODEX_HOME} default={DEFAULT_MODEL}", flush=True)
+    print(f"[codex-proxy] CODEX_HOME={CODEX_HOME} default={DEFAULT_MODEL} router={ROUTER_PRIMARY} omniroute_configured={_omniroute_enabled()}", flush=True)
     try:
         from waitress import serve
         print(f"[codex-proxy] serving via waitress on 0.0.0.0:{PORT} threads={_MAX_CONCURRENT*2}", flush=True)
