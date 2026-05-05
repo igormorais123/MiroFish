@@ -33,6 +33,7 @@ CODEX_BIN = os.environ.get("CODEX_BIN", _default_codex if os.path.exists(_defaul
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 PORT = int(os.environ.get("CODEX_PROXY_PORT", "8004"))
 DEFAULT_MODEL = os.environ.get("CODEX_DEFAULT_MODEL", "gpt-5.5")
+CODEX_REASONING_EFFORT = os.environ.get("CODEX_REASONING_EFFORT", "low")
 _CODEX_RETRIES = int(os.environ.get("CODEX_RETRIES", "2"))
 _CODEX_RETRY_BACKOFF = float(os.environ.get("CODEX_RETRY_BACKOFF", "2.0"))
 ALLOWED_MODELS = {"gpt-5.5", "gpt-5.4-mini", "gpt-5.4", "gpt-5.4-xhigh"}
@@ -397,6 +398,7 @@ def _call_codex(prompt: str, model: str, want_json: bool = False, timeout: int =
     cmd = [
         CODEX_BIN, "exec",
         "-m", model,
+        "-c", f'model_reasoning_effort="{CODEX_REASONING_EFFORT}"',
         "--skip-git-repo-check",
         "--sandbox", "read-only",
         "-o", out_path,
@@ -569,6 +571,7 @@ def health():
         "backend": "codex",
         "codex_home": CODEX_HOME,
         "default_model": DEFAULT_MODEL,
+        "reasoning_effort": CODEX_REASONING_EFFORT,
         "cache": {"hits": _cache_hits, "misses": _cache_misses, "size": len(_cache), "max": _CACHE_MAX, "ttl_s": _CACHE_TTL},
         "concurrency": {"max": _MAX_CONCURRENT, "available": _codex_sem._value if hasattr(_codex_sem, "_value") else None},
         "metrics": {**m, "avg_elapsed_s": round(avg, 2)},

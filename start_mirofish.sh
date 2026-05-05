@@ -75,6 +75,7 @@ if grep -qE "^LLM_BASE_URL=.*8004" .env 2>/dev/null || [ "$MODE" = "--codex" ]; 
     CODEX_HOME="${CODEX_HOME:-$HOME/.codex-pro}" \
     CODEX_PROXY_PORT="${CODEX_PROXY_PORT:-8004}" \
     CODEX_DEFAULT_MODEL="${CODEX_DEFAULT_MODEL:-gpt-5.5}" \
+    CODEX_REASONING_EFFORT="${CODEX_REASONING_EFFORT:-low}" \
       nohup python codex_proxy.py > logs_codex_proxy.log 2>&1 &
     disown || true
     sleep 4
