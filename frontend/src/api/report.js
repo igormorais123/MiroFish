@@ -75,6 +75,14 @@ export const getReport = (reportId) => {
 }
 
 /**
+ * Obter secoes geradas do relatorio
+ * @param {string} reportId
+ */
+export const getReportSections = (reportId) => {
+  return service.get(`/api/report/${reportId}/sections`)
+}
+
+/**
  * Listar artefatos de auditoria do relatorio
  * @param {string} reportId
  * @param {boolean} includeContent
