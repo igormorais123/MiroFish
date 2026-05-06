@@ -134,6 +134,10 @@ export const getSimulationQuality = (simulationId, params = {}) => {
   return service.get(`/api/simulation/${simulationId}/quality`, { params })
 }
 
+export const getSimulationReadiness = (simulationId, params = {}) => {
+  return service.get(`/api/simulation/${simulationId}/readiness`, { params })
+}
+
 /**
  * Obter postagens da simulacao
  * @param {string} simulationId

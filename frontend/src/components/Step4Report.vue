@@ -105,6 +105,23 @@
             </div>
           </div>
 
+          <div v-if="deliveryPackage" class="delivery-package" :class="`delivery-package--${deliveryPackage.status}`">
+            <div class="delivery-package-main">
+              <span class="delivery-dot"></span>
+              <span class="delivery-title">{{ deliveryPackageTitle }}</span>
+            </div>
+            <div class="delivery-package-meta">
+              <span>{{ deliveryPackageAction }}</span>
+              <span v-if="deliveryPackage.artifacts?.length">{{ deliveryPackage.artifacts.length }} artefatos</span>
+            </div>
+            <div v-if="deliveryPackage.blockers?.length" class="delivery-package-message">
+              {{ deliveryPackage.blockers[0] }}
+            </div>
+            <div v-else-if="deliveryPackage.warnings?.length" class="delivery-package-message">
+              {{ deliveryPackage.warnings[0] }}
+            </div>
+          </div>
+
           <div class="workflow-steps" v-if="workflowSteps.length > 0">
             <div
               v-for="(step, sidx) in workflowSteps"
@@ -507,7 +524,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle } from '../api/report'
+import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle, getReportDeliveryPackage } from '../api/report'
+import { escapeHtml, textToSafeHtml } from '../utils/safeMarkdown'
 
 const router = useRouter()
 
@@ -548,6 +566,7 @@ const reportRecord = ref(null)
 const reportArtifacts = ref([])
 const auditLoadError = ref(null)
 const missionBundleFetchedFor = ref(null)
+const deliveryPackage = ref(null)
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
@@ -1645,14 +1664,12 @@ const InterviewDisplay = {
                       ])
                     ])
                   ]),
-                  h('div', {
-                    class: ['qa-text', 'answer-text', { 'placeholder-text': isPlaceholder }],
-                    innerHTML: isPlaceholder
-                      ? answerText
-                      : formatAnswer(answerText, isExpanded)
-                          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                          .replace(/\n/g, '<br>')
-                  }),
+                h('div', {
+                  class: ['qa-text', 'answer-text', { 'placeholder-text': isPlaceholder }],
+                  innerHTML: isPlaceholder
+                    ? textToSafeHtml(answerText)
+                    : textToSafeHtml(formatAnswer(answerText, isExpanded))
+                }),
                   // Expand/Collapse Button (não exibir para texto de placeholder)
                   !isPlaceholder && answerText.length > 400 && h('button', {
                     class: 'expand-answer-btn',
@@ -2043,6 +2060,30 @@ const auditStatusText = computed(() => {
   return 'Pendente'
 })
 
+const deliveryPackageTitle = computed(() => {
+  const labels = {
+    client_deliverable: 'Entrega verificada',
+    ready_for_export: 'Pronto para pacote',
+    diagnostic_only: 'Diagnóstico interno',
+    report_in_progress: 'Relatório em geração',
+    blocked: 'Entrega bloqueada',
+    missing: 'Relatório ausente'
+  }
+  return labels[deliveryPackage.value?.status] || 'Entrega em revisão'
+})
+
+const deliveryPackageAction = computed(() => {
+  const labels = {
+    download_verified_bundle: 'Baixar pacote verificado',
+    generate_export_bundle: 'Gerar pacote executivo',
+    review_diagnostic_or_rerun_client_mode: 'Revisar modo diagnóstico',
+    wait_report: 'Aguardar relatório',
+    repair_or_review_blockers: 'Revisar bloqueios',
+    select_report: 'Selecionar relatório'
+  }
+  return labels[deliveryPackage.value?.next_action] || 'Revisar estado'
+})
+
 const auditIssues = computed(() => {
   const issues = [
     ...(qualityGate.value?.issues || []),
@@ -2220,6 +2261,7 @@ const renderMarkdown = (content) => {
   
   // Remover título de nível 2 (## xxx) do início, pois o título da seção já está no elemento externo
   let processedContent = content.replace(/^##\s+.+\n+/, '')
+  processedContent = escapeHtml(processedContent)
   
   // Processar blocos de código
   let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
@@ -2234,7 +2276,7 @@ const renderMarkdown = (content) => {
   html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>')
   
   // Processar blocos de citação
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
   
   // Processar listas - suportar sublistas
   html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {
@@ -2504,10 +2546,11 @@ const fetchReportAudit = async () => {
   if (!props.reportId) return
 
   try {
-    const [reportRes, artifactsRes, sectionsRes] = await Promise.all([
+    const [reportRes, artifactsRes, sectionsRes, deliveryRes] = await Promise.all([
       getReport(props.reportId),
       getReportArtifacts(props.reportId, true),
-      getReportSections(props.reportId)
+      getReportSections(props.reportId),
+      getReportDeliveryPackage(props.reportId).catch(() => null)
     ])
 
     if (reportRes.success && reportRes.data) {
@@ -2541,6 +2584,10 @@ const fetchReportAudit = async () => {
         }
       })
       generatedSections.value = loadedSections
+    }
+
+    if (deliveryRes?.success && deliveryRes.data) {
+      deliveryPackage.value = deliveryRes.data
     }
 
     const hasMissionBundle = reportArtifacts.value.some(item => item.name === 'mission_bundle.json')
@@ -2624,6 +2671,7 @@ watch(() => props.reportId, (newId) => {
     reportArtifacts.value = []
     missionBundleFetchedFor.value = null
     auditLoadError.value = null
+    deliveryPackage.value = null
     
     startPolling()
   }
@@ -3244,6 +3292,69 @@ watch(() => props.reportId, (newId) => {
   background: transparent;
   border-style: dashed;
   color: #6B7280;
+}
+
+.delivery-package {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: #F9FAFB;
+}
+
+.delivery-package--ready_for_export,
+.delivery-package--client_deliverable {
+  border-color: #A7F3D0;
+  background: #ECFDF5;
+}
+
+.delivery-package--blocked,
+.delivery-package--missing {
+  border-color: #FECACA;
+  background: #FEF2F2;
+}
+
+.delivery-package--diagnostic_only {
+  border-color: #FDE68A;
+  background: #FFFBEB;
+}
+
+.delivery-package-main,
+.delivery-package-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.delivery-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6B7280;
+}
+
+.delivery-package--ready_for_export .delivery-dot,
+.delivery-package--client_deliverable .delivery-dot {
+  background: #059669;
+}
+
+.delivery-package--blocked .delivery-dot,
+.delivery-package--missing .delivery-dot {
+  background: #DC2626;
+}
+
+.delivery-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.delivery-package-meta,
+.delivery-package-message {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #4B5563;
 }
 
 .workflow-steps {

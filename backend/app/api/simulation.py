@@ -12,6 +12,7 @@ from ..config import Config
 from ..services.zep_entity_reader import ZepEntityReader
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.mission_selection import MissionSelection
+from ..services.decision_readiness import evaluate_decision_readiness
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
 from ..utils.logger import get_logger
@@ -41,6 +42,29 @@ def optimize_interview_prompt(prompt: str) -> str:
     if prompt.startswith(INTERVIEW_PROMPT_PREFIX):
         return prompt
     return f"{INTERVIEW_PROMPT_PREFIX}{prompt}"
+
+
+@simulation_bp.route('/<simulation_id>/readiness', methods=['GET'])
+def get_simulation_readiness(simulation_id: str):
+    """Consolidar estado de produto e proxima acao segura da simulacao."""
+    try:
+        data = evaluate_decision_readiness(
+            simulation_id,
+            graph_id=request.args.get("graph_id"),
+            delivery_mode=request.args.get("delivery_mode"),
+        )
+        status_code = 404 if data.get("status") == "missing" else 200
+        return jsonify({
+            "success": status_code == 200,
+            "data": data,
+        }), status_code
+    except Exception as e:
+        logger.error(f"Falha ao avaliar readiness da simulacao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 500
 
 
 # ============== Interface de leitura de entidades ==============

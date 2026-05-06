@@ -15,6 +15,7 @@ from ..services.mission_selection import MissionSelection
 from ..services.power_catalog import PowerCatalog
 from ..services.power_persona_catalog import PowerPersonaCatalog
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
+from ..services.report_delivery_packet import build_report_delivery_packet
 from ..services.simulation_manager import SimulationManager
 from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
@@ -671,6 +672,25 @@ def list_report_artifacts(report_id: str):
         return jsonify({
             "success": False,
             "error": str(e)
+        }), 500
+
+
+@report_bp.route('/<report_id>/delivery-package', methods=['GET'])
+def get_report_delivery_package(report_id: str):
+    """Obter pacote consolidado de entregabilidade do relatorio."""
+    try:
+        packet = build_report_delivery_packet(report_id)
+        status_code = 404 if packet.get("status") == "missing" else 200
+        return jsonify({
+            "success": status_code == 200,
+            "data": packet,
+        }), status_code
+    except Exception as e:
+        logger.error(f"Falha ao obter delivery package: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
         }), 500
 
 
