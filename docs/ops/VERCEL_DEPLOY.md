@@ -9,6 +9,9 @@
 | Project name | `mirofish-inteia` |
 | Project ID | `prj_enAVMOreJOeLH7VFrOzY9UIzF98s` |
 | Org / Team ID | `team_Af2JN68IUUA7lwsIGKuJiN66` |
+| CLI context observado | `igormorais123s-projects` |
+| CLI user observado | `inteia` |
+| URL direta Vercel | https://mirofish-inteia.vercel.app |
 | Site público | https://inteia.com.br/mirofish |
 | Plataforma | Vercel (Hobby/Pro — verificar com Igor) |
 

@@ -21,6 +21,9 @@ Reduzir conflito entre instancias paralelas (Claude Code, Codex, Hermes e trabal
 | Vercel project | `mirofish-inteia` |
 | Vercel project ID | `prj_enAVMOreJOeLH7VFrOzY9UIzF98s` |
 | Vercel team/org ID | `team_Af2JN68IUUA7lwsIGKuJiN66` |
+| Vercel CLI context | `igormorais123s-projects` |
+| Vercel CLI user | `inteia` |
+| Vercel direct production URL | `https://mirofish-inteia.vercel.app` |
 | Site publico | `https://inteia.com.br/mirofish` |
 | API publica correta | `https://inteia.com.br/mirofish/api/...` |
 
@@ -98,7 +101,25 @@ Confirmado localmente em `.vercel/project.json`:
 }
 ```
 
-Observacao: a consulta pelo conector Vercel retornou `403 Forbidden` nesta sessao. Portanto, qualquer acao no painel Vercel deve ser confirmada por CLI autenticada (`vercel whoami`, `vercel project ls`, `vercel deployments ls`) ou pelo painel web antes de alterar producao.
+Confirmado por CLI nesta sessao:
+
+```bash
+vercel whoami
+# inteia
+
+vercel project ls
+# contexto: igormorais123s-projects
+# projeto: mirofish-inteia
+# latest production URL: https://mirofish-inteia.vercel.app
+
+vercel ls mirofish-inteia
+# ultimo deployment observado:
+# https://mirofish-inteia-d3nk9pteh-igormorais123s-projects.vercel.app
+# Status: Ready
+# Environment: Production
+```
+
+Observacao: a consulta pelo conector Vercel retornou `403 Forbidden` nesta sessao, mas a CLI autenticada funcionou. Para qualquer acao de producao, confirmar por CLI autenticada ou painel web antes de alterar o ambiente.
 
 ## Ordem segura de merge/deploy
 
