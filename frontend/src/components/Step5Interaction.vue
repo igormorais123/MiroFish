@@ -535,7 +535,7 @@ const reportToolById = {
   insight_forge: {
     name: 'InsightForge',
     actionLabel: 'Executar analise profunda',
-    buildPrompt: () => `Execute o modo InsightForge para o relatorio ${props.reportId}. Cruze dados de origem, secoes finais e estado do ambiente simulado para entregar: cadeia causal, evidencias criticas, riscos de interpretacao e proximos passos operacionais. Se a ferramenta externa nao estiver acoplada nesta sessao, use os artefatos persistidos do relatorio e avance sem parar na indisponibilidade.`
+    buildPrompt: () => `Execute o modo InsightForge para o relatorio ${props.reportId}. Cruze dados de origem, secoes finais e estado do ambiente simulado para entregar: cadeia causal, evidencias criticas, riscos de interpretacao e proximos passos operacionais. Use a ferramenta InsightForge do agente e sintetize o resultado com o relatorio persistido.`
   },
   panorama_search: {
     name: 'PanoramaSearch',
@@ -557,6 +557,13 @@ const reportToolById = {
     actionLabel: 'Gerar fechamento',
     buildPrompt: () => `Gere o desfecho operacional final do relatorio ${props.reportId}: decisao recomendada, proximos passos em 24h, 7 dias e 30 dias, checklist do que salvar ou imprimir, anexos indispensaveis e riscos pendentes que ainda podem mudar a recomendacao.`
   }
+}
+
+const backendToolModeById = {
+  insight_forge: 'insight_forge',
+  panorama_search: 'panorama_search',
+  quick_search: 'quick_search',
+  interview_subagent: 'interview_agents'
 }
 
 const appBasePath = computed(() => {
@@ -687,7 +694,7 @@ const formatTime = (timestamp) => {
   }
 }
 
-const executeReportAgentPrompt = async (message, label = 'operacao') => {
+const executeReportAgentPrompt = async (message, label = 'operacao', toolId = null) => {
   if (!message?.trim() || isSending.value) return
 
   selectReportAgentChat()
@@ -702,7 +709,7 @@ const executeReportAgentPrompt = async (message, label = 'operacao') => {
   isSending.value = true
 
   try {
-    await sendToReportAgent(message)
+    await sendToReportAgent(message, backendToolModeById[toolId] || null)
     addLog(`${label} concluida pelo agente de relatorio`)
   } catch (err) {
     const errorMessage = err.message || 'Falha na operacao'
@@ -724,7 +731,7 @@ const runReportTool = async (toolId) => {
   if (!tool) return
 
   activeReportTool.value = toolId
-  await executeReportAgentPrompt(tool.buildPrompt(), tool.name)
+  await executeReportAgentPrompt(tool.buildPrompt(), tool.name, toolId)
 }
 
 const runReportOperation = async (operation) => {
@@ -880,7 +887,7 @@ const sendMessage = async () => {
   }
 }
 
-const sendToReportAgent = async (message) => {
+const sendToReportAgent = async (message, toolMode = null) => {
   addLog(`Enviando ao agente de relatório: ${message.substring(0, 50)}...`)
   
   // Build chat history for API
@@ -892,11 +899,17 @@ const sendToReportAgent = async (message) => {
       content: msg.content
     }))
   
-  const res = await chatWithReport({
+  const payload = {
     simulation_id: props.simulationId,
     message: message,
     chat_history: historyForApi
-  })
+  }
+
+  if (toolMode) {
+    payload.tool_mode = toolMode
+  }
+
+  const res = await chatWithReport(payload)
   
   if (res.success && res.data) {
     chatHistory.value.push({

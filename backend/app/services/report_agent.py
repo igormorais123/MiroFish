@@ -1567,6 +1567,17 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
     
     # Conjunto de nomes de ferramentas validos, usado para validacao na analise de JSON bruto como fallback
     VALID_TOOL_NAMES = {"insight_forge", "panorama_search", "quick_search", "interview_agents"}
+    CHAT_TOOL_ALIASES = {
+        "insight_forge": "insight_forge",
+        "insightforge": "insight_forge",
+        "panorama_search": "panorama_search",
+        "panoramasearch": "panorama_search",
+        "quick_search": "quick_search",
+        "quicksearch": "quick_search",
+        "interview_subagent": "interview_agents",
+        "interviewsubagent": "interview_agents",
+        "interview_agents": "interview_agents",
+    }
 
     def _parse_tool_calls(self, response: str) -> List[Dict[str, Any]]:
         """
@@ -1627,6 +1638,41 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 data["parameters"] = data.pop("params")
             return True
         return False
+
+    def _normalize_chat_tool_mode(self, tool_mode: Optional[str]) -> Optional[str]:
+        """Converte o modo vindo da UI para o nome interno da ferramenta."""
+        if not tool_mode:
+            return None
+
+        normalized = re.sub(r"[^a-zA-Z0-9_]", "", str(tool_mode).strip().lower())
+        return self.CHAT_TOOL_ALIASES.get(normalized)
+
+    def _build_chat_tool_parameters(
+        self,
+        tool_name: str,
+        message: str,
+        report_content: str = "",
+    ) -> Dict[str, Any]:
+        """Monta parametros seguros para execucao direta das ferramentas no chat."""
+        query = (message or self.simulation_requirement or "").strip()
+
+        if tool_name == "panorama_search":
+            return {"query": query, "include_expired": True}
+        if tool_name == "quick_search":
+            return {"query": query, "limit": 12}
+        if tool_name == "interview_agents":
+            return {"interview_topic": query, "max_agents": 5}
+
+        return {
+            "query": query,
+            "report_context": (report_content or "")[:4000],
+        }
+
+    def _clean_chat_response(self, response: str) -> str:
+        """Remove blocos internos de ferramenta antes de devolver ao usuario."""
+        clean_response = re.sub(r'<tool_call>.*?</tool_call>', '', response or '', flags=re.DOTALL)
+        clean_response = re.sub(r'\[TOOL_CALL\].*?\)', '', clean_response)
+        return clean_response.strip()
     
     def _get_tools_description(self) -> str:
         """Gera o texto de descricao das ferramentas"""
@@ -2674,7 +2720,8 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
     def chat(
         self,
         message: str,
-        chat_history: List[Dict[str, str]] = None
+        chat_history: List[Dict[str, str]] = None,
+        tool_mode: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Dialogo com o Report Agent
@@ -2727,8 +2774,52 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             "content": message
         })
         
-        # Ciclo ReACT (versao simplificada)
         tool_calls_made = []
+        direct_tool_name = self._normalize_chat_tool_mode(tool_mode)
+
+        if direct_tool_name:
+            parameters = self._build_chat_tool_parameters(
+                direct_tool_name,
+                message,
+                report_content,
+            )
+            tool_result = self._execute_tool(
+                direct_tool_name,
+                parameters,
+                report_context=report_content[:4000],
+            )
+            tool_call = {
+                "name": direct_tool_name,
+                "parameters": parameters,
+                "mode": "direct",
+            }
+            tool_calls_made.append(tool_call)
+
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"[Resultado {direct_tool_name}]\n"
+                    f"{tool_result[:6000]}\n\n"
+                    "A ferramenta acima ja foi executada pelo sistema para esta conversa. "
+                    "Responda ao pedido do usuario usando obrigatoriamente esse resultado e o relatorio persistido. "
+                    "Nao declare indisponibilidade ou falta de acoplamento da ferramenta; se algum dado estiver limitado, "
+                    "aponte a lacuna operacional diretamente."
+                )
+            })
+
+            final_response = self.llm.chat(
+                messages=messages,
+                temperature=0.5,
+                **self._cost_session_kwargs(),
+            )
+
+            return {
+                "response": self._clean_chat_response(final_response),
+                "tool_calls": tool_calls_made,
+                "sources": [parameters.get("query") or parameters.get("interview_topic") or ""]
+            }
+
+        # Ciclo ReACT (versao simplificada)
         max_iterations = 2  # Numero reduzido de rodadas de iteracao
         
         for iteration in range(max_iterations):
@@ -2743,11 +2834,8 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             
             if not tool_calls:
                 # Sem chamada de ferramenta, retorna a resposta diretamente
-                clean_response = re.sub(r'<tool_call>.*?</tool_call>', '', response, flags=re.DOTALL)
-                clean_response = re.sub(r'\[TOOL_CALL\].*?\)', '', clean_response)
-                
                 return {
-                    "response": clean_response.strip(),
+                    "response": self._clean_chat_response(response),
                     "tool_calls": tool_calls_made,
                     "sources": [tc.get("parameters", {}).get("query", "") for tc in tool_calls_made]
                 }
@@ -2779,12 +2867,8 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             **self._cost_session_kwargs(),
         )
         
-        # Limpa a resposta
-        clean_response = re.sub(r'<tool_call>.*?</tool_call>', '', final_response, flags=re.DOTALL)
-        clean_response = re.sub(r'\[TOOL_CALL\].*?\)', '', clean_response)
-        
         return {
-            "response": clean_response.strip(),
+            "response": self._clean_chat_response(final_response),
             "tool_calls": tool_calls_made,
             "sources": [tc.get("parameters", {}).get("query", "") for tc in tool_calls_made]
         }

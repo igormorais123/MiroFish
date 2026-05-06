@@ -260,6 +260,51 @@ def test_report_agent_build_failed_section_content_e_claro_para_cliente():
     assert "timeout interno" not in content
 
 
+def test_report_agent_chat_tool_mode_executa_ferramenta_antes_da_resposta(monkeypatch):
+    class DummyLLM:
+        def __init__(self):
+            self.messages = None
+
+        def chat(self, messages, **kwargs):
+            self.messages = messages
+            return "Conclusão\nInsightForge executado com evidências do grafo."
+
+    class DummyInsightResult:
+        def to_text(self):
+            return "INSIGHT_FORGE_RESULT: cadeia causal e fatos do grafo"
+
+    class DummyZepTools:
+        def __init__(self):
+            self.calls = []
+
+        def insight_forge(self, **kwargs):
+            self.calls.append(kwargs)
+            return DummyInsightResult()
+
+    monkeypatch.setattr(ReportManager, "get_report_by_simulation", lambda simulation_id: None)
+
+    llm = DummyLLM()
+    zep_tools = DummyZepTools()
+    agent = ReportAgent(
+        graph_id="graph_1",
+        simulation_id="sim_1",
+        simulation_requirement="demanda de teste",
+        llm_client=llm,
+        zep_tools=zep_tools,
+    )
+
+    result = agent.chat(
+        "Execute o modo InsightForge para montar cadeia causal.",
+        tool_mode="insight_forge",
+    )
+
+    assert zep_tools.calls
+    assert result["tool_calls"][0]["name"] == "insight_forge"
+    assert result["response"] == "Conclusão\nInsightForge executado com evidências do grafo."
+    assert "nao acoplada" not in result["response"].lower()
+    assert any("INSIGHT_FORGE_RESULT" in msg["content"] for msg in llm.messages)
+
+
 def test_report_agent_sanitize_llm_response_for_log_remove_final_answer_bruto():
     response = (
         "Thought: dados coletados.\n"
