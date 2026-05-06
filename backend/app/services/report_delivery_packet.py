@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .report_agent import ReportManager
+from .report_method_checklist import evaluate_report_method_checklist
 
 
 def _artifact_names(report_id: str) -> list[str]:
@@ -44,6 +45,8 @@ def build_report_delivery_packet(report_id: str) -> dict[str, Any]:
     artifacts = _artifact_names(report_id)
     bundle_verification = _verified_bundle(report_id)
     bundle_verified = bundle_verification is not None
+    method_checklist = evaluate_report_method_checklist(report_id)
+    method_checks_pass = method_checklist.get("hard_checks_pass") is True
     report_publishable = report.is_publishable()
     blockers: list[str] = []
     warnings: list[str] = []
@@ -64,11 +67,24 @@ def build_report_delivery_packet(report_id: str) -> dict[str, Any]:
     if report_publishable and not bundle_verified:
         warnings.append("Bundle verificavel ainda nao foi gerado/aprovado.")
 
-    client_deliverable = report_publishable and bundle_verified
+    for item in method_checklist.get("hard_blockers", []):
+        message = item.get("message")
+        if message and message not in blockers:
+            blockers.append(message)
+
+    for item in method_checklist.get("warnings", []):
+        message = item.get("message")
+        if message and message not in warnings:
+            warnings.append(message)
+
+    if report_publishable and bundle_verified and not method_checks_pass:
+        blockers.append("Checklist metodologico bloqueou a entrega.")
+
+    client_deliverable = report_publishable and bundle_verified and method_checks_pass
     if client_deliverable:
         status = "client_deliverable"
         next_action = "download_verified_bundle"
-    elif report_publishable:
+    elif report_publishable and method_checks_pass:
         status = "ready_for_export"
         next_action = "generate_export_bundle"
     elif delivery_status == "diagnostic_only":
@@ -91,9 +107,11 @@ def build_report_delivery_packet(report_id: str) -> dict[str, Any]:
         "delivery_status": delivery_status,
         "report_publishable": report_publishable,
         "bundle_verified": bundle_verified,
+        "method_checks_pass": method_checks_pass,
         "client_deliverable": client_deliverable,
         "blockers": blockers,
         "warnings": warnings,
         "artifacts": artifacts,
         "bundle_verification": bundle_verification,
+        "method_checklist": method_checklist,
     }

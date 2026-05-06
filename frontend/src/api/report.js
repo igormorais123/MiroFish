@@ -95,6 +95,10 @@ export const getReportDeliveryPackage = (reportId) => {
   return service.get(`/api/report/${reportId}/delivery-package`)
 }
 
+export const repairReportFinalization = (reportId) => {
+  return service.post(`/api/report/${reportId}/finalization/repair`)
+}
+
 /**
  * Obter artefato especifico de auditoria do relatorio
  * @param {string} reportId
