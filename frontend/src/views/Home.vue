@@ -873,15 +873,26 @@ const startSimulation = () => {
   border: 0;
   border-radius: 14px;
 }
-/* Máscara para esconder marca d'água "Veo" no canto inferior direito do vídeo gerado.
-   Posição calibrada para o frame 1280x720 do gerador (Veo). */
+/* Máscara para esconder marca d'água "Veo" no canto inferior direito do vídeo.
+   Como o fundo do vídeo é preto puro, podemos cobrir totalmente sem efeito visível. */
 .brand-card-video-mask {
   position: absolute;
   right: 0; bottom: 0;
-  width: 14%; height: 14%;
-  background: linear-gradient(135deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 55%, #000 100%);
+  width: 22%; height: 18%;
+  background:
+    linear-gradient(135deg, rgba(0,0,0,0) 0%, #000 35%, #000 100%);
   pointer-events: none;
   z-index: 2;
+}
+/* Segunda mask sólida apenas no cantinho onde fica o texto "Veo" — garante cobertura
+   total mesmo se o gerador mudar a posição do watermark levemente. */
+.brand-card-video-mask::after {
+  content: "";
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 70%; height: 70%;
+  background: #000;
+  border-top-left-radius: 14px;
 }
 .brand-card-image-glow {
   position: absolute; inset: 0;
