@@ -151,10 +151,25 @@ def generate_ontology():
     try:
         logger.info("=== Iniciando geracao da definicao de ontologia ===")
 
-        # Obter parametros
-        simulation_requirement = request.form.get('simulation_requirement', '')
-        project_name = request.form.get('project_name', 'Unnamed Project')
-        additional_context = request.form.get('additional_context', '')
+        # Obter parametros. A tela normalmente envia FormData, mas alguns
+        # clientes preservam o cabecalho JSON global; aceitar os dois formatos
+        # evita bloquear a criacao quando a missao vem apenas do objetivo.
+        json_payload = request.get_json(silent=True) or {}
+        simulation_requirement = (
+            request.form.get('simulation_requirement')
+            or json_payload.get('simulation_requirement')
+            or ''
+        )
+        project_name = (
+            request.form.get('project_name')
+            or json_payload.get('project_name')
+            or 'Unnamed Project'
+        )
+        additional_context = (
+            request.form.get('additional_context')
+            or json_payload.get('additional_context')
+            or ''
+        )
 
         logger.debug(f"Nome do projeto: {project_name}")
         logger.debug(f"Objetivo da simulacao: {simulation_requirement[:100]}...")

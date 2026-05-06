@@ -637,10 +637,14 @@ const handleNewProject = async () => {
       await startBuildGraph()
     } else {
       error.value = response.error || 'Falha na geração da ontologia'
+      ontologyProgress.value = null
+      currentPhase.value = -1
     }
   } catch (err) {
     console.error('Handle new project error:', err)
     error.value = 'Falha ao inicializar o projeto: ' + (err.message || 'erro desconhecido')
+    ontologyProgress.value = null
+    currentPhase.value = -1
   } finally {
     loading.value = false
   }
