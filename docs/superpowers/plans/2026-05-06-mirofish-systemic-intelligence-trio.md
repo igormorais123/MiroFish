@@ -261,8 +261,14 @@ Then a Helena/Vox-style verified bundle boundary wraps the package before HTML/P
 - `backend/app/services/report_finalization.py`
   Deterministically rechecks existing report content, attribution, evidence audit, status, progress, `full_report.md`, and post-outline sections without calling an LLM.
 
+- `backend/app/services/report_method_checklist.py`
+  Lightweight Mirofish method checklist adapted from Helena/Vox contracts.
+
 - `backend/tests/test_report_finalization.py`
   Unit tests for stale audit repair, operational deadlines, Markdown heading numeric claims, and generated section discovery.
+
+- `backend/tests/test_report_method_checklist.py`
+  Unit tests for method checklist pass/fail behavior and public-opinion conditional checks.
 
 - `backend/tests/test_report_delivery_packet.py`  
   Unit tests for delivery packet policy.
@@ -276,11 +282,29 @@ Then a Helena/Vox-style verified bundle boundary wraps the package before HTML/P
 - `backend/app/services/report_exporter.py`  
   Second PR service for HTML/export manifest.
 
+- `backend/app/services/report_bundle_verifier.py`
+  Second PR service for safe-path, required-artifact, file-hash, and delivery-boundary verification.
+
 - `backend/tests/test_report_exporter.py`  
   Second PR tests for export policy, HTML source, hashes, and path safety.
 
+- `backend/tests/test_report_bundle_verifier.py`
+  Second PR tests for verified bundle manifest, path traversal rejection, missing artifacts, and hash mismatch detection.
+
 - `backend/app/services/report_chart_builder.py`  
   Third PR service for deterministic local charts.
+
+- `backend/app/services/report_claim_ledger.py`
+  Fourth PR optional claim/provenance-lite extraction and recommendation contract checks.
+
+- `backend/app/services/document_reading_adapter.py`
+  Fourth PR optional adapter for Helena BookNavigator/CIR3-style local document intelligence, disabled by default.
+
+- `backend/tests/test_report_claim_ledger.py`
+  Fourth PR optional tests for claim types, evidence links, and recommendation fields.
+
+- `backend/tests/test_document_reading_adapter.py`
+  Fourth PR optional tests for disabled-by-default behavior and safe local bundle loading.
 
 - `backend/autoresearch/targets/report_delivery.py`  
   Zero-LLM AutoResearch target for delivery-package quality.
@@ -299,6 +323,7 @@ Then a Helena/Vox-style verified bundle boundary wraps the package before HTML/P
 - `.ralph/METRICS.schema.json`
 - `backend/app/api/report.py`
 - `backend/app/services/report_attribution.py`
+- `backend/app/services/forecast_ledger.py`
 - `backend/app/utils/report_quality.py`
 - `backend/autoresearch/cli.py`
 - `frontend/src/api/report.js`
@@ -640,8 +665,148 @@ Selected backend tests pass; frontend build succeeds; diff check emits no output
 
 **Files:**
 - Create: `backend/app/services/report_delivery_packet.py`
+- Create: `backend/app/services/report_method_checklist.py`
+- Create: `backend/tests/test_report_method_checklist.py`
 - Create: `backend/tests/test_report_delivery_packet.py`
 - Modify: `backend/app/services/report_finalization.py`
+
+- [ ] **Step 0: Add lightweight method checklist**
+
+Create `backend/tests/test_report_method_checklist.py`:
+
+```python
+from app.services.report_method_checklist import build_report_method_checklist
+
+
+def test_method_checklist_passes_basic_publishable_report():
+    result = build_report_method_checklist(
+        markdown="""
+# Relatorio
+
+## Simulacao
+Foram avaliados cenarios.
+
+## Evidencias
+As fontes e limites estao declarados.
+
+## Recomendacoes
+- Dono: Operacoes
+- Prazo: 30 dias
+- Custo/esforco: baixo
+- KPI: tempo de resposta
+""",
+        artifacts={
+            "system_gate.json": {"passes_gate": True},
+            "evidence_audit.json": {"passes_gate": True},
+            "mission_bundle.json": {"hashes": {"manifesto": "abc"}},
+        },
+        delivery_status="publishable",
+    )
+
+    assert result["passed"] is True
+    assert result["checks"]["verification_gate"]["passed"] is True
+    assert result["checks"]["operational_recommendation"]["passed"] is True
+
+
+def test_public_opinion_protocol_is_conditional():
+    result = build_report_method_checklist(
+        markdown="Public opinion and social propagation are central to this scenario.",
+        artifacts={"system_gate.json": {"passes_gate": True}},
+        delivery_status="publishable",
+    )
+
+    assert result["checks"]["public_opinion_protocol"]["required"] is True
+    assert result["checks"]["public_opinion_protocol"]["passed"] is False
+
+
+def test_recommendation_requires_kpi_deadline_cost_or_effort_and_owner():
+    result = build_report_method_checklist(
+        markdown="## Recomendacoes\nFazer plano de acao.",
+        artifacts={},
+        delivery_status="publishable",
+    )
+
+    assert result["passed"] is False
+    assert result["checks"]["operational_recommendation"]["passed"] is False
+```
+
+Create `backend/app/services/report_method_checklist.py` with a deterministic, zero-LLM checklist adapted from Helena/Vox:
+
+```python
+from __future__ import annotations
+
+from typing import Any
+
+
+PUBLIC_OPINION_TERMS = (
+    "opiniao publica",
+    "public opinion",
+    "rede social",
+    "social propagation",
+    "difusao",
+    "propagacao",
+)
+
+
+def build_report_method_checklist(
+    markdown: str,
+    artifacts: dict[str, Any],
+    delivery_status: str,
+) -> dict[str, Any]:
+    text = (markdown or "").lower()
+    checks = {
+        "intake_diagnostic": _check("intake_diagnostic", bool(markdown.strip())),
+        "simulation_declared": _check("simulation_declared", _has_any(text, ("simulacao", "simulation", "cenario", "scenario"))),
+        "scenario_testing": _check("scenario_testing", _has_any(text, ("cenario", "scenario", "30/60/90", "15/30/60"))),
+        "verification_gate": _check("verification_gate", bool((artifacts.get("system_gate.json") or {}).get("passes_gate"))),
+        "traceability": _check("traceability", "mission_bundle.json" in artifacts or "evidence_manifest.json" in artifacts),
+        "honest_limits": _check("honest_limits", _has_any(text, ("limite", "limites", "incerteza", "assuncao", "assumption"))),
+        "operational_recommendation": _check(
+            "operational_recommendation",
+            _has_any(text, ("dono", "responsavel", "owner"))
+            and _has_any(text, ("prazo", "deadline", "horas", "dias"))
+            and _has_any(text, ("custo", "esforco", "cost", "effort"))
+            and "kpi" in text,
+        ),
+        "learning_loop": _check("learning_loop", delivery_status in {"publishable", "diagnostic_only", "blocked", "legacy_unverified"}),
+    }
+
+    public_required = _has_any(text, PUBLIC_OPINION_TERMS)
+    checks["public_opinion_protocol"] = _check(
+        "public_opinion_protocol",
+        (not public_required) or ("public_opinion_runs_manifest.json" in artifacts),
+        required=public_required,
+    )
+
+    failed = [name for name, item in checks.items() if item["required"] and not item["passed"]]
+    return {
+        "passed": not failed,
+        "total": len(checks),
+        "passed_count": len(checks) - len(failed),
+        "failed": failed,
+        "checks": checks,
+    }
+
+
+def _check(name: str, passed: bool, required: bool = True) -> dict[str, Any]:
+    return {"name": name, "required": required, "passed": bool(passed)}
+
+
+def _has_any(text: str, terms: tuple[str, ...]) -> bool:
+    return any(term in text for term in terms)
+```
+
+Run:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_method_checklist.py -q
+```
+
+Expected:
+
+```text
+3 passed
+```
 
 - [ ] **Step 1: Write failing tests**
 
