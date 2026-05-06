@@ -89,3 +89,5 @@ analysis_outputs/
 
 # Plataformas de grafo locais (instancias, nao versionar)
 graph_platforms/
+
+.vercel
