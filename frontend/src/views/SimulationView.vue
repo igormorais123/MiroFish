@@ -97,16 +97,19 @@ const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
 
 // --- Computed Layout Styles ---
+const splitGraphWidth = computed(() => (graphData.value ? '36%' : '24%'))
+const splitWorkbenchWidth = computed(() => (graphData.value ? '64%' : '76%'))
+
 const leftPanelStyle = computed(() => {
   if (viewMode.value === 'graph') return { width: '100%', opacity: 1, transform: 'translateX(0)' }
   if (viewMode.value === 'workbench') return { width: '0%', opacity: 0, transform: 'translateX(-20px)' }
-  return { width: '50%', opacity: 1, transform: 'translateX(0)' }
+  return { width: splitGraphWidth.value, opacity: 1, transform: 'translateX(0)' }
 })
 
 const rightPanelStyle = computed(() => {
   if (viewMode.value === 'workbench') return { width: '100%', opacity: 1, transform: 'translateX(0)' }
   if (viewMode.value === 'graph') return { width: '0%', opacity: 0, transform: 'translateX(20px)' }
-  return { width: '50%', opacity: 1, transform: 'translateX(0)' }
+  return { width: splitWorkbenchWidth.value, opacity: 1, transform: 'translateX(0)' }
 })
 
 // --- Status Computed ---
@@ -462,6 +465,7 @@ onMounted(async () => {
 
 .panel-wrapper {
   height: 100%;
+  min-width: 0;
   overflow: hidden;
   transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease, transform 0.3s ease;
   will-change: width, opacity, transform;
