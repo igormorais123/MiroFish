@@ -18,7 +18,7 @@ _QUOTE_SPAN_RE = re.compile(
 _MARKDOWN_FENCE_RE = re.compile(r"(```.*?```)", re.DOTALL)
 _DEADLINE_RE = re.compile(
     r"\b\d+\s*(?:(?:,|\be\b|\bou\b|-|a)\s*\d+\s*)*"
-    r"(?:dias?|semanas?|mes(?:es)?)\b",
+    r"(?:minutos?|horas?|dias?|semanas?|mes(?:es)?)\b",
     re.IGNORECASE,
 )
 

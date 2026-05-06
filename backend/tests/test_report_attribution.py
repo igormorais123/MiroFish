@@ -28,6 +28,12 @@ def test_operational_deadlines_are_labeled_before_numeric_audit():
     assert "[Sugestao operacional]" in result
 
 
+def test_operational_hour_deadlines_are_labeled_before_numeric_audit():
+    content = "Em 48 horas, anexar a decisao e as pecas essenciais."
+    result = label_operational_deadlines(content)
+    assert "[Sugestao operacional]" in result
+
+
 def test_curly_unsupported_quote_is_converted_to_simulation_inference():
     content = "A sintese registra: “precisamos reorganizar a rotina familiar”."
     result = normalize_report_attribution(content, evidence_texts=["calendario de visitas"])
