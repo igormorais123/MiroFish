@@ -122,6 +122,7 @@ Antes de mexer em algo grande, leia também:
 - [`docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md`](docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md) — política operacional (rotas, VPS, ordem de reconciliação)
 - [`docs/ops/COMANDOS_SEGUROS_MIROFISH.md`](docs/ops/COMANDOS_SEGUROS_MIROFISH.md) — comandos prontos pra copiar
 - [`docs/ops/VERCEL_DEPLOY.md`](docs/ops/VERCEL_DEPLOY.md) — config Vercel, project ID, env vars
+- [`docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md`](docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md) — nomes de variáveis, cofres e política de segredos
 - [`docs/ops/CENTRALIZACAO_GITHUB_2026-05-06.md`](docs/ops/CENTRALIZACAO_GITHUB_2026-05-06.md) — PRs abertas, estado Vercel confirmado e ordem segura de merge
 - [`README.md`](README.md) — visão de produto
 
