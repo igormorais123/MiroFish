@@ -483,6 +483,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { chatWithReport, getReport, getAgentLog, getReportSections } from '../api/report'
 import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
+import { escapeHtml } from '../utils/safeMarkdown'
 
 const props = defineProps({
   reportId: String,
@@ -766,13 +767,14 @@ const renderMarkdown = (content) => {
   if (!content) return ''
   
   let processedContent = content.replace(/^##\s+.+\n+/, '')
+  processedContent = escapeHtml(processedContent)
   let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
   html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>')
   html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>')
   html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>')
   html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>')
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
   
   // Processar listas - suportar sublistas
   html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {

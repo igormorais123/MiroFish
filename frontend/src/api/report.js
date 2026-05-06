@@ -91,6 +91,10 @@ export const getReportArtifacts = (reportId, includeContent = false) => {
   return service.get(`/api/report/${reportId}/artifacts`, { params: { include_content: includeContent } })
 }
 
+export const getReportDeliveryPackage = (reportId) => {
+  return service.get(`/api/report/${reportId}/delivery-package`)
+}
+
 /**
  * Obter artefato especifico de auditoria do relatorio
  * @param {string} reportId

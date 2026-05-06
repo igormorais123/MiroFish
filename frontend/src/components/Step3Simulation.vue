@@ -105,6 +105,16 @@
             {{ primaryGateIssue }}
           </div>
         </div>
+        <div v-if="phase === 2 && readiness" class="quality-gate readiness-gate" :class="{ approved: readiness.status === 'ready_for_report', blocked: readiness.status === 'blocked' || readiness.status === 'report_blocked' }">
+          <div class="quality-gate-main">
+            <span class="gate-dot"></span>
+            <span class="quality-title">{{ readinessTitle }}</span>
+          </div>
+          <div class="quality-metrics">
+            <span>{{ readinessAction }}</span>
+            <span v-if="readiness.blockers?.length">{{ readiness.blockers.length }} bloqueio{{ readiness.blockers.length === 1 ? '' : 's' }}</span>
+          </div>
+        </div>
         <section v-if="phase === 2" class="mission-selector" aria-labelledby="mission-selector-title">
           <div class="mission-selector-header">
             <div>
@@ -351,9 +361,10 @@ import { useRouter } from 'vue-router'
 import { 
   startSimulation, 
   stopSimulation,
-  getRunStatus, 
+  getRunStatus,
   getRunStatusDetail,
   getSimulationQuality,
+  getSimulationReadiness,
   getMissionSelection,
   saveMissionSelection
 } from '../api/simulation'
@@ -386,6 +397,7 @@ const qualityCheck = ref(null)
 const isCheckingQuality = ref(false)
 const qualityError = ref(null)
 const qualityLoadedFor = ref(null)
+const readiness = ref(null)
 const powerPersonaCatalog = ref([])
 const powerCatalog = ref([])
 const selectedPowerIdSet = ref(new Set())
@@ -506,8 +518,33 @@ const qualityGateClass = computed(() => ({
   unavailable: !!qualityError.value && !reportGate.value
 }))
 
+const readinessTitle = computed(() => {
+  const labels = {
+    blocked: 'Próxima ação bloqueada',
+    ready_for_report: 'Pronto para relatório',
+    report_in_progress: 'Relatório em andamento',
+    report_blocked: 'Relatório bloqueado',
+    report_diagnostic: 'Diagnóstico interno',
+    ready_for_verified_delivery: 'Pronto para entrega'
+  }
+  return labels[readiness.value?.status] || 'Prontidão pendente'
+})
+
+const readinessAction = computed(() => {
+  const labels = {
+    fix_simulation_or_source_material: 'Corrigir simulação ou fonte',
+    generate_report: 'Gerar relatório',
+    wait_report: 'Aguardar relatório',
+    repair_or_review_blockers: 'Revisar bloqueios',
+    review_diagnostic_only: 'Revisar diagnóstico',
+    open_delivery_package: 'Abrir pacote de entrega'
+  }
+  return labels[readiness.value?.next_action] || 'Aguardar verificação'
+})
+
 const canGenerateReport = computed(() => {
-  return phase.value === 2 && !isGeneratingReport.value && !isCheckingQuality.value && gatePasses.value
+  const backendAllowsReport = !readiness.value || readiness.value.status === 'ready_for_report'
+  return phase.value === 2 && !isGeneratingReport.value && !isCheckingQuality.value && gatePasses.value && backendAllowsReport
 })
 
 const reportButtonText = computed(() => {
@@ -520,6 +557,7 @@ const reportButtonText = computed(() => {
 })
 
 const reportButtonTitle = computed(() => {
+  if (readiness.value?.status && readiness.value.status !== 'ready_for_report') return readinessAction.value
   if (gateBlocked.value && primaryGateIssue.value) return primaryGateIssue.value
   if (qualityError.value) return qualityError.value
   return ''
@@ -673,6 +711,7 @@ const resetAllState = () => {
   qualityCheck.value = null
   qualityError.value = null
   qualityLoadedFor.value = null
+  readiness.value = null
   prevTwitterRound.value = 0
   prevRedditRound.value = 0
   roundTimes.value = []
@@ -787,6 +826,7 @@ const handleStopSimulation = async () => {
       stopPolling()
       emit('update-status', 'completed')
       await loadQualityGate({ force: true })
+      await loadReadiness()
     } else {
       addLog(`Falha ao encerrar: ${res.error || 'erro desconhecido'}`)
     }
@@ -898,6 +938,7 @@ const fetchRunStatus = async () => {
         stopPolling()
         emit('update-status', 'completed')
         await loadQualityGate({ force: true })
+        await loadReadiness()
       }
     }
   } catch (err) {
@@ -1098,6 +1139,18 @@ const loadQualityGate = async ({ force = false } = {}) => {
   }
 }
 
+const loadReadiness = async () => {
+  if (!props.simulationId) return
+  try {
+    const res = await getSimulationReadiness(props.simulationId)
+    if (res.success && res.data) {
+      readiness.value = res.data
+    }
+  } catch (err) {
+    console.warn('Falha ao carregar prontidão da simulação:', err)
+  }
+}
+
 const handleNextStep = async () => {
   if (!props.simulationId) {
     addLog('Erro: simulationId ausente')
@@ -1110,6 +1163,7 @@ const handleNextStep = async () => {
   }
 
   const approved = await loadQualityGate()
+  await loadReadiness()
   if (!approved) {
     addLog('A geração foi interrompida para evitar relatório fora do sistema consolidado.')
     return
@@ -1174,6 +1228,7 @@ watch(phase, (newPhase) => {
     loadPowerCatalog()
     loadPowerPersonaCatalog()
     loadMissionSelection()
+    loadReadiness()
   }
 })
 
