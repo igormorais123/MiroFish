@@ -155,6 +155,15 @@ def test_extract_numeric_claims_ignora_blocos_de_qc_gerados():
     assert [claim["number"] for claim in claims] == ["40%"]
 
 
+def test_extract_numeric_claims_ignora_titulos_markdown():
+    claims = extract_numeric_claims(
+        "## Provas, Perguntas do Decisor e Janela de 15/30/60 Dias\n\n"
+        "Resultado principal: 40%."
+    )
+
+    assert [claim["number"] for claim in claims] == ["40%"]
+
+
 def test_audit_report_evidence_bloqueia_numero_sem_suporte():
     audit = audit_report_evidence(
         "Cenario Base tem 68% de probabilidade.",
@@ -171,6 +180,17 @@ def test_audit_report_evidence_bloqueia_numero_sem_suporte():
 def test_audit_report_evidence_aceita_numero_rotulado_como_inferencia():
     audit = audit_report_evidence(
         "[Inferencia calibrada] Cenario Base tem 68% de probabilidade.",
+        ["A simulacao registrou 10 acoes."],
+        fail_on_unsupported_numbers=True,
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_labeled_inference"] == 1
+
+
+def test_audit_report_evidence_aceita_prazo_rotulado_como_sugestao_operacional():
+    audit = audit_report_evidence(
+        "[Sugestao operacional] Em 48 horas, anexar a decisao e as pecas essenciais.",
         ["A simulacao registrou 10 acoes."],
         fail_on_unsupported_numbers=True,
     )

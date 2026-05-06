@@ -18,8 +18,8 @@ _QUOTE_RE = re.compile(r'"([^"\n]{8,})"|“([^”\n]{8,})”|‘([^’\n]{8,})�
 _MARKDOWN_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 _AUDIT_BLOCK_RE = re.compile(r"\n---\n\n## QC[\s\S]*$", re.IGNORECASE)
 _INFERENCE_MARKER_RE = re.compile(
-    r"\[(?:inferencia|simulacao|estimativa|campo necessario|calibracao)[^\]]*\]"
-    r"|inferencia|simulacao|estimad[ao]s?|calibrad[ao]s?|nao estimavel|sem dados suficientes",
+    r"\[(?:inferencia|simulacao|estimativa|campo necessario|calibracao|sugest[aã]o operacional)[^\]]*\]"
+    r"|inferencia|simulacao|estimad[ao]s?|calibrad[ao]s?|sugest[aã]o operacional|nao estimavel|sem dados suficientes",
     re.IGNORECASE,
 )
 
@@ -187,6 +187,8 @@ def extract_numeric_claims(text: str) -> list[dict]:
     for line_no, line in enumerate(cleaned.splitlines(), 1):
         stripped = line.strip()
         if not stripped or set(stripped.replace(" ", "")) <= {"|", "-", ":"}:
+            continue
+        if stripped.startswith("#"):
             continue
         for match in _NUMBER_RE.finditer(stripped):
             raw = match.group(0).strip()
