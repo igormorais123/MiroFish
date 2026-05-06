@@ -18,23 +18,23 @@
 
           <!-- Sections List -->
           <div class="sections-list">
-            <div 
-              v-for="(section, idx) in reportOutline.sections" 
-              :key="idx"
+            <div
+              v-for="section in displaySections"
+              :key="section.index"
               class="report-section-item"
               :class="{ 
-                'is-active': currentSectionIndex === idx + 1,
-                'is-completed': isSectionCompleted(idx + 1),
-                'is-pending': !isSectionCompleted(idx + 1) && currentSectionIndex !== idx + 1
+                'is-active': currentSectionIndex === section.index,
+                'is-completed': isSectionCompleted(section.index),
+                'is-pending': !isSectionCompleted(section.index) && currentSectionIndex !== section.index
               }"
             >
-              <div class="section-header-row" @click="toggleSectionCollapse(idx)" :class="{ 'clickable': isSectionCompleted(idx + 1) }">
-                <span class="section-number">{{ String(idx + 1).padStart(2, '0') }}</span>
+              <div class="section-header-row" @click="toggleSectionCollapse(section.index)" :class="{ 'clickable': isSectionCompleted(section.index) }">
+                <span class="section-number">{{ String(section.index).padStart(2, '0') }}</span>
                 <h3 class="section-title">{{ section.title }}</h3>
-                <svg 
-                  v-if="isSectionCompleted(idx + 1)" 
+                <svg
+                  v-if="isSectionCompleted(section.index)"
                   class="collapse-icon" 
-                  :class="{ 'is-collapsed': collapsedSections.has(idx) }"
+                  :class="{ 'is-collapsed': collapsedSections.has(section.index) }"
                   viewBox="0 0 24 24" 
                   width="20" 
                   height="20" 
@@ -46,12 +46,12 @@
                 </svg>
               </div>
               
-              <div class="section-body" v-show="!collapsedSections.has(idx)">
+              <div class="section-body" v-show="!collapsedSections.has(section.index)">
                 <!-- Completed Content -->
-                <div v-if="generatedSections[idx + 1]" class="generated-content" v-html="renderMarkdown(generatedSections[idx + 1])"></div>
+                <div v-if="generatedSections[section.index]" class="generated-content" v-html="renderMarkdown(generatedSections[section.index])"></div>
                 
                 <!-- Loading State -->
-                <div v-else-if="currentSectionIndex === idx + 1" class="loading-state">
+                <div v-else-if="currentSectionIndex === section.index" class="loading-state">
                   <div class="loading-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <circle cx="12" cy="12" r="10" stroke-width="4" stroke="#E5E7EB"></circle>
@@ -146,6 +146,47 @@
           </div>
         </div>
 
+        <div class="report-ops-bar" v-if="reportId">
+          <button class="ops-btn ops-primary" type="button" @click="runReportOperation('next_steps')" :disabled="isSending">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            <span>Próximos passos</span>
+          </button>
+          <button class="ops-btn" type="button" @click="openFinalReport">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 3h7v7"></path>
+              <path d="M10 14L21 3"></path>
+              <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path>
+            </svg>
+            <span>Abrir final</span>
+          </button>
+          <a class="ops-btn" :href="reportDownloadUrl" :download="`${reportId}.md`">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Baixar Markdown</span>
+          </a>
+          <button class="ops-btn" type="button" @click="printReport">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            <span>Imprimir</span>
+          </button>
+          <button class="ops-btn" type="button" @click="copyReportLink">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span>Copiar link</span>
+          </button>
+        </div>
+
         <!-- Chat Mode -->
         <div v-if="activeTab === 'chat'" class="chat-container">
 
@@ -165,7 +206,13 @@
             </div>
             <div v-if="showToolsDetail" class="tools-card-body">
               <div class="tools-grid">
-                <div class="tool-item tool-purple">
+                <button
+                  type="button"
+                  class="tool-item tool-purple"
+                  :class="{ active: activeReportTool === 'insight_forge' }"
+                  :disabled="isSending"
+                  @click="runReportTool('insight_forge')"
+                >
                   <div class="tool-icon-wrapper">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.5V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.5A7 7 0 0 0 12 2z"></path>
@@ -174,9 +221,16 @@
                   <div class="tool-content">
                     <div class="tool-name">InsightForge</div>
                     <div class="tool-desc">Cruza os dados de origem com o estado do ambiente simulado para produzir análise causal profunda ao longo do tempo.</div>
+                    <div class="tool-action">{{ reportToolById.insight_forge.actionLabel }}</div>
                   </div>
-                </div>
-                <div class="tool-item tool-blue">
+                </button>
+                <button
+                  type="button"
+                  class="tool-item tool-blue"
+                  :class="{ active: activeReportTool === 'panorama_search' }"
+                  :disabled="isSending"
+                  @click="runReportTool('panorama_search')"
+                >
                   <div class="tool-icon-wrapper">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
@@ -186,9 +240,16 @@
                   <div class="tool-content">
                     <div class="tool-name">PanoramaSearch</div>
                     <div class="tool-desc">Reconstrói caminhos de propagação e o fluxo de informação usando travessia em grafo.</div>
+                    <div class="tool-action">{{ reportToolById.panorama_search.actionLabel }}</div>
                   </div>
-                </div>
-                <div class="tool-item tool-orange">
+                </button>
+                <button
+                  type="button"
+                  class="tool-item tool-orange"
+                  :class="{ active: activeReportTool === 'quick_search' }"
+                  :disabled="isSending"
+                  @click="runReportTool('quick_search')"
+                >
                   <div class="tool-icon-wrapper">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -197,9 +258,16 @@
                   <div class="tool-content">
                     <div class="tool-name">QuickSearch</div>
                     <div class="tool-desc">Consulta instantânea baseada em GraphRAG para recuperar fatos objetivos e atributos específicos dos nós.</div>
+                    <div class="tool-action">{{ reportToolById.quick_search.actionLabel }}</div>
                   </div>
-                </div>
-                <div class="tool-item tool-green">
+                </button>
+                <button
+                  type="button"
+                  class="tool-item tool-green"
+                  :class="{ active: activeReportTool === 'interview_subagent' }"
+                  :disabled="isSending"
+                  @click="runReportTool('interview_subagent')"
+                >
                   <div class="tool-icon-wrapper">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -210,8 +278,9 @@
                   <div class="tool-content">
                     <div class="tool-name">InterviewSubAgent</div>
                     <div class="tool-desc">Entrevistas autônomas e paralelas com agentes do mundo simulado para coletar opiniões e estados mentais.</div>
+                    <div class="tool-action">{{ reportToolById.interview_subagent.actionLabel }}</div>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
           </div>
@@ -412,7 +481,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { chatWithReport, getReport, getAgentLog } from '../api/report'
+import { chatWithReport, getReport, getAgentLog, getReportSections } from '../api/report'
 import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
 
 const props = defineProps({
@@ -430,6 +499,7 @@ const selectedAgent = ref(null)
 const selectedAgentIndex = ref(null)
 const showFullProfile = ref(true)
 const showToolsDetail = ref(true)
+const activeReportTool = ref(null)
 
 // Chat State
 const chatInput = ref('')
@@ -461,18 +531,84 @@ const isSectionCompleted = (sectionIndex) => {
 const leftPanel = ref(null)
 const rightPanel = ref(null)
 
+const reportToolById = {
+  insight_forge: {
+    name: 'InsightForge',
+    actionLabel: 'Executar analise profunda',
+    buildPrompt: () => `Execute o modo InsightForge para o relatorio ${props.reportId}. Cruze dados de origem, secoes finais e estado do ambiente simulado para entregar: cadeia causal, evidencias criticas, riscos de interpretacao e proximos passos operacionais. Se a ferramenta externa nao estiver acoplada nesta sessao, use os artefatos persistidos do relatorio e avance sem parar na indisponibilidade.`
+  },
+  panorama_search: {
+    name: 'PanoramaSearch',
+    actionLabel: 'Reconstruir fluxo',
+    buildPrompt: () => `Execute o modo PanoramaSearch para o relatorio ${props.reportId}. Reconstrua o fluxo de informacao e os caminhos de propagacao relevantes em formato operacional: origem, intermediarios, efeito na decisao e pontos onde a tese pode ser reforcada.`
+  },
+  quick_search: {
+    name: 'QuickSearch',
+    actionLabel: 'Buscar fatos-chave',
+    buildPrompt: () => `Execute o modo QuickSearch para o relatorio ${props.reportId}. Levante fatos objetivos, documentos, IDs, anexos e trechos que sustentam a recomendacao final. Responda como checklist curto, com lacunas pendentes separadas.`
+  },
+  interview_subagent: {
+    name: 'InterviewSubAgent',
+    actionLabel: 'Preparar entrevistas',
+    buildPrompt: () => `Execute o modo InterviewSubAgent para o relatorio ${props.reportId}. Indique quais agentes simulados devem ser entrevistados, quais perguntas fazer e que tipo de resposta mudaria a recomendacao final.`
+  },
+  next_steps: {
+    name: 'Proximos passos',
+    actionLabel: 'Gerar fechamento',
+    buildPrompt: () => `Gere o desfecho operacional final do relatorio ${props.reportId}: decisao recomendada, proximos passos em 24h, 7 dias e 30 dias, checklist do que salvar ou imprimir, anexos indispensaveis e riscos pendentes que ainda podem mudar a recomendacao.`
+  }
+}
+
+const appBasePath = computed(() => {
+  if (typeof window === 'undefined') return ''
+  return window.location.pathname.startsWith('/mirofish') ? '/mirofish' : ''
+})
+
+const reportDownloadUrl = computed(() => {
+  if (!props.reportId) return '#'
+  return `${appBasePath.value}/api/report/${props.reportId}/download`
+})
+
+const finalReportUrl = computed(() => {
+  if (!props.reportId) return '#'
+  return `${appBasePath.value}/report/${props.reportId}`
+})
+
+const extractGeneratedSectionTitle = (content, fallbackIndex) => {
+  const match = String(content || '').match(/^##\s+(.+)$/m)
+  return match?.[1]?.trim() || `Secao adicional ${fallbackIndex}`
+}
+
+const displaySections = computed(() => {
+  const outlineSections = (reportOutline.value?.sections || []).map((section, idx) => ({
+    ...section,
+    index: idx + 1
+  }))
+  const outlineCount = outlineSections.length
+  const extraSections = Object.keys(generatedSections.value)
+    .map(Number)
+    .filter(index => Number.isFinite(index) && index > outlineCount)
+    .sort((a, b) => a - b)
+    .map(index => ({
+      index,
+      title: extractGeneratedSectionTitle(generatedSections.value[index], index)
+    }))
+
+  return [...outlineSections, ...extraSections]
+})
+
 // Methods
 const addLog = (msg) => {
   emit('add-log', msg)
 }
 
-const toggleSectionCollapse = (idx) => {
-  if (!generatedSections.value[idx + 1]) return
+const toggleSectionCollapse = (sectionIndex) => {
+  if (!generatedSections.value[sectionIndex]) return
   const newSet = new Set(collapsedSections.value)
-  if (newSet.has(idx)) {
-    newSet.delete(idx)
+  if (newSet.has(sectionIndex)) {
+    newSet.delete(sectionIndex)
   } else {
-    newSet.add(idx)
+    newSet.add(sectionIndex)
   }
   collapsedSections.value = newSet
 }
@@ -548,6 +684,74 @@ const formatTime = (timestamp) => {
     })
   } catch {
     return ''
+  }
+}
+
+const executeReportAgentPrompt = async (message, label = 'operacao') => {
+  if (!message?.trim() || isSending.value) return
+
+  selectReportAgentChat()
+  chatInput.value = ''
+  chatHistory.value.push({
+    role: 'user',
+    content: message,
+    timestamp: new Date().toISOString()
+  })
+
+  scrollToBottom()
+  isSending.value = true
+
+  try {
+    await sendToReportAgent(message)
+    addLog(`${label} concluida pelo agente de relatorio`)
+  } catch (err) {
+    const errorMessage = err.message || 'Falha na operacao'
+    addLog(`Falha em ${label}: ${errorMessage}`)
+    chatHistory.value.push({
+      role: 'assistant',
+      content: `Nao consegui concluir esta operacao agora: ${errorMessage}`,
+      timestamp: new Date().toISOString()
+    })
+  } finally {
+    isSending.value = false
+    saveChatHistory()
+    scrollToBottom()
+  }
+}
+
+const runReportTool = async (toolId) => {
+  const tool = reportToolById[toolId]
+  if (!tool) return
+
+  activeReportTool.value = toolId
+  await executeReportAgentPrompt(tool.buildPrompt(), tool.name)
+}
+
+const runReportOperation = async (operation) => {
+  if (operation === 'next_steps') {
+    await runReportTool('next_steps')
+  }
+}
+
+const openFinalReport = () => {
+  if (!props.reportId) return
+  window.location.assign(finalReportUrl.value)
+}
+
+const printReport = () => {
+  window.print()
+}
+
+const copyReportLink = async () => {
+  if (!props.reportId) return
+  const url = new URL(finalReportUrl.value, window.location.origin).toString()
+
+  try {
+    await navigator.clipboard.writeText(url)
+    addLog('Link do relatorio final copiado')
+  } catch {
+    chatInput.value = url
+    addLog('Nao foi possivel copiar automaticamente; o link foi colocado no campo de conversa')
   }
 }
 
@@ -878,11 +1082,36 @@ const loadReportData = async () => {
     // Get report info
     const reportRes = await getReport(props.reportId)
     if (reportRes.success && reportRes.data) {
-      // Load agent logs to get report outline and sections
+      if (reportRes.data.outline) {
+        reportOutline.value = reportRes.data.outline
+      }
+
+      // Load agent logs and persisted sections, including final post-outline sections.
       await loadAgentLogs()
+      await loadReportSections()
     }
   } catch (err) {
     addLog(`Falha ao carregar o relatório: ${err.message}`)
+  }
+}
+
+const loadReportSections = async () => {
+  if (!props.reportId) return
+
+  try {
+    const res = await getReportSections(props.reportId)
+    if (res.success && res.data) {
+      const loadedSections = { ...generatedSections.value }
+      ;(res.data.sections || []).forEach(section => {
+        if (section.section_index && section.content) {
+          loadedSections[section.section_index] = section.content
+        }
+      })
+      generatedSections.value = loadedSections
+      addLog('Secoes finais persistidas carregadas')
+    }
+  } catch (err) {
+    addLog(`Falha ao carregar secoes persistidas: ${err.message}`)
   }
 }
 
@@ -898,9 +1127,14 @@ const loadAgentLogs = async () => {
         if (log.action === 'planning_complete' && log.details?.outline) {
           reportOutline.value = log.details.outline
         }
+
+        if (log.action === 'section_start') {
+          currentSectionIndex.value = log.section_index
+        }
         
         if (log.action === 'section_complete' && log.section_index < 100 && log.details?.content) {
           generatedSections.value[log.section_index] = log.details.content
+          currentSectionIndex.value = null
         }
       })
       
@@ -1435,6 +1669,57 @@ watch(() => props.simulationId, (newId) => {
   box-shadow: 0 12px 24px rgba(212, 160, 23, 0.24);
 }
 
+.report-ops-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(15, 39, 71, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.ops-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #0f2747;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ops-btn:hover:not(:disabled) {
+  border-color: rgba(212, 160, 23, 0.42);
+  background: rgba(212, 160, 23, 0.1);
+}
+
+.ops-btn:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
+.ops-primary {
+  background: linear-gradient(135deg, #0f2747 0%, #173b69 100%);
+  color: #FFFFFF;
+  border-color: transparent;
+}
+
+.ops-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #173b69 0%, #204a80 100%);
+  border-color: transparent;
+}
+
 /* Interaction Header */
 .interaction-header {
   padding: 16px 24px;
@@ -1573,15 +1858,38 @@ watch(() => props.simulationId, (newId) => {
 .tool-item {
   display: flex;
   gap: 10px;
+  width: 100%;
   padding: 12px;
   background: rgba(255, 255, 255, 0.78);
   border-radius: 10px;
   border: 1px solid rgba(15, 39, 71, 0.1);
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
   transition: all 0.2s ease;
 }
 
-.tool-item:hover {
+.tool-item:hover:not(:disabled),
+.tool-item.active {
   box-shadow: 0 10px 20px rgba(15, 39, 71, 0.08);
+  border-color: rgba(212, 160, 23, 0.42);
+  transform: translateY(-1px);
+}
+
+.tool-item.active {
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.tool-item:focus-visible {
+  outline: 2px solid rgba(212, 160, 23, 0.56);
+  outline-offset: 2px;
+}
+
+.tool-item:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
 }
 
 .tool-icon-wrapper {
@@ -1635,6 +1943,15 @@ watch(() => props.simulationId, (newId) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.tool-action {
+  margin-top: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f2747;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* Agent Profile Card */
@@ -2572,5 +2889,36 @@ watch(() => props.simulationId, (newId) => {
   border: none;
   border-top: 1px solid #E5E7EB;
   margin: 24px 0;
+}
+
+@media print {
+  .interaction-panel {
+    height: auto;
+    overflow: visible;
+    background: #FFFFFF;
+  }
+
+  .main-split-layout {
+    display: block;
+    overflow: visible;
+  }
+
+  .right-panel {
+    display: none;
+  }
+
+  .left-panel.report-style {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    overflow: visible;
+    border-right: none;
+    padding: 24px 40px;
+    background: #FFFFFF;
+  }
+
+  .report-content-wrapper {
+    max-width: none;
+  }
 }
 </style>
