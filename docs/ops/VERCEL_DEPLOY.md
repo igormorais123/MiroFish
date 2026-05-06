@@ -69,6 +69,10 @@ vercel --prod            # NÃO use sem confirmar com Igor
 
 **Não estão no Git.** Configuradas no painel Vercel: Settings → Environment Variables.
 
+Fonte canônica de nomes e política: [`SEGREDOS_E_AMBIENTES_MIROFISH.md`](SEGREDOS_E_AMBIENTES_MIROFISH.md).
+
+Estado observado em 2026-05-06: `vercel env ls` não retornou variáveis. Não copie `.env` local para Vercel produção sem revisar, porque valores de desenvolvimento com `localhost` quebram o ambiente publicado.
+
 Para listar (precisa Vercel CLI + login):
 
 ```bash

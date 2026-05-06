@@ -20,6 +20,7 @@
 - [`docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md`](docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md) — política operacional
 - [`docs/ops/COMANDOS_SEGUROS_MIROFISH.md`](docs/ops/COMANDOS_SEGUROS_MIROFISH.md) — receitas prontas
 - [`docs/ops/VERCEL_DEPLOY.md`](docs/ops/VERCEL_DEPLOY.md) — config de deploy
+- [`docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md`](docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md) — política de segredos e nomes de variáveis
 - [`docs/ops/CENTRALIZACAO_GITHUB_2026-05-06.md`](docs/ops/CENTRALIZACAO_GITHUB_2026-05-06.md) — estado atual de PRs, Vercel e ordem segura de merge
 
 ## Branch prefix esperado por agente
