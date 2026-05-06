@@ -1,0 +1,15 @@
+{
+  "name": "ralphloop-method-v1",
+  "mode": "code",
+  "target": ".ralph/TASK_TEMPLATE.md",
+  "metric": "efesto_actionability_weighted_score",
+  "variants_per_generation": 5,
+  "selection_top_k": 2,
+  "max_generations": 5,
+  "writes_to_production": false,
+  "outputs": [
+    "RANKING.md",
+    "PATCH_PROPOSTO.diff",
+    "DECISAO.md"
+  ]
+}

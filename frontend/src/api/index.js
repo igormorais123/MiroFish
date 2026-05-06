@@ -20,6 +20,14 @@ const service = axios.create({
 // Interceptador de requisicao
 service.interceptors.request.use(
   config => {
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+      if (typeof config.headers.delete === 'function') {
+        config.headers.delete('Content-Type')
+      } else {
+        delete config.headers['Content-Type']
+        delete config.headers['content-type']
+      }
+    }
     return config
   },
   error => {
@@ -43,6 +51,10 @@ service.interceptors.response.use(
   },
   error => {
     console.error('Erro na resposta:', error)
+    if (error.response?.data?.error || error.response?.data?.message) {
+      const apiMessage = error.response.data.error || error.response.data.message
+      return Promise.reject(new Error(apiMessage))
+    }
     
     // Tratar timeout
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {

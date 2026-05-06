@@ -11,6 +11,7 @@ from . import simulation_bp
 from ..config import Config
 from ..services.zep_entity_reader import ZepEntityReader
 from ..services.oasis_profile_generator import OasisProfileGenerator
+from ..services.mission_selection import MissionSelection
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
 from ..utils.logger import get_logger
@@ -211,6 +212,61 @@ def create_simulation():
 
     except Exception as e:
         logger.error(f"Falha ao criar simulacao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/mission-selection', methods=['GET'])
+def get_mission_selection(simulation_id: str):
+    """Obter poderes e personas escolhidos para a missao."""
+    try:
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": f"Simulação não encontrada: {simulation_id}"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "data": MissionSelection().load(simulation_id)
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao obter selecao da missao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/mission-selection', methods=['POST'])
+def save_mission_selection(simulation_id: str):
+    """Salvar poderes e personas escolhidos para a missao."""
+    try:
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": f"Simulação não encontrada: {simulation_id}"
+            }), 404
+
+        data = request.get_json() or {}
+        data["simulation_id"] = simulation_id
+        selection = MissionSelection().save(simulation_id, data)
+        return jsonify({
+            "success": True,
+            "data": selection
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao salvar selecao da missao: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
@@ -447,7 +503,7 @@ def prepare_simulation():
         # Obtem texto do documento
         document_text = ProjectManager.get_extracted_text(state.project_id) or ""
 
-        # Enriquecimento Apify (opcional)
+        # Enriquecimento externo (opcional)
         enrich_queries = data.get('enrich_queries', [])
         enrich_actors = data.get('enrich_actors', [])
         enrich_ig_posts = data.get('enrich_ig_posts', [])
@@ -471,14 +527,51 @@ def prepare_simulation():
                     enrich_ig_posts = enrich_ig_posts or enrich_actors
                     logger.info(f"Apify auto: {len(enrich_queries)} queries, "
                                 f"{len(enrich_actors)} IG, {len(enrich_youtube)} YT")
-                block = enricher.build_enrichment_block(
-                    queries=enrich_queries,
-                    actors_instagram=enrich_actors,
-                    ig_posts_handles=enrich_ig_posts,
-                    ig_tagged_handles=enrich_ig_tagged,
-                    youtube_urls=enrich_youtube,
-                    project_id=state.project_id,
-                )
+                import queue
+
+                result_queue = queue.Queue(maxsize=1)
+
+                def run_enrichment():
+                    try:
+                        result_queue.put({
+                            "block": enricher.build_enrichment_block(
+                                queries=enrich_queries,
+                                actors_instagram=enrich_actors,
+                                ig_posts_handles=enrich_ig_posts,
+                                ig_tagged_handles=enrich_ig_tagged,
+                                youtube_urls=enrich_youtube,
+                                project_id=state.project_id,
+                            )
+                        })
+                    except Exception as enrich_error:
+                        result_queue.put({"error": enrich_error})
+
+                timeout_seconds = float(os.environ.get("APIFY_ENRICH_TIMEOUT_SECONDS", "45"))
+                enrich_thread = threading.Thread(target=run_enrichment, daemon=True)
+                enrich_thread.start()
+
+                try:
+                    enrich_result = result_queue.get(timeout=timeout_seconds)
+                except queue.Empty:
+                    logger.warning(
+                        "Apify enrichment excedeu %.0fs e foi ignorado; "
+                        "simulacao prossegue sem bloquear.",
+                        timeout_seconds,
+                    )
+                    enrich_result = {
+                        "block": (
+                            "# Enriquecimento externo\n\n"
+                            "A coleta externa foi solicitada, mas nao retornou dentro do "
+                            f"limite operacional de {timeout_seconds:.0f}s. "
+                            "A simulacao prosseguiu com o briefing consolidado "
+                            "e registrou a coleta externa como pendente.\n"
+                        )
+                    }
+
+                if enrich_result.get("error"):
+                    raise enrich_result["error"]
+
+                block = enrich_result.get("block", "")
                 if block:
                     document_text = document_text.rstrip() + "\n\n" + block + "\n"
                     logger.info(f"Apify: {len(block)} chars anexados ao contexto")
@@ -797,6 +890,66 @@ def get_simulation(simulation_id: str):
 
     except Exception as e:
         logger.error(f"Falha ao obter estado da simulacao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/quality', methods=['GET'])
+def get_simulation_quality(simulation_id: str):
+    """
+    Obter diagnostico de qualidade da simulacao para relatorio.
+
+    Consolida diversidade comportamental, diversidade semantica e gate estrutural
+    antes de permitir entrega conclusiva.
+    """
+    try:
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": f"Simulação não encontrada: {simulation_id}"
+            }), 404
+
+        source_text = None
+        try:
+            source_text = ProjectManager.get_extracted_text(state.project_id)
+        except Exception:
+            pass
+
+        require_completed_arg = request.args.get('require_completed')
+        require_completed = None
+        if require_completed_arg is not None:
+            require_completed = require_completed_arg.lower() in {"1", "true", "sim", "yes"}
+
+        from ..services.report_system_gate import evaluate_report_system_gate
+
+        gate_result = evaluate_report_system_gate(
+            simulation_id=simulation_id,
+            graph_id=request.args.get('graph_id') or state.graph_id,
+            source_text=source_text,
+            require_completed_simulation=require_completed,
+            delivery_mode=request.args.get('delivery_mode'),
+        )
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "simulation_id": simulation_id,
+                "simulation_status": state.status.value,
+                "project_id": state.project_id,
+                "graph_id": state.graph_id,
+                "diversity": gate_result.metrics.get("diversity", {}),
+                "report_gate": gate_result.to_dict(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao obter diagnostico de qualidade da simulacao: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,

@@ -1,6 +1,11 @@
 # Architecture
 
 **Analysis Date:** 2026-04-13
+**Last update:** 2026-05-04
+
+## Atualizacao 2026-05-04
+
+O pipeline ganhou uma camada explicita de governanca: relatorio cliente so e entregue se a simulacao produzir evidencia auditavel. Essa camada cruza projeto, grafo, perfis, config, run_state, logs, trace OASIS, diversidade e auditoria de citacoes.
 
 ## Pattern Overview
 
@@ -13,6 +18,8 @@
 - Independent service components (Graphiti, LLM providers, Apify) via HTTP/REST
 - Social simulation engine (OASIS) embedded in backend
 - No database persistence (state in JSON, uploads on disk)
+- Hard delivery gate and delivery governance before report publication
+- Evidence artifacts persisted beside each report
 
 ## Layers
 
@@ -36,7 +43,10 @@
   - `graph_builder.py` - Calls Graphiti to construct knowledge graph
   - `simulation_manager.py` - Orchestrates OASIS simulation execution
   - `simulation_runner.py` - Parallel execution of Twitter/Reddit simulations
-  - `report_agent.py` - Multi-round ReACT agent for report generation
+  - `report_system_gate.py` - Structural gate for report delivery
+  - `delivery_governance.py` - Client vs demo/smoke publishability policy
+  - `social_bootstrap.py` - Deterministic first interaction pulse for OASIS
+  - `report_agent.py` - Multi-round report generation with evidence audit
   - `apify_enricher.py` - Web scraping and data enrichment
   - `zep_tools.py` - Tools for report agent (search, insight forging, interviews)
 
@@ -106,25 +116,33 @@
    - Each process:
      - Calls OASIS to initialize agents with profiles
      - Runs simulation for N rounds
+     - Publishes initial posts
+     - Executes a configurable social bootstrap (comments, likes/dislikes, reposts, quotes)
      - Agents take actions (create post, comment, etc.) based on LLM reasoning
      - Memory updated via `ZepGraphMemoryUpdater`
      - Saves round snapshots to disk
 4. Frontend polls `GET /api/simulation/{simulation_id}/status` for progress
 5. Simulation completes when all rounds finished
+6. Frontend/API can query `/api/simulation/{simulation_id}/quality` before report generation
 
 **Step 5: Report Generation (Interface 4)**
 
 1. User clicks "Generate Report" or asks question
 2. Frontend calls `POST /api/report/generate` with report intent, graph_id, simulation_id
 3. Backend:
-   - Initializes `ReportAgent` (stateful LLM agent)
+   - Runs `report_system_gate.assert_report_system_ready()`
+   - Resolves `delivery_governance` so demo/smoke reports are diagnostic-only
+   - Returns 409 if evidence/simulation quality is insufficient
+   - Initializes `ReportAgent` only after gate context exists
    - Agent executes ReACT loop (Reason → Act → Observe):
      - Calls tools: `search_entities()`, `insight_forge()`, `panorama()`, `interview_agents()`
      - LLM generates report sections (intro, analysis, predictions, etc.)
      - Each section goes through multiple reflection rounds
+   - Direct quotes and numeric claims are audited against local evidence
+   - `system_gate.json`, `evidence_manifest.json` and `evidence_audit.json` are persisted
    - Logs all actions to `agent_log.jsonl` for debugging
-   - Returns HTML report with formatting
-4. Frontend displays report, enables user interaction
+   - Returns report only if status is compatible with delivery rules
+4. Frontend displays report and evidence custody; legacy reports are marked non-publicable
 
 **Step 6: Interaction (Interface 5)**
 
@@ -158,6 +176,22 @@
 - Purpose: Encapsulate entire simulation context
 - Examples: `backend/app/services/simulation_manager.py` (SimulationState dataclass)
 - Pattern: Dataclass with status, round count, platform flags, error handling
+- Current behavior: synchronized from runner `run_state.json` to avoid API/report disagreement
+
+**Report System Gate:**
+- Purpose: Block report generation when the system has insufficient evidence
+- Examples: `backend/app/services/report_system_gate.py`
+- Pattern: Fail-closed validation with structured metrics and issues
+
+**Delivery Governance:**
+- Purpose: Separate client/publicable delivery from internal diagnostic runs
+- Examples: `backend/app/services/delivery_governance.py`
+- Pattern: Unknown modes fall back to strict `client`; `demo/smoke` always returns non-publicable policy
+
+**Evidence Audit:**
+- Purpose: Prove direct quotes, numeric claims and local evidence support report text
+- Examples: `backend/app/utils/report_quality.py`
+- Pattern: Extract direct quotes and numeric claims, match against evidence corpus, mark unsupported claims; numeric inference must be labeled
 
 **OasisAgentProfile:**
 - Purpose: Agent definition for OASIS simulation
@@ -217,6 +251,7 @@
 - Config validation: `Config.validate()` called at startup
 - File upload: Extension whitelist (`ALLOWED_EXTENSIONS`)
 - LLM model names: Alias resolution via `Config.resolve_model_name()`
+- Report delivery: hard gate plus delivery governance, quote audit and numeric audit in `report_system_gate.py`, `delivery_governance.py` and `report_quality.py`
 
 **Authentication:**
 - Approach: None for user-facing API (open access)
@@ -232,4 +267,4 @@
 
 ---
 
-*Architecture analysis: 2026-04-13*
+*Architecture map updated: 2026-05-04*

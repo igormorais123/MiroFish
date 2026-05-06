@@ -1,6 +1,19 @@
 # Codebase Concerns
 
 **Analysis Date:** 2026-04-13
+**Last update:** 2026-05-04
+
+## Mitigacoes aplicadas em 2026-05-04
+
+- Relatorio fora do sistema: mitigado por `report_system_gate.py`, auditoria de citacoes e status `publishable`.
+- Simulacao monologica com apenas `CREATE_POST`: mitigada por metricas de diversidade e bloqueio por trace OASIS.
+- Desacordo entre `SimulationRunner` e `SimulationManager`: mitigado por sincronizacao de `run_state`.
+- Relatorios antigos sem evidencia: mitigados por classificacao `legacy_unverified`.
+- Falta de visibilidade do gate: mitigada pela etapa 3 e cadeia de custodia na etapa 4.
+- Dependencia do LLM escolher interacoes espontaneamente: reduzida pelo pulso social inicial configuravel.
+- Baixa cobertura de contratos criticos: reduzida para 70 testes backend passando.
+
+Risco residual importante: ainda falta rodada real longa com LLM ativo para confirmar que o conjunto contrato comportamental + pulso OASIS + gate gera relatorio publicavel em caso novo.
 
 ## Tech Debt
 
@@ -18,6 +31,7 @@
   - `backend/app/api/simulation.py` (2736 lines)
 - Impact: Difficult to test, maintain, and reason about; high chance of introducing bugs during changes
 - Fix approach: Extract methods into smaller service classes, create service layer abstractions, split API routes into multiple blueprints
+- Update 2026-05-04: parte da governanca foi extraida para `report_system_gate.py` e `social_bootstrap.py`; `report_agent.py`, `simulation_runner.py` e `simulation.py` seguem grandes.
 
 **File Handle Not Using Context Manager:**
 - Issue: Manual file opening at `simulation_runner.py` line 427 without `with` statement; handle stored in class variable for later closing
@@ -104,6 +118,7 @@
   - Implement parallel tool execution where possible
   - Cache tool results across report sections
   - Pre-compute common queries once per simulation
+- Update 2026-05-04: risco de qualidade foi reduzido por gate/auditoria; performance sequencial continua pendente.
 
 **No Caching for Entity Reader:**
 - Problem: ZepEntityReader queries graph on every request without caching
@@ -252,12 +267,14 @@
 - Files: `backend/app/api/` (entire module)
 - Risk: Regressions in happy path and error handling paths go undetected
 - Priority: **High** - affects all user-facing functionality
+- Update 2026-05-04: novos contratos de service layer foram testados; rotas ainda precisam de testes com Flask client.
 
 **Service Layer Logic Not Tested:**
 - What's not tested: SimulationRunner, SimulationManager, ReportAgent, ApifyEnricher
 - Files: `backend/app/services/` (most modules)
 - Risk: Complex logic with side effects (file I/O, process management) has no verification
 - Priority: **High** - critical for stability
+- Update 2026-05-04: `simulation_data_reader`, `simulation_manager`, `report_quality`, artefatos de relatorio e `social_bootstrap` agora tem cobertura direta.
 
 **Configuration Validation Not Tested:**
 - What's not tested: Config.validate() and env var handling
@@ -285,4 +302,4 @@
 
 ---
 
-*Concerns audit: 2026-04-13*
+*Concerns audit updated: 2026-05-04*

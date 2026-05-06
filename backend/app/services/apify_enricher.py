@@ -362,7 +362,7 @@ class ApifyEnricher:
             logger.warning("Budget Apify esgotado, retornando vazio")
             return ""
 
-        parts: list[str] = ["# Enriquecimento Apify", ""]
+        parts: list[str] = ["# Enriquecimento externo", ""]
 
         # Google SERP
         facts = self.fetch_case_facts(queries, results_per_query)

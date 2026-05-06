@@ -1,59 +1,58 @@
 # STATE — MiroFish INTEIA
 
+Atualizado em: 2026-05-04
+
 ## Current
-- **Milestone:** v1.2 — Motor Confiável
-- **Phases completas:** 1, 2, 5 (Onda A), 6, 7, 8
-- **Status:** deploy contínuo ativo no VPS kvm4, volume-mounted para hot-patch
 
-## v1.2 Phase Status
+- **Milestone:** v1.3 — Consultoria por Simulacao Auditavel
+- **Status:** P0 estrutural implementado e validado localmente.
+- **Validacao:** `python -m pytest backend\tests` com 76 testes aprovados; `npm run build` aprovado; `git diff --check` sem erro de whitespace.
+- **Servidores locais verificados:** backend `http://localhost:5001/health` e frontend `http://localhost:5173` responderam 200.
 
-### Phase 1 — Diagnóstico ✅
-- `DIAGNOSTICO_TRAVAMENTO.md`: 7 pontos ranqueados, análise estática
+## O que mudou nesta fase
 
-### Phase 2 — Fix Pipeline ✅ (6/7 tasks live)
-- Task 1 (think/code-fence): já existia
-- Task 2 (None fallback): já existia
-- Task 3 (MAX_TOOL_CALLS_PER_CHAT 2→3): ✅ live
-- Task 4 (backoff 5-30s, MAX_RETRIES=8): ✅ live
-- Task 5 (provider fallback chain, opt-in): ✅ live (precisa DEEPSEEK_API_KEY para ativar)
-- Task 6 (SQLite chmod): ✅ live
-- Task 7 (Graphiti health check 10x10s): ✅ live
+1. Relatorio deixou de ser apenas geracao textual e passou a depender de gate sistemico.
+2. O backend bloqueia relatorio sem simulacao concluida, material-base, grafo, config, perfis, run_state, diversidade minima, trace OASIS e auditoria de citacoes.
+3. A interface da etapa 3 consulta a qualidade da simulacao e bloqueia a geracao quando o sistema reprova.
+4. A interface da etapa 4 exibe cadeia de custodia, artefatos e motivos de bloqueio.
+5. Relatorios antigos sem `quality_gate` e `evidence_audit` sao classificados como `legacy_unverified`, nao publicaveis.
+6. O runner OASIS ganhou pulso social inicial configuravel, com comentarios, curtidas, rejeicoes, reposts e citacoes persistidas.
+7. Perfis OASIS ganharam contrato comportamental para atuar como participantes sociais, nao apenas observadores.
+8. O sistema separa modo `client` de `demo/smoke`: diagnostico tecnico pode rodar, mas nunca recebe status publicavel.
+9. Auditoria de evidencias passou a cobrir numeros: percentuais, probabilidades e contagens precisam estar no corpus ou marcados como inferencia/simulacao/calibracao.
 
-### Phase 5 — Upstream Sync Onda A ✅
-- 2 commits mergeados: `7c7c7a2` (pin axios), `223b283` (fix 3 high-sev CVEs)
-- 143 commits upstream restantes documentados em UPSTREAM_SYNC.md (ondas B, C)
+## Novos arquivos principais
 
-### Phase 6 — PT-BR ✅
-- BUG FIX: `_translate_if_english` usava assinatura antiga do chat() — toda tradução falhava silenciosamente
-- `_RELATION_TRANSLATION` com 35 verbos EN→PT aplicado em edge.name/fact_type
+- `.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md`
+- `.planning/DOCUMENTATION_MAP.md`
+- `backend/app/services/report_system_gate.py`
+- `backend/app/services/delivery_governance.py`
+- `backend/app/services/social_bootstrap.py`
+- `backend/tests/test_delivery_governance.py`
+- `backend/tests/test_report_manager_artifacts.py`
+- `backend/tests/test_report_quality.py`
+- `backend/tests/test_simulation_data_reader.py`
+- `backend/tests/test_simulation_manager.py`
+- `backend/tests/test_social_bootstrap.py`
 
-### Phase 7 — Segurança ✅
-- `utils/pagination.py` com bounds 10k/1M (evita OOM)
-- Clamp aplicado em `/api/simulation/actions` e `/api/graph/projects`
-- `/api/internal/v1/health/public` sem token (retorna só up/down)
-- `apify_enricher.py` path Windows → env var `COLMEIA_SCRIPTS_PATH`
+## Decisoes registradas
 
-### Phase 8 — Persistência ✅
-- Volume docker `/opt/mirofish/backend/app:/app/backend/app:ro` no compose
-- Patches no host refletem no container (só precisa restart)
-- Fim do ciclo "código servidor diverge do repo"
+- Um relatorio cliente so pode ser `publishable` se passar gate estrutural e auditoria de evidencia.
+- Citacao direta precisa existir literalmente no corpus local; traducao ou parafrase deve ser marcada como inferencia/simulacao.
+- Volume de acoes nao basta: Distinct-2, entropia de agentes, entropia de tipos de acao e trace OASIS entram como criterio.
+- Simulacao antiga sem gate deve ser tratada como legado tecnico, nao entrega cliente.
+- Smoke/demo existe como diagnostico tecnico, separado de modo cliente e bloqueado como `diagnostic_only`.
+- Numero em relatorio cliente e claim auditavel; se nao aparece no corpus local, precisa estar rotulado como inferencia calibrada ou o relatorio e bloqueado.
 
-## Pending (v1.2)
-- Phase 3: Qualidade do Relatório (precisa medição runtime de overlap)
-- Phase 4: Performance <30min (precisa benchmark)
-- Phase 5 Ondas B+C (143 commits upstream restantes, alta customização)
-- Phase 9: Poder Preditivo (precisa simulação real)
-- Phase 10: Testes Críticos (P3, trabalho contínuo)
+## Pendencias reais
 
-## Decisions
-- 2026-04-18: Diagnóstico real sobrescreve plano antigo
-- 2026-04-18: Phase 1 é diagnóstico estático (VPS disponível mas runtime de 2h por simulação inviável na sessão)
-- 2026-04-18: Phase 2 deploy via docker cp + restart, depois consolidado via volume mount (Phase 8)
-- 2026-04-18: Upstream Onda A (só security deps) mergeado; Ondas B/C adiadas — conflito alto em arquivos muito customizados (report_agent.py, zep_tools.py)
-- 2026-04-18: LLM_FALLBACK_ENABLED=false default — ativar precisa chaves DeepSeek/Groq
-- 2026-04-18: Volume mount em modo `:ro` — protege contra bugs que escrevam no próprio código
+1. Rodar uma nova simulacao real longa com LLM ativo e verificar se atravessa o gate ate relatorio publicavel.
+2. Criar preset de baixa atividade que gere diagnostico tecnico sem fingir opiniao publica.
+5. Continuar testes de API e frontend, hoje ainda sem suite automatizada de componentes.
 
-## Completed
-- v1.0: Sistema funcional
-- v1.1 Phase 1-3: Toolbar + Graphiti graph_id + API custos
-- v1.2 Phases 1, 2, 5 (A), 6, 7, 8
+## Historico relevante
+
+- v1.0: sistema funcional.
+- v1.1: relatorio premium, graph_id, API de custos.
+- v1.2: correcoes de pipeline, PT-BR, seguranca basica, persistencia e QC inicial.
+- v1.3: gate estrutural, governanca cliente/demo, auditoria de evidencias/citacoes/numeros, diversidade social, cadeia de custodia e pulso OASIS.

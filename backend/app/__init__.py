@@ -6,7 +6,7 @@ import warnings
 # Suprime warnings ruidosos de libs de terceiros em ambientes Windows/Linux.
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory, abort
 from flask_cors import CORS
 
 from .config import Config
@@ -15,7 +15,14 @@ from .utils.logger import setup_logger, get_logger
 
 def create_app(config_class=Config):
     """Cria e configura a aplicacao Flask."""
-    app = Flask(__name__)
+    # Serve frontend/dist como static se existir (evita CORS em dev local)
+    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    _frontend_dist = os.path.join(_project_root, 'frontend', 'dist')
+    _has_frontend = os.path.isdir(_frontend_dist) and os.path.exists(os.path.join(_frontend_dist, 'index.html'))
+    if _has_frontend:
+        app = Flask(__name__, static_folder=_frontend_dist, static_url_path='')
+    else:
+        app = Flask(__name__)
     app.config.from_object(config_class)
     
     # Mantem JSON legivel sem escape ASCII agressivo.
@@ -77,10 +84,26 @@ def create_app(config_class=Config):
             'code': Config.APP_CODE,
             'llm_base_url': Config.LLM_BASE_URL,
             'llm_model': Config.LLM_MODEL_NAME,
+            'has_frontend': _has_frontend,
         }
-    
+
+    # SPA fallback: serve index.html para rotas nao-API quando frontend/dist existe
+    if _has_frontend:
+        @app.route('/')
+        def _frontend_root():
+            return send_from_directory(_frontend_dist, 'index.html')
+
+        @app.route('/<path:path>')
+        def _frontend_catch(path):
+            if path.startswith('api/') or path == 'health':
+                abort(404)
+            full = os.path.join(_frontend_dist, path)
+            if os.path.isfile(full):
+                return send_from_directory(_frontend_dist, path)
+            return send_from_directory(_frontend_dist, 'index.html')
+
     if should_log_startup:
-        logger.info(f"{Config.APP_NAME} backend pronto")
+        logger.info(f"{Config.APP_NAME} backend pronto (frontend={'on' if _has_frontend else 'off'})")
     
     return app
 

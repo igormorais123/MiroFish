@@ -487,9 +487,10 @@ class GraphBuilderService:
             stall_timeout=stall_timeout,
         )
 
-        # Verificar materializacao — 10 checks x 10s (2026-04-18, Phase 2 Task 7)
-        # Ataca "Graphiti falha silenciosamente — nos nunca materializam" (CONCERNS.md)
-        max_checks = 10
+        # Verificar materializacao. Com Codex + Graphiti, os episodios podem
+        # aparecer antes das entidades/fatos; encerrar cedo demais gera grafo
+        # "concluido" com zero nos.
+        max_checks = 12
         check_interval = 10
         last_graph_data: Dict[str, Any] | None = None
 
@@ -515,7 +516,7 @@ class GraphBuilderService:
                     )
                 time.sleep(check_interval)
 
-        # Zero nos apos 100s de espera — sinal forte de falha silenciosa
+        # Zero nos apos espera estendida — sinal forte de falha silenciosa
         # Log estruturado para diagnostico e nao silencia o problema
         import logging
         _glog = logging.getLogger('mirofish.graphiti')

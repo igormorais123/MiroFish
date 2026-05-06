@@ -208,7 +208,8 @@ class OasisProfileGenerator:
         self,
         entity: EntityNode,
         user_id: int,
-        use_llm: bool = True
+        use_llm: bool = True,
+        stance: str = "default",
     ) -> OasisAgentProfile:
         """
         Gera OASIS Agent Profile a partir de entidade Zep
@@ -237,7 +238,8 @@ class OasisProfileGenerator:
                 entity_type=entity_type,
                 entity_summary=entity.summary,
                 entity_attributes=entity.attributes,
-                context=context
+                context=context,
+                stance=stance,
             )
         else:
             # Gera perfil basico por regras
@@ -432,13 +434,25 @@ class OasisProfileGenerator:
         """Verifica se e entidade de tipo grupo/instituicao"""
         return entity_type.lower() in self.GROUP_ENTITY_TYPES
 
+    # Instrucao adversarial — Phase 3 do roadmap v1.2 ("contra-agentes/devil's advocate")
+    _CONTRARIAN_INSTRUCTION = (
+        "\n\n[INSTRUCAO ADICIONAL — STANCE CONTRARIA]\n"
+        "Este perfil DEVE ler o cenario de forma estruturalmente OPOSTA ao consenso aparente "
+        "no contexto fornecido. Pratique ceticismo metodico: questione premissas, exponha riscos "
+        "que a narrativa hegemonica esconde, traga vieses ignorados, ofereca leitura adversarial. "
+        "Nao seja troll nem caricato — seja um critico fundamentado, com argumentos consistentes. "
+        "A persona deve refletir essa postura cetica/adversarial sem perder coerencia com o tipo "
+        "de entidade representado."
+    )
+
     def _generate_profile_with_llm(
         self,
         entity_name: str,
         entity_type: str,
         entity_summary: str,
         entity_attributes: Dict[str, Any],
-        context: str
+        context: str,
+        stance: str = "default",
     ) -> Dict[str, Any]:
         """
         Usa LLM para gerar perfil muito detalhado
@@ -458,6 +472,10 @@ class OasisProfileGenerator:
             prompt = self._build_group_persona_prompt(
                 entity_name, entity_type, entity_summary, entity_attributes, context
             )
+
+        # Phase 3: stance adversarial em ~20% dos perfis para evitar viés de consenso
+        if stance == "contrarian":
+            prompt = prompt + self._CONTRARIAN_INSTRUCTION
 
         # Tenta multiplas geracoes ate sucesso ou limite de retentativas
         max_attempts = 3
@@ -714,7 +732,12 @@ Importante:
 - Use portugues do Brasil por padrao
 - Se o contexto nao indicar outra localidade, assuma ambiente ocidental e brasileiro
 - age deve ser 30 e gender deve ser "other"
-- A fala institucional deve ser coerente com o papel da organizacao"""
+- A fala institucional deve ser coerente com o papel da organizacao
+- Se a entidade representa um grupo grande/heterogeneo (ex: eleitorado, base de apoio, populacao,
+  classe profissional), a persona DEVE refletir diversidade interna: mencione subgrupos com posicoes
+  divergentes (favoravel, neutro, contrario) em vez de tratar o grupo como bloco monolitico.
+  Em "postura diante de controversias", explicite tensoes internas reais (geracao, regiao, classe,
+  ideologia) ao inves de uma posicao consensual artificial."""
 
     def _generate_profile_rule_based(
         self,
@@ -861,6 +884,22 @@ Importante:
                 except Exception as e:
                     logger.warning(f"Falha ao salvar profiles em tempo real: {e}")
 
+        # Phase 3: define quais idx serao contrarians (~20% — 1 a cada 5).
+        # Determinismo via idx evita variacao entre runs do mesmo grafo.
+        # Skip se total < 5 (amostra pequena) ou se desativado por env.
+        import os as _os
+        contrarian_disabled = _os.environ.get("MIROFISH_DISABLE_CONTRARIANS", "0") == "1"
+        contrarian_ratio = 5  # 1 a cada N
+        contrarians_planned = 0 if (total < 5 or contrarian_disabled) else max(1, total // contrarian_ratio)
+        if contrarians_planned > 0:
+            logger.info(f"Devil's advocate: {contrarians_planned}/{total} perfis como contrarians (1/{contrarian_ratio})")
+
+        def _stance_for(idx: int) -> str:
+            if contrarians_planned <= 0:
+                return "default"
+            # Distribui contrarians uniformemente: idx 2, 7, 12, ...
+            return "contrarian" if (idx % contrarian_ratio == 2) else "default"
+
         def generate_single_profile(idx: int, entity: EntityNode) -> tuple:
             """Funcao de trabalho para gerar um unico profile"""
             entity_type = entity.get_entity_type() or "Entity"
@@ -869,7 +908,8 @@ Importante:
                 profile = self.generate_profile_from_entity(
                     entity=entity,
                     user_id=idx,
-                    use_llm=use_llm
+                    use_llm=use_llm,
+                    stance=_stance_for(idx),
                 )
 
                 # Imprime perfil gerado no console e log em tempo real
@@ -1008,6 +1048,26 @@ Importante:
         else:
             self._save_reddit_json(profiles, file_path)
 
+    @staticmethod
+    def _social_behavior_contract(profile: OasisAgentProfile) -> str:
+        stance = getattr(profile, "stance", "") or "default"
+        return (
+            "Contrato de simulacao social: aja como participante do debate, nao como narrador. "
+            "Quando um conteudo afetar seus interesses, escolha acoes publicas coerentes com seu perfil: "
+            "CREATE_COMMENT para responder com argumento, LIKE_POST ou DISLIKE_POST para sinalizar apoio ou rejeicao, "
+            "REPOST ou QUOTE_POST para ampliar uma fala relevante, FOLLOW quando a fonte fizer sentido. "
+            "Use CREATE_POST para posicao propria nova, nao para repetir o mesmo estimulo. "
+            "Evite apenas observar, atualizar feed ou ficar em silencio quando houver tema relevante. "
+            f"Sua inclinacao narrativa nesta simulacao e: {stance}."
+        )
+
+    def _append_social_behavior_contract(self, text: str, profile: OasisAgentProfile) -> str:
+        base = (text or "").strip()
+        contract = self._social_behavior_contract(profile)
+        if "Contrato de simulacao social:" in base:
+            return base
+        return f"{base} {contract}".strip()
+
     def _save_twitter_csv(self, profiles: List[OasisAgentProfile], file_path: str):
         """
         Salva Twitter Profile em formato CSV (conforme OASIS oficial)
@@ -1042,6 +1102,7 @@ Importante:
                 user_char = profile.bio
                 if profile.persona and profile.persona != profile.bio:
                     user_char = f"{profile.bio} {profile.persona}"
+                user_char = self._append_social_behavior_contract(user_char, profile)
                 # Processa quebras de linha (substituidas por espacos no CSV)
                 user_char = user_char.replace('\n', ' ').replace('\r', ' ')
 
@@ -1110,7 +1171,10 @@ Importante:
                 "username": profile.user_name,
                 "name": profile.name,
                 "bio": profile.bio[:150] if profile.bio else f"{profile.name}",
-                "persona": profile.persona or f"{profile.name} is a participant in social discussions.",
+                "persona": self._append_social_behavior_contract(
+                    profile.persona or f"{profile.name} is a participant in social discussions.",
+                    profile,
+                ),
                 "karma": profile.karma if profile.karma else 1000,
                 "created_at": profile.created_at,
                 # Campos obrigatorios do OASIS - garante valores padrao

@@ -21,6 +21,7 @@ from enum import Enum
 from ..config import Config
 from ..utils.llm_client import LLMClient
 from ..utils.logger import get_logger
+from ..utils.token_tracker import TokenTracker
 from .zep_tools import (
     ZepToolsService, 
     SearchResult, 
@@ -258,23 +259,29 @@ class ReportLogger:
         self,
         section_title: str,
         section_index: int,
-        full_content: str
+        full_content: str,
+        error: str = None,
     ):
         """
         Registra a conclusao da geracao de uma secao
 
         O frontend deve monitorar este log para verificar se uma secao foi realmente concluida e obter o conteudo completo
         """
+        details = {
+            "content": full_content,
+            "content_length": len(full_content),
+            "message": f"Secao {section_title} gerada com sucesso"
+        }
+        if error:
+            details["error"] = error
+            details["message"] = f"Secao {section_title} concluida com erro"
+
         self.log(
             action="section_complete",
             stage="generating",
             section_title=section_title,
             section_index=section_index,
-            details={
-                "content": full_content,
-                "content_length": len(full_content),
-                "message": f"Secao {section_title} gerada com sucesso"
-            }
+            details=details
         )
 
     def log_report_complete(self, total_sections: int, total_time_seconds: float):
@@ -450,6 +457,29 @@ class Report:
     created_at: str = ""
     completed_at: str = ""
     error: Optional[str] = None
+    quality_gate: Optional[Dict[str, Any]] = None
+    evidence_audit: Optional[Dict[str, Any]] = None
+
+    def delivery_status(self) -> str:
+        """Classificacao operacional para entrega ao cliente."""
+        if self.status == ReportStatus.FAILED:
+            return "failed"
+        if self.status != ReportStatus.COMPLETED:
+            return "in_progress"
+        if not self.quality_gate or not self.evidence_audit:
+            return "legacy_unverified"
+        if self.quality_gate.get("passes_gate") is not True:
+            return "blocked_by_system_gate"
+        if self.evidence_audit.get("passes_gate") is not True:
+            return "blocked_by_evidence_audit"
+        gate_metrics = self.quality_gate.get("metrics") or {}
+        if gate_metrics.get("diagnostic_only") or gate_metrics.get("delivery_publishable_mode") is False:
+            return "diagnostic_only"
+        return "publishable"
+
+    def is_publishable(self) -> bool:
+        """Verdadeiro somente quando o relatorio passou por todo o contrato INTEIA."""
+        return self.delivery_status() == "publishable"
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -462,7 +492,11 @@ class Report:
             "markdown_content": self.markdown_content,
             "created_at": self.created_at,
             "completed_at": self.completed_at,
-            "error": self.error
+            "error": self.error,
+            "quality_gate": self.quality_gate,
+            "evidence_audit": self.evidence_audit,
+            "delivery_status": self.delivery_status(),
+            "publishable": self.is_publishable(),
         }
 
 
@@ -520,14 +554,14 @@ Ferramenta de busca rapida e leve, adequada para consultas de informacao simples
 - Lista de fatos mais relevantes para a consulta"""
 
 TOOL_DESC_INTERVIEW_AGENTS = """\
-[Entrevista Aprofundada - Entrevista real com Agents (duas plataformas)]
-Chama a API de entrevista do ambiente de simulacao OASIS para entrevistar Agents de simulacao em execucao!
-Nao e uma simulacao de LLM, mas sim uma chamada a interface real de entrevista para obter respostas originais dos Agents simulados.
+[Entrevista Aprofundada - Entrevista real com agentes simulados (duas plataformas)]
+Chama a API de entrevista do ambiente de simulacao OASIS para entrevistar agentes de simulacao em execucao.
+Nao e uma simulacao de LLM, mas sim uma chamada a interface real de entrevista para obter respostas originais dos agentes simulados.
 Por padrao, entrevista simultaneamente nas plataformas Twitter e Reddit para obter perspectivas mais abrangentes.
 
 Fluxo de funcionalidades:
-1. Le automaticamente os arquivos de perfil para conhecer todos os Agents simulados
-2. Seleciona inteligentemente os Agents mais relevantes para o tema da entrevista (ex: estudantes, midia, autoridades, etc.)
+1. Le automaticamente os arquivos de perfil para conhecer todos os agentes simulados
+2. Seleciona inteligentemente os agentes mais relevantes para o tema da entrevista (ex: estudantes, midia, autoridades, etc.)
 3. Gera automaticamente perguntas de entrevista
 4. Chama a interface /api/simulation/interview/batch para realizar entrevistas reais nas duas plataformas
 5. Integra todos os resultados das entrevistas, fornecendo analise multiperspectiva
@@ -535,38 +569,38 @@ Fluxo de funcionalidades:
 [Cenarios de uso]
 - Necessidade de entender visoes de diferentes papeis sobre o evento (o que pensam os estudantes? E a midia? E as autoridades?)
 - Necessidade de coletar opinioes e posicoes de multiplas partes
-- Necessidade de obter respostas reais dos Agents simulados (vindas do ambiente de simulacao OASIS)
+- Necessidade de obter respostas reais dos agentes simulados (vindas do ambiente de simulacao OASIS)
 - Desejo de tornar o relatorio mais vivido, incluindo "registros de entrevistas"
 
 [Conteudo retornado]
-- Informacoes de identidade dos Agents entrevistados
-- Respostas de cada Agent nas plataformas Twitter e Reddit
+- Informacoes de identidade dos agentes entrevistados
+- Respostas de cada agente nas plataformas Twitter e Reddit
 - Citacoes-chave (podem ser citadas diretamente)
 - Resumo das entrevistas e comparacao de pontos de vista
 
-[Importante] E necessario que o ambiente de simulacao OASIS esteja em execucao para usar esta funcionalidade!"""
+[Importante] O ambiente de simulacao OASIS deve estar em execucao para usar esta funcionalidade."""
 
 # ── Prompt de planejamento do sumario ──
 
 PLAN_SYSTEM_PROMPT = """\
-Voce e um especialista em redacao de "Relatorios de Previsao Futura", com uma "visao onisciente" do mundo simulado — voce pode observar o comportamento, as falas e as interacoes de cada Agent na simulacao.
+Voce e um especialista em redacao de "Relatorios de Previsao Futura", com uma "visao onisciente" do mundo simulado — voce pode observar o comportamento, as falas e as interacoes de cada agente na simulacao.
 
 IMPORTANTE: Todas as respostas, análises e conteúdos gerados devem ser em português brasileiro.
 
 [Conceito Central]
-Construimos um mundo simulado e injetamos nele uma "demanda de simulacao" especifica como variavel. O resultado da evolucao do mundo simulado e uma previsao do que pode acontecer no futuro. O que voce esta observando nao sao "dados experimentais", mas sim um "ensaio do futuro".
+Construimos um mundo simulado e injetamos nele uma "demanda de simulacao" especifica como variavel. O resultado da evolucao do mundo simulado e um teste de hipotese para decisao. O relatorio deve mostrar o que ficou forte, o que exige reforco e quais movimentos aumentam poder de previsao.
 
 [Sua Tarefa]
-Redigir um "Relatorio de Previsao Futura" que responda:
-1. Sob as condicoes que definimos, o que aconteceu no futuro?
-2. Como os diferentes tipos de Agents (grupos) reagiram e agiram?
-3. Quais tendencias e riscos futuros dignos de atencao esta simulacao revelou?
+Redigir um "Relatorio de Consultoria por Simulacao" que responda:
+1. Qual hipotese foi testada?
+2. O que a simulacao observou sob as condicoes definidas?
+3. Onde o resultado e forte, onde exige reforco e qual risco operacional permanece?
 
 [Posicionamento do Relatorio]
-- Este e um relatorio de previsao futura baseado em simulacao, revelando "se assim, como sera o futuro"
-- Foco nos resultados da previsao: evolucao dos eventos, reacoes dos grupos, fenomenos emergentes, riscos potenciais
-- As falas e acoes dos Agents no mundo simulado sao previsoes do comportamento futuro dos grupos
-- NAO e uma analise da situacao atual do mundo real
+- Este e um relatorio de consultoria por simulacao: testa hipoteses antes da recomendacao
+- Foco em hipotese testada, resultado observado, alcance da simulacao e risco operacional
+- As falas e acoes dos agentes no mundo simulado sao evidencias simuladas para decisao
+- NAO invente certeza vazia; rotule [Fato], [Simulacao], [Inferencia] ou [Reforco necessario]
 - NAO e um resumo generico de opiniao publica
 
 [Limite de Secoes]
@@ -597,17 +631,19 @@ A variavel que injetamos no mundo simulado (demanda de simulacao): {simulation_r
 - Quantidade de entidades participantes da simulacao: {total_nodes}
 - Quantidade de relacionamentos gerados entre entidades: {total_edges}
 - Distribuicao dos tipos de entidades: {entity_types}
-- Quantidade de Agents ativos: {total_entities}
+- Quantidade de agentes ativos: {total_entities}
 
 [Amostra de Fatos Futuros Previstos pela Simulacao]
 {related_facts_json}
 
 Analise este ensaio do futuro com uma "visao onisciente":
 1. Sob as condicoes que definimos, que estado o futuro apresentou?
-2. Como os diferentes tipos de pessoas (Agents) reagiram e agiram?
+2. Como os diferentes tipos de pessoas reagiram e agiram?
 3. Quais tendencias futuras dignas de atencao esta simulacao revelou?
 
 Com base nos resultados da previsao, projete a estrutura de secoes mais adequada para o relatorio.
+
+{prediction_contract_block}
 
 [Lembrete] Quantidade de secoes do relatorio: minimo 2, maximo 5, conteudo deve ser conciso e focado nas descobertas centrais da previsao."""
 
@@ -624,20 +660,23 @@ Cenario de previsao (demanda de simulacao): {simulation_requirement}
 
 Secao a ser redigida agora: {section_title}
 
+{prediction_contract_block}
+
 ═══════════════════════════════════════════════════════════════
 [Conceito Central]
 ═══════════════════════════════════════════════════════════════
 
 O mundo simulado e um ensaio do futuro. Injetamos condicoes especificas (demanda de simulacao) no mundo simulado,
-e o comportamento e as interacoes dos Agents na simulacao sao previsoes do comportamento futuro dos grupos.
+e o comportamento e as interacoes dos agentes na simulacao sao evidencias simuladas para decisao.
 
 Sua tarefa e:
-- Revelar o que aconteceu no futuro sob as condicoes definidas
-- Prever como os diferentes tipos de grupos (Agents) reagiram e agiram
+- Mostrar qual hipotese foi testada
+- Revelar o que a simulacao observou sob as condicoes definidas
+- Separar resultado estavel, fragilidade, alcance e risco operacional
 - Descobrir tendencias futuras, riscos e oportunidades dignos de atencao
 
 NAO escreva como uma analise da situacao atual do mundo real
-FOQUE em "como sera o futuro" — os resultados da simulacao sao o futuro previsto
+FOQUE em "o que a simulacao sustenta" — os resultados simulados informam decisao, mas nao substituem campo real
 
 ═══════════════════════════════════════════════════════════════
 [Regras Mais Importantes - Obrigatorio seguir]
@@ -645,27 +684,40 @@ FOQUE em "como sera o futuro" — os resultados da simulacao sao o futuro previs
 
 1. [Obrigatorio chamar ferramentas para observar o mundo simulado]
    - Voce esta observando o ensaio do futuro com uma "visao onisciente"
-   - Todo o conteudo deve vir de eventos e falas/acoes dos Agents no mundo simulado
+   - Todo o conteudo deve vir de eventos e falas/acoes dos agentes no mundo simulado
    - Proibido usar seu proprio conhecimento para escrever o conteudo do relatorio
    - Cada secao deve chamar ferramentas pelo menos 3 vezes (maximo 5) para observar o mundo simulado, que representa o futuro
 
-2. [Obrigatorio citar falas/acoes originais dos Agents]
-   - As falas e comportamentos dos Agents sao previsoes do comportamento futuro dos grupos
+2. [Obrigatorio citar falas/acoes originais dos agentes]
+   - As falas e comportamentos dos agentes sao previsoes do comportamento futuro dos grupos
    - Use formato de citacao no relatorio para apresentar essas previsoes, por exemplo:
      > "Um certo grupo expressaria: conteudo original..."
    - Essas citacoes sao as evidencias centrais da previsao simulada
 
-3. [Consistencia linguistica - Citacoes devem ser traduzidas para o idioma do relatorio]
+3. [Consistencia linguistica - Citacoes diretas nao podem ser fabricadas nem traduzidas como aspas]
    - O conteudo retornado pelas ferramentas pode conter ingles, portugues ou expressoes mistas
    - O relatorio deve seguir o idioma principal da solicitacao do usuario e dos materiais originais
    - Se nao houver indicacao clara, use portugues do Brasil como padrao
-   - Ao citar conteudo em outros idiomas, traduza primeiro para o idioma do relatorio mantendo o sentido original
-   - Esta regra se aplica tanto ao texto principal quanto ao conteudo nos blocos de citacao (formato >)
+   - Use aspas SOMENTE quando a frase exata existir nas evidencias retornadas por ferramentas ou no material-base
+   - Se precisar traduzir ou resumir uma fala, faca como parafrase marcada [Simulacao] ou [Inferencia], sem aspas
 
 4. [Apresentar fielmente os resultados da previsao]
    - O conteudo do relatorio deve refletir os resultados da simulacao que representam o futuro no mundo simulado
    - Nao adicione informacoes que nao existem na simulacao
-   - Se a informacao for insuficiente em algum aspecto, declare isso honestamente
+   - Se a informacao estiver curta em algum aspecto, indique qual reforco tornaria a decisao mais forte
+   - Cada recomendacao deve trazer: hipotese, resultado, alcance e risco operacional
+
+5. [REGRA ZERO - INTEIA - Antialucinacao (INVIOLAVEL)]
+   - PROIBIDO inventar citacoes. Toda aspa "..." deve vir de uma acao REAL retornada pela ferramenta.
+     Se nao ha acao registrada, NAO escreva citacao — escreva "[Inferencia]: descricao" sem aspas.
+   - PROIBIDO inventar numeros ou percentuais. Se o dado nao veio da simulacao, use "nao estimavel" ou
+     "sem dados suficientes". Nunca chute "30% de chance", "40% de probabilidade" etc.
+   - Probabilidades de cenario e riscos so podem usar percentual se vierem de metrica do sistema ou se a frase/tabela
+     estiver marcada como [Inferencia calibrada], com base operacional declarada.
+   - PROIBIDO extrapolar alem do dossie de origem. Se o texto original nao diz "X", nao escreva "X" como fato.
+   - Quando houver duvida entre dado real e inferencia, marque explicitamente: [Fato] ou [Inferencia].
+   - Se a simulacao teve menos de 10 acoes totais, reforce a recomendacao com plano de coleta,
+     novos documentos e proxima rodada de simulacao, sem abrir a secao com aviso ao cliente.
 
 ═══════════════════════════════════════════════════════════════
 [Normas de Formato - Extremamente importante!]
@@ -715,7 +767,7 @@ Esta secao analisa...
 - insight_forge: Analise de insights profundos, decompoe problemas automaticamente e busca fatos e relacionamentos em multiplas dimensoes
 - panorama_search: Busca panoramica ampla, para entender a visao completa, linha do tempo e evolucao do evento
 - quick_search: Verificacao rapida de um ponto de informacao especifico
-- interview_agents: Entrevistar Agents simulados, obter pontos de vista em primeira pessoa e reacoes reais de diferentes papeis
+- interview_agents: Entrevistar agentes simulados, obter pontos de vista em primeira pessoa e reacoes reais de diferentes papeis
 
 ═══════════════════════════════════════════════════════════════
 [Fluxo de trabalho]
@@ -883,17 +935,35 @@ Com base no relatorio de previsao completo gerado pela simulacao, produza uma \
 secao final intitulada "Analise Estrategica" que contenha:
 
 1. **Sintese Executiva** (3-5 linhas): o que esta simulacao revelou que NAO era obvio antes
-2. **Riscos Criticos**: riscos concretos identificados, com probabilidade estimada (0-100%)
-3. **Oportunidades**: janelas de acao que a simulacao revelou
-4. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
-5. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
+2. **Tres Cenarios Probabilisticos** (OBRIGATORIO): tabela em Markdown com 3 cenarios mutuamente exclusivos
+   cuja soma de probabilidades = 100%. Formato exato:
+
+   | Cenario | Probabilidade | Narrativa-chave (1-2 linhas) | Gatilho de virada |
+   |---------|--------------|------------------------------|-------------------|
+   | **Base** (mais provavel) | XX% | ... | ... |
+   | **Otimista** | YY% | ... | ... |
+   | **Contrario** (devil's advocate) | ZZ% | ... | ... |
+
+   O cenario Contrario deve oferecer uma leitura estruturalmente oposta a do Base (nao apenas "menos do mesmo").
+   XX + YY + ZZ DEVE ser 100. Se a amostra for pequena, ajuste as probabilidades para refletir incerteza
+   (ex: 40/30/30 ao inves de 70/20/10).
+
+3. **Riscos Criticos**: riscos concretos identificados, com probabilidade estimada (0-100%)
+4. **Oportunidades**: janelas de acao que a simulacao revelou
+5. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
+6. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
    (considerar: tamanho da amostra de agentes, numero de rodadas, diversidade de perfis)
+7. **Limites e Campo Necessario**: o que foi simulado, o que foi confirmado e o que ainda exige dado externo
 
 [Regras Absolutas]
 - Lidere com a recomendacao, fundamente depois
 - Zero linguagem de esquiva ("depende", "e complexo", "ha muitas variaveis")
+- A tabela de 3 cenarios e OBRIGATORIA — relatorio sem ela e considerado incompleto
 - Cada risco com probabilidade numerica
 - Cada recomendacao com prazo e responsavel quando aplicavel
+- Rotule claims como [Fato], [Simulacao], [Inferencia] ou [Campo necessario]
+- Nao use aspas diretas se a frase nao aparece literalmente no relatorio ou nos dados simulados
+- Se a evidencia for fraca, reduza a confianca e declare o limite; nao compense com retorica
 - Termine com uma frase de assinatura pessoal — acida, inteligente, memoravel
 
 [Formato]
@@ -940,6 +1010,15 @@ class ReportAgent:
     # 2026-04-18: subido de 2→3 para reduzir rejeicao de Final Answer
     # quando min_tool_calls=3 forca ReACT a mais consultas (ver DIAGNOSTICO_TRAVAMENTO.md #3)
     MAX_TOOL_CALLS_PER_CHAT = 3
+
+    COST_PHASES = {
+        "preparacao": "Preparação da missão",
+        "planejamento": "Planejamento do relatório",
+        "secoes": "Escrita das seções",
+        "helena": "Conselho estratégico Helena",
+        "auditoria": "Auditoria de qualidade",
+        "entrega": "Entrega final",
+    }
     
     def __init__(
         self,
@@ -947,7 +1026,10 @@ class ReportAgent:
         simulation_id: str,
         simulation_requirement: str,
         llm_client: Optional[LLMClient] = None,
-        zep_tools: Optional[ZepToolsService] = None
+        zep_tools: Optional[ZepToolsService] = None,
+        power_persona_context: str = "",
+        power_persona_selection: Optional[Dict[str, Any]] = None,
+        power_selection: Optional[Dict[str, Any]] = None,
     ):
         """
         Inicializa o Report Agent
@@ -958,13 +1040,20 @@ class ReportAgent:
             simulation_requirement: Descricao da demanda de simulacao
             llm_client: Cliente LLM (opcional)
             zep_tools: Servico de ferramentas Zep (opcional)
+            power_persona_context: Contexto selecionado de poderes/personas (opcional)
         """
         self.graph_id = graph_id
         self.simulation_id = simulation_id
         self.simulation_requirement = simulation_requirement
+        self.power_persona_context = (power_persona_context or "").strip()
+        self.power_persona_selection = power_persona_selection or {}
+        self.power_selection = power_selection or {"selected_ids": [], "poderes_selecionados": []}
         
         self.llm = llm_client or LLMClient(model=Config.LLM_PREMIUM_MODEL)
         self.zep_tools = zep_tools or ZepToolsService()
+        self._cost_report_id: Optional[str] = None
+        self._cost_phase_id: Optional[str] = None
+        self._cost_session_started = False
         
         # Definicao das ferramentas
         self.tools = self._define_tools()
@@ -975,6 +1064,337 @@ class ReportAgent:
         self.console_logger: Optional[ReportConsoleLogger] = None
 
         logger.info(f"ReportAgent inicializado: graph_id={graph_id}, simulation_id={simulation_id}")
+
+    def _power_persona_prompt_block(self) -> str:
+        if not self.power_persona_context:
+            return ""
+        return (
+            "\n\n[Contexto selecionado de poderes e personas]\n"
+            f"{self.power_persona_context}"
+        )
+
+    def _power_selection_prompt_block(self) -> str:
+        powers = self.power_selection.get("poderes_selecionados") or []
+        if not powers:
+            return ""
+        lines = ["\n\n[Poderes ativos da missao]"]
+        for power in powers[:12]:
+            lines.append(
+                f"- {power.get('nome')}: {power.get('impacto') or power.get('descricao')}"
+            )
+        return "\n".join(lines)
+
+    def _prediction_contract_block(self) -> str:
+        return """\
+[Contrato preditivo/adversarial obrigatório]
+O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
+- linha recomendada / tese vencedora;
+- tese adversária mais forte;
+- como a outra parte, decisor ou público pode distorcer cada movimento;
+- o que cortar, evitar ou não pedir agora;
+- ação/pedido seguro agora e ação/pedido perigoso agora;
+- documentos/comprovantes necessários nos próximos 15, 30 e 60 dias;
+- perguntas prováveis do decisor;
+- gatilhos que mudariam a recomendação;
+- ganho real sobre o óbvio."""
+
+    def _start_cost_session(self, report_id: str) -> None:
+        """Inicia uma sessao isolada do medidor sem zerar consumo global."""
+        self._cost_report_id = report_id
+        self._cost_phase_id = None
+        self._cost_session_started = True
+        TokenTracker().start_session(report_id)
+
+    def _switch_cost_phase(self, phase_id: str) -> None:
+        if not self._cost_session_started or not self._cost_report_id:
+            return
+        tracker = TokenTracker()
+        if self._cost_phase_id and self._cost_phase_id != phase_id:
+            tracker.finish_phase(self._cost_report_id, self._cost_phase_id)
+        tracker.start_phase(
+            self._cost_report_id,
+            phase_id,
+            self.COST_PHASES.get(phase_id, f"Fase {phase_id}"),
+        )
+        self._cost_phase_id = phase_id
+
+    def _finish_cost_phase(self) -> None:
+        if self._cost_session_started and self._cost_report_id and self._cost_phase_id:
+            TokenTracker().finish_phase(self._cost_report_id, self._cost_phase_id)
+        self._cost_phase_id = None
+
+    def _clear_cost_session(self) -> None:
+        """Remove o contexto ativo do medidor desta instancia."""
+        self._cost_report_id = None
+        self._cost_phase_id = None
+        self._cost_session_started = False
+
+    def _cost_session_kwargs(self) -> Dict[str, str]:
+        if not self._cost_session_started or not self._cost_report_id:
+            return {}
+        kwargs = {"session_id": self._cost_report_id}
+        if self._cost_phase_id:
+            kwargs["phase_id"] = self._cost_phase_id
+        return kwargs
+
+    def _save_cost_meter_snapshot(self, report: Report, report_id: str) -> Dict[str, Any]:
+        if self._cost_session_started:
+            self._finish_cost_phase()
+        snapshot = TokenTracker().get_session(report_id)
+        snapshot = self._apply_power_cost_to_snapshot(snapshot)
+        if report.quality_gate is None:
+            report.quality_gate = {}
+        report.quality_gate["cost_meter"] = snapshot
+        ReportManager.save_json_artifact(report_id, "cost_meter.json", snapshot)
+        return snapshot
+
+    def _apply_power_cost_to_snapshot(self, snapshot: Dict[str, Any]) -> Dict[str, Any]:
+        powers = self.power_selection.get("poderes_selecionados") or []
+        if not powers:
+            return snapshot
+
+        multiplier = float(self.power_selection.get("multiplicador_total") or 1)
+        fixed_cost = float(self.power_selection.get("custo_fixo_brl") or 0)
+        base_value = float(snapshot.get("inteia_value_brl") or 0)
+        powered_value = round(base_value * multiplier + fixed_cost, 2)
+
+        updated = dict(snapshot)
+        updated["inteia_value_brl_base"] = round(base_value, 2)
+        updated["inteia_value_brl"] = powered_value
+        updated["power_value_delta_brl"] = round(powered_value - base_value, 2)
+        updated["power_multiplier"] = multiplier
+        updated["power_fixed_cost_brl"] = fixed_cost
+        updated["poderes_comerciais"] = powers
+        updated["power_cost_formula"] = "valor_base * multiplicador_total + custo_fixo"
+        updated["power_cost_components"] = [
+            {
+                "id": power.get("id"),
+                "nome": power.get("nome"),
+                "custo_tipo": power.get("custo_tipo"),
+                "multiplicador_tokens": power.get("multiplicador_tokens", 1),
+                "custo_fixo_brl": power.get("custo_fixo_brl", 0),
+            }
+            for power in powers
+            if isinstance(power, dict)
+        ]
+        updated["rotulo_valor"] = "Valor operacional INTEIA com poderes da missão"
+        return updated
+
+    @staticmethod
+    def _normalize_section_attribution(
+        content: str,
+        evidence_texts: list[str],
+        section_index: int,
+        section_title: str,
+    ) -> tuple[str, Dict[str, Any]]:
+        from .report_attribution import normalize_report_attribution
+
+        result = normalize_report_attribution(content, evidence_texts)
+        return result["content"], {
+            "section_index": section_index,
+            "section_title": section_title,
+            "converted_quotes_count": result["converted_quotes_count"],
+            "quotes": result["quotes"],
+        }
+
+    @staticmethod
+    def _build_failed_section_content(error: Exception | str | None = None) -> str:
+        return "Falha ao gerar esta seção. A missão deve ser reexecutada para completar esta parte."
+
+    @staticmethod
+    def _apply_strategic_density_gate(
+        report: Report,
+        report_id: str,
+        assembled_content: str,
+    ) -> Dict[str, Any]:
+        from .strategic_density_gate import StrategicDensityGate
+
+        strategic_density = StrategicDensityGate().evaluate(assembled_content)
+        if report.quality_gate is None:
+            report.quality_gate = {}
+        report.quality_gate["strategic_density"] = strategic_density
+        ReportManager.save_json_artifact(report_id, "strategic_density.json", strategic_density)
+
+        if not strategic_density.get("passes_gate"):
+            report.quality_gate["passes_gate"] = False
+            report.quality_gate.setdefault("issues", [])
+            report.quality_gate["issues"].append(
+                "Relatorio bloqueado por baixa densidade estrategica"
+            )
+            report.quality_gate["issues"].extend(strategic_density.get("issues", []))
+            report.markdown_content = assembled_content
+            report.status = ReportStatus.FAILED
+            report.error = "Relatorio bloqueado por baixa densidade estrategica"
+            ReportManager.save_report(report)
+            raise ValueError(report.error)
+
+        return strategic_density
+
+    @staticmethod
+    def _sanitize_llm_response_for_log(response: str) -> str:
+        """
+        Remove o conteudo final bruto da resposta antes de registra-la no agent_log.
+
+        O conteudo final normalizado e registrado depois em section_content; manter a
+        versao bruta aqui pode expor citacoes sem suporte que a normalizacao remove.
+        """
+        if not response or "Final Answer:" not in response:
+            return response
+
+        before_final, _, _ = response.partition("Final Answer:")
+        safe_final = "Final Answer: [conteudo final normalizado registrado em section_content]"
+        before_final = before_final.rstrip()
+        if not before_final:
+            return safe_final
+        return f"{before_final}\n{safe_final}"
+
+    @staticmethod
+    def _coerce_interview_payload(payload: Any) -> Any:
+        if isinstance(payload, str):
+            text = payload.strip()
+            if not text:
+                return ""
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return text
+
+        if hasattr(payload, "to_dict") and callable(payload.to_dict):
+            try:
+                return payload.to_dict()
+            except Exception:
+                return payload
+
+        return payload
+
+    @classmethod
+    def _extract_interview_items(cls, payload: Any) -> List[Any]:
+        payload = cls._coerce_interview_payload(payload)
+
+        if isinstance(payload, list):
+            return payload
+
+        if not isinstance(payload, dict):
+            return []
+
+        for key in ("results", "data", "interviews"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return value
+            if isinstance(value, dict):
+                nested = cls._extract_interview_items(value)
+                if nested:
+                    return nested
+
+        return []
+
+    @classmethod
+    def _is_usable_interview_result(cls, payload: Any) -> bool:
+        payload = cls._coerce_interview_payload(payload)
+
+        if isinstance(payload, str):
+            return False
+
+        if isinstance(payload, dict) and payload.get("success") is False:
+            return False
+
+        items = cls._extract_interview_items(payload)
+        return bool(items)
+
+    @classmethod
+    def _format_interview_result_text(cls, payload: Any) -> str:
+        if hasattr(payload, "to_text") and callable(payload.to_text):
+            return payload.to_text()
+
+        original_payload = payload
+        payload = cls._coerce_interview_payload(payload)
+
+        if isinstance(payload, str):
+            return payload.strip()
+
+        items = cls._extract_interview_items(payload)
+        if not items:
+            return json.dumps(payload, ensure_ascii=False, indent=2)
+
+        text_parts = ["## Entrevistas com agentes simulados", ""]
+        for index, item in enumerate(items, 1):
+            if not isinstance(item, dict):
+                text_parts.append(f"{index}. {item}")
+                continue
+
+            agent_name = item.get("agent_name") or item.get("name") or item.get("agent") or f"Agente {index}"
+            agent_role = item.get("agent_role") or item.get("role") or item.get("profile") or ""
+            question = item.get("question") or item.get("pergunta") or ""
+            answer = (
+                item.get("answer")
+                or item.get("response")
+                or item.get("resposta")
+                or item.get("content")
+                or item.get("text")
+                or ""
+            )
+
+            title = f"### Entrevista {index}: {agent_name}"
+            if agent_role:
+                title += f" ({agent_role})"
+            text_parts.append(title)
+            if question:
+                text_parts.append(f"Pergunta: {question}")
+            if answer:
+                text_parts.append(f"Resposta: {answer}")
+
+            extra = {
+                key: value
+                for key, value in item.items()
+                if key not in {
+                    "agent_name",
+                    "name",
+                    "agent",
+                    "agent_role",
+                    "role",
+                    "profile",
+                    "question",
+                    "pergunta",
+                    "answer",
+                    "response",
+                    "resposta",
+                    "content",
+                    "text",
+                }
+                and value not in (None, "", [])
+            }
+            if extra:
+                text_parts.append("Dados adicionais:")
+                text_parts.append(json.dumps(extra, ensure_ascii=False, indent=2))
+            text_parts.append("")
+
+        if isinstance(original_payload, str):
+            text_parts.append("Fonte original em JSON preservada:")
+            text_parts.append(original_payload.strip())
+
+        return "\n".join(text_parts).strip()
+
+    def _log_llm_response_safe(
+        self,
+        section_title: str,
+        section_index: int,
+        response: str,
+        iteration: int,
+        has_tool_calls: bool,
+        has_final_answer: bool,
+    ) -> None:
+        if not self.report_logger:
+            return
+
+        safe_response = self._sanitize_llm_response_for_log(response)
+        self.report_logger.log_llm_response(
+            section_title=section_title,
+            section_index=section_index,
+            response=safe_response,
+            iteration=iteration,
+            has_tool_calls=has_tool_calls,
+            has_final_answer=has_final_answer,
+        )
     
     def _define_tools(self) -> Dict[str, Dict[str, Any]]:
         """Define as ferramentas disponiveis"""
@@ -1008,7 +1428,7 @@ class ReportAgent:
                 "description": TOOL_DESC_INTERVIEW_AGENTS,
                 "parameters": {
                     "interview_topic": "Tema ou descricao da demanda da entrevista (ex: 'Entender a visao dos estudantes sobre o incidente de formaldeido no dormitorio')",
-                    "max_agents": "Quantidade maxima de Agents a entrevistar (opcional, padrao 5, maximo 10)"
+                    "max_agents": "Quantidade maxima de agentes a entrevistar (opcional, padrao 5, maximo 10)"
                 }
             }
         }
@@ -1085,7 +1505,16 @@ class ReportAgent:
                             max_agents=max_agents
                         )
                         result = future.result(timeout=120)
-                    return result.to_text()
+                    if self._is_usable_interview_result(result):
+                        return self._format_interview_result_text(result)
+
+                    logger.warning("interview_agents retornou resultado sem entrevistas uteis, usando quick_search como fallback")
+                    fallback_result = self.zep_tools.quick_search(
+                        graph_id=self.graph_id,
+                        query=interview_topic,
+                        limit=10
+                    )
+                    return f"(Entrevista nao disponivel neste momento, dados obtidos via busca no grafo)\n\n{fallback_result.to_text()}"
                 except (concurrent.futures.TimeoutError, Exception) as interview_err:
                     logger.warning(f"interview_agents falhou ({str(interview_err)}), usando quick_search como fallback")
                     fallback_result = self.zep_tools.quick_search(
@@ -1238,7 +1667,8 @@ class ReportAgent:
         if progress_callback:
             progress_callback("planning", 30, "Gerando sumario do relatorio...")
         
-        system_prompt = PLAN_SYSTEM_PROMPT
+        prompt_context = self._power_selection_prompt_block() + self._power_persona_prompt_block()
+        system_prompt = PLAN_SYSTEM_PROMPT + prompt_context
         user_prompt = PLAN_USER_PROMPT_TEMPLATE.format(
             simulation_requirement=self.simulation_requirement,
             total_nodes=context.get('graph_statistics', {}).get('total_nodes', 0),
@@ -1246,6 +1676,7 @@ class ReportAgent:
             entity_types=list(context.get('graph_statistics', {}).get('entity_types', {}).keys()),
             total_entities=context.get('total_entities', 0),
             related_facts_json=json.dumps(context.get('related_facts', [])[:10], ensure_ascii=False, indent=2),
+            prediction_contract_block=self._prediction_contract_block(),
         )
 
         try:
@@ -1254,7 +1685,8 @@ class ReportAgent:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.3
+                temperature=0.3,
+                **self._cost_session_kwargs(),
             )
             
             if progress_callback:
@@ -1300,7 +1732,7 @@ class ReportAgent:
         previous_sections: List[str],
         progress_callback: Optional[Callable] = None,
         section_index: int = 0
-    ) -> str:
+    ) -> tuple[str, int]:
         """
         Gera o conteudo de uma unica secao usando o padrao ReACT
 
@@ -1319,7 +1751,7 @@ class ReportAgent:
             section_index: Indice da secao (para registro de log)
 
         Returns:
-            Conteudo da secao (formato Markdown)
+            Conteudo da secao (formato Markdown) e contagem de ferramentas usadas
         """
         logger.info(f"Gerando secao via ReACT: {section.title}")
         
@@ -1327,13 +1759,15 @@ class ReportAgent:
         if self.report_logger:
             self.report_logger.log_section_start(section.title, section_index)
         
+        prompt_context = self._power_selection_prompt_block() + self._power_persona_prompt_block()
         system_prompt = SECTION_SYSTEM_PROMPT_TEMPLATE.format(
             report_title=outline.title,
             report_summary=outline.summary,
             simulation_requirement=self.simulation_requirement,
             section_title=section.title,
+            prediction_contract_block=self._prediction_contract_block(),
             tools_description=self._get_tools_description(),
-        )
+        ) + prompt_context
 
         # Constroi o prompt do usuario - cada secao concluida com maximo de 4000 caracteres
         if previous_sections:
@@ -1380,7 +1814,8 @@ class ReportAgent:
                 response = self.llm.chat(
                     messages=messages,
                     temperature=0.5,
-                    max_tokens=4096
+                    max_tokens=4096,
+                    **self._cost_session_kwargs(),
                 )
             except Exception as llm_err:
                 logger.warning(f"Secao {section.title} iteracao {iteration + 1}: erro no LLM: {str(llm_err)}")
@@ -1445,15 +1880,14 @@ class ReportAgent:
                     conflict_retries = 0
 
             # Registra log da resposta do LLM
-            if self.report_logger:
-                self.report_logger.log_llm_response(
-                    section_title=section.title,
-                    section_index=section_index,
-                    response=response,
-                    iteration=iteration + 1,
-                    has_tool_calls=has_tool_calls,
-                    has_final_answer=has_final_answer
-                )
+            self._log_llm_response_safe(
+                section_title=section.title,
+                section_index=section_index,
+                response=response,
+                iteration=iteration + 1,
+                has_tool_calls=has_tool_calls,
+                has_final_answer=has_final_answer,
+            )
 
             # ── Caso 1: LLM produziu Final Answer ──
             if has_final_answer:
@@ -1476,14 +1910,7 @@ class ReportAgent:
                 final_answer = response.split("Final Answer:")[-1].strip()
                 logger.info(f"Secao {section.title} gerada com sucesso (chamadas de ferramenta: {tool_calls_count})")
 
-                if self.report_logger:
-                    self.report_logger.log_section_content(
-                        section_title=section.title,
-                        section_index=section_index,
-                        content=final_answer,
-                        tool_calls_count=tool_calls_count
-                    )
-                return final_answer
+                return final_answer, tool_calls_count
 
             # ── Caso 2: LLM tentou chamar ferramenta ──
             if has_tool_calls:
@@ -1569,25 +1996,19 @@ class ReportAgent:
                 })
                 continue
 
-            # Chamadas de ferramenta suficientes, LLM produziu conteudo mas sem o prefixo "Final Answer:"
-            # Aceita diretamente este conteudo como resposta final, sem iteracoes vazias
-            logger.info(f"Secao {section.title}: prefixo 'Final Answer:' nao detectado, aceitando saida do LLM como conteudo final (chamadas de ferramenta: {tool_calls_count})")
-            final_answer = response.strip()
-
-            # Sanitiza: remove marcas XML de chamadas de ferramenta e pensamento do agente
-            final_answer = re.sub(r'<tool_call>.*?</tool_call>', '', final_answer, flags=re.DOTALL)
-            final_answer = re.sub(r'<thinking>.*?</thinking>', '', final_answer, flags=re.DOTALL)
-            final_answer = re.sub(r'\[TOOL_CALL\].*?\)', '', final_answer, flags=re.DOTALL)
-            final_answer = final_answer.strip()
-
-            if self.report_logger:
-                self.report_logger.log_section_content(
-                    section_title=section.title,
-                    section_index=section_index,
-                    content=final_answer,
-                    tool_calls_count=tool_calls_count
-                )
-            return final_answer
+            logger.warning(
+                f"Secao {section.title}: saida sem 'Final Answer:' apos "
+                f"{tool_calls_count} chamadas de ferramenta; solicitando fechamento correto"
+            )
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Voce ja consultou dados suficientes. Agora produza somente o texto final da secao, "
+                    "iniciando obrigatoriamente com 'Final Answer:'. Nao inclua Thought, Action, Observation "
+                    "nem chamada de ferramenta."
+                ),
+            })
+            continue
         
         # Atingiu o maximo de iteracoes, forca geracao do conteudo
         logger.warning(f"Secao {section.title} atingiu o maximo de iteracoes, forcando geracao")
@@ -1597,42 +2018,37 @@ class ReportAgent:
             response = self.llm.chat(
                 messages=messages,
                 temperature=0.5,
-                max_tokens=4096
+                max_tokens=4096,
+                **self._cost_session_kwargs(),
             )
         except Exception as llm_err:
             logger.error(f"Secao {section.title}: erro no LLM durante finalizacao forcada: {str(llm_err)}")
-            response = None
+            raise RuntimeError("Falha ao fechar a secao com conteudo final") from llm_err
 
-        # Verifica se o LLM retornou None durante a finalizacao forcada
-        if response is None:
-            logger.error(f"Secao {section.title}: LLM retornou None durante finalizacao forcada, usando mensagem de erro padrao")
-            final_answer = f"(Falha na geracao desta secao: LLM retornou resposta vazia, tente novamente mais tarde)"
-        elif "Final Answer:" in response:
-            final_answer = response.split("Final Answer:")[-1].strip()
-        else:
-            final_answer = response
+        if not response or "Final Answer:" not in response:
+            logger.error(f"Secao {section.title}: finalizacao forcada nao retornou conteudo final valido")
+            raise RuntimeError("Falha ao fechar a secao com conteudo final")
+
+        final_answer = response.split("Final Answer:")[-1].strip()
         
         # Sanitiza: remove marcas XML de chamadas de ferramenta e pensamento do agente (critico para finalizacao forcada)
         final_answer = re.sub(r'<tool_call>.*?</tool_call>', '', final_answer, flags=re.DOTALL)
         final_answer = re.sub(r'<thinking>.*?</thinking>', '', final_answer, flags=re.DOTALL)
         final_answer = re.sub(r'\[TOOL_CALL\].*?\)', '', final_answer, flags=re.DOTALL)
         final_answer = final_answer.strip()
+
+        if not final_answer:
+            logger.error(f"Secao {section.title}: conteudo final vazio apos saneamento")
+            raise RuntimeError("Falha ao fechar a secao com conteudo final")
         
-        # Registra log de conclusao da geracao do conteudo da secao
-        if self.report_logger:
-            self.report_logger.log_section_content(
-                section_title=section.title,
-                section_index=section_index,
-                content=final_answer,
-                tool_calls_count=tool_calls_count
-            )
-        
-        return final_answer
+        return final_answer, tool_calls_count
     
     def generate_report(
         self,
         progress_callback: Optional[Callable[[str, int, str], None]] = None,
-        report_id: Optional[str] = None
+        report_id: Optional[str] = None,
+        source_text: Optional[str] = None,
+        delivery_mode: Optional[str] = None,
     ) -> Report:
         """
         Gera o relatorio completo (saida em tempo real por secao)
@@ -1673,8 +2089,10 @@ class ReportAgent:
         
         # Lista de titulos de secoes concluidas (para rastreamento de progresso)
         completed_section_titles = []
+        self._start_cost_session(report_id)
         
         try:
+            self._switch_cost_phase("preparacao")
             # Inicializacao: cria pasta do relatorio e salva estado inicial
             ReportManager._ensure_report_folder(report_id)
             
@@ -1693,9 +2111,85 @@ class ReportAgent:
                 report_id, "pending", 0, "Inicializando relatorio...",
                 completed_sections=[]
             )
+            if self.power_persona_context:
+                ReportManager.save_json_artifact(
+                    report_id,
+                    "power_persona_context.json",
+                    {
+                        "simulation_id": self.simulation_id,
+                        "graph_id": self.graph_id,
+                        "selected_ids": self.power_persona_selection.get("selected_ids", []),
+                        "tipo": self.power_persona_selection.get("tipo"),
+                        "count": self.power_persona_selection.get("count", 0),
+                        "items": self.power_persona_selection.get("items", []),
+                        "preview": self.power_persona_selection.get(
+                            "preview",
+                            self.power_persona_context[:500],
+                        ),
+                    },
+                )
+            if self.power_selection.get("selected_ids"):
+                ReportManager.save_json_artifact(
+                    report_id,
+                    "power_selection.json",
+                    {
+                        "simulation_id": self.simulation_id,
+                        "graph_id": self.graph_id,
+                        **self.power_selection,
+                    },
+                )
+            ReportManager.save_report(report)
+
+            # Gate estrutural INTEIA: impede relatorio fora do sistema consolidado.
+            if not source_text:
+                try:
+                    from .simulation_manager import SimulationManager
+                    from ..models.project import ProjectManager
+
+                    sim_state = SimulationManager().get_simulation(self.simulation_id)
+                    if sim_state:
+                        source_text = ProjectManager.get_extracted_text(sim_state.project_id)
+                except Exception as gate_source_err:
+                    logger.warning(f"Nao foi possivel carregar texto-base para gate: {gate_source_err}")
+
+            from .report_system_gate import (
+                assert_report_system_ready,
+                collect_report_evidence,
+                compact_evidence_for_manifest,
+            )
+
+            gate_result = assert_report_system_ready(
+                simulation_id=self.simulation_id,
+                graph_id=self.graph_id,
+                source_text=source_text,
+                delivery_mode=delivery_mode,
+            )
+            evidence_bundle = collect_report_evidence(
+                simulation_id=self.simulation_id,
+                source_text=source_text,
+            )
+            evidence_texts = evidence_bundle.get("evidence_texts", [])
+            section_attributions: list[Dict[str, Any]] = []
+            report.quality_gate = gate_result.to_dict()
+            ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
+            ReportManager.save_json_artifact(
+                report_id,
+                "evidence_manifest.json",
+                {
+                    "simulation_id": self.simulation_id,
+                    "graph_id": self.graph_id,
+                    "simulation_requirement": self.simulation_requirement,
+                    "quality_gate": report.quality_gate,
+                    "evidence_index": compact_evidence_for_manifest(
+                        evidence_bundle.get("evidence_index", [])
+                    ),
+                    "total_evidence_documents": evidence_bundle.get("total_evidence_documents", 0),
+                },
+            )
             ReportManager.save_report(report)
             
             # Fase 1: Planejamento do sumario
+            self._switch_cost_phase("planejamento")
             report.status = ReportStatus.PLANNING
             ReportManager.update_progress(
                 report_id, "planning", 5, "Iniciando planejamento do sumario do relatorio...",
@@ -1727,72 +2221,138 @@ class ReportAgent:
             
             logger.info(f"Sumario salvo no arquivo: {report_id}/outline.json")
 
-            # Fase 2: Geracao secao por secao (salvamento por secao)
+            # Fase 2: Geracao paralela de secoes (2026-04-25 timing fix)
+            self._switch_cost_phase("secoes")
+            # Trocou loop sequencial por ThreadPool com 4 workers. Sem contexto cruzado
+            # (previous_sections=[]) — pequena perda de coesao narrativa, ganho ~5x.
+            # Cada secao tem seu proprio system prompt + Regra Zero, entao independencia e aceitavel.
             report.status = ReportStatus.GENERATING
-            
+
             total_sections = len(outline.sections)
-            generated_sections = []  # Salva conteudo para contexto
-            
-            for i, section in enumerate(outline.sections):
-                section_num = i + 1
-                base_progress = 20 + int((i / total_sections) * 70)
-                
-                # Atualiza progresso
-                ReportManager.update_progress(
-                    report_id, "generating", base_progress,
-                    f"Gerando secao: {section.title} ({section_num}/{total_sections})",
-                    current_section=section.title,
-                    completed_sections=completed_section_titles
-                )
-                
-                if progress_callback:
-                    progress_callback(
-                        "generating",
-                        base_progress,
-                        f"Gerando secao: {section.title} ({section_num}/{total_sections})"
-                    )
-                
-                # Gera conteudo da secao principal
-                section_content = self._generate_section_react(
-                    section=section,
-                    outline=outline,
-                    previous_sections=generated_sections,
-                    progress_callback=lambda stage, prog, msg:
-                        progress_callback(
-                            stage, 
-                            base_progress + int(prog * 0.7 / total_sections),
-                            msg
-                        ) if progress_callback else None,
-                    section_index=section_num
-                )
-                
-                section.content = section_content
-                generated_sections.append(f"## {section.title}\n\n{section_content}")
+            generated_sections = [None] * total_sections  # Pre-aloca para manter ordem
+            section_errors: list[Dict[str, Any]] = []
+            import concurrent.futures
+            from threading import Lock as _Lock
+            _section_lock = _Lock()
+            _completed = [0]
 
-                # Salva a secao
-                ReportManager.save_section(report_id, section_num, section)
-                completed_section_titles.append(section.title)
-
-                # Registra log de conclusao da secao
-                full_section_content = f"## {section.title}\n\n{section_content}"
-
-                if self.report_logger:
-                    self.report_logger.log_section_full_complete(
-                        section_title=section.title,
+            def _gen_one_section(idx: int, sec):
+                section_num = idx + 1
+                try:
+                    content, tool_calls_count = self._generate_section_react(
+                        section=sec,
+                        outline=outline,
+                        previous_sections=[],  # paralelizado: sem contexto cruzado
+                        progress_callback=None,  # callbacks agregados fora do thread
                         section_index=section_num,
-                        full_content=full_section_content.strip()
                     )
+                    content, attribution = self._normalize_section_attribution(
+                        content,
+                        evidence_texts,
+                        section_num,
+                        sec.title,
+                    )
+                    sec.content = content
+                    with _section_lock:
+                        section_attributions.append(attribution)
+                    ReportManager.save_section(report_id, section_num, sec)
+                    if self.report_logger:
+                        self.report_logger.log_section_content(
+                            section_title=sec.title,
+                            section_index=section_num,
+                            content=content,
+                            tool_calls_count=tool_calls_count,
+                        )
+                        self.report_logger.log_section_full_complete(
+                            section_title=sec.title,
+                            section_index=section_num,
+                            full_content=f"## {sec.title}\n\n{content}".strip(),
+                        )
+                    logger.info(f"Secao salva: {report_id}/section_{section_num:02d}.md")
+                    return idx, content, None
+                except Exception as e:
+                    logger.error(f"Falha gerando secao {section_num}: {e}")
+                    error_message = str(e)
+                    content = self._build_failed_section_content(e)
+                    attribution = {
+                        "section_index": section_num,
+                        "section_title": sec.title,
+                        "converted_quotes_count": 0,
+                        "quotes": [],
+                        "error": error_message,
+                    }
+                    sec.content = content
+                    with _section_lock:
+                        section_attributions.append(attribution)
+                    ReportManager.save_section(report_id, section_num, sec)
+                    if self.report_logger:
+                        self.report_logger.log_section_content(
+                            section_title=sec.title,
+                            section_index=section_num,
+                            content=content,
+                            tool_calls_count=0,
+                        )
+                        self.report_logger.log_section_full_complete(
+                            section_title=sec.title,
+                            section_index=section_num,
+                            full_content=f"## {sec.title}\n\n{content}".strip(),
+                            error=error_message,
+                        )
+                    logger.info(f"Secao salva com erro: {report_id}/section_{section_num:02d}.md")
+                    return idx, content, error_message
 
-                logger.info(f"Secao salva: {report_id}/section_{section_num:02d}.md")
+            # Submete todas as secoes em paralelo
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as _exec:
+                _futures = {_exec.submit(_gen_one_section, i, s): i for i, s in enumerate(outline.sections)}
+                for _fut in concurrent.futures.as_completed(_futures):
+                    i, content, err = _fut.result()
+                    generated_sections[i] = f"## {outline.sections[i].title}\n\n{content}"
+                    with _section_lock:
+                        _completed[0] += 1
+                        done = _completed[0]
+                        completed_section_titles.append(outline.sections[i].title)
+                    base_progress = 20 + int((done / total_sections) * 70)
+                    ReportManager.update_progress(
+                        report_id, "generating", base_progress,
+                        f"Secao concluida ({done}/{total_sections})",
+                        current_section=None,
+                        completed_sections=completed_section_titles,
+                    )
+                    if progress_callback:
+                        progress_callback("generating", base_progress, f"Secao concluida ({done}/{total_sections})")
+                    if err:
+                        section_errors.append({
+                            "section_index": i + 1,
+                            "section_title": outline.sections[i].title,
+                            "error": err,
+                        })
 
-                # Atualiza progresso
-                ReportManager.update_progress(
-                    report_id, "generating",
-                    base_progress + int(70 / total_sections),
-                    f"Secao {section.title} concluida",
-                    current_section=None,
-                    completed_sections=completed_section_titles
+            ReportManager.save_json_artifact(
+                report_id,
+                "section_attribution.json",
+                {"sections": sorted(section_attributions, key=lambda item: item["section_index"])},
+            )
+
+            if section_errors:
+                assembled_content = ReportManager.assemble_full_report(report_id, outline)
+                report.markdown_content = assembled_content
+                report.status = ReportStatus.FAILED
+                report.error = (
+                    "Relatorio interrompido: uma ou mais secoes falharam na geracao"
                 )
+                if report.quality_gate is None:
+                    report.quality_gate = {}
+                report.quality_gate["passes_gate"] = False
+                report.quality_gate.setdefault("issues", [])
+                report.quality_gate["issues"].append(report.error)
+                report.quality_gate["section_errors"] = section_errors
+                ReportManager.save_json_artifact(
+                    report_id,
+                    "section_errors.json",
+                    {"sections": section_errors},
+                )
+                ReportManager.save_report(report)
+                raise ValueError(report.error)
             
             # Fase 3: Montagem do relatorio completo
             if progress_callback:
@@ -1807,6 +2367,7 @@ class ReportAgent:
             assembled_content = ReportManager.assemble_full_report(report_id, outline)
 
             # Fase 4: Analise Estrategica Helena Strategos
+            self._switch_cost_phase("helena")
             if progress_callback:
                 progress_callback("generating", 96, "Helena Strategos analisando...")
 
@@ -1821,6 +2382,13 @@ class ReportAgent:
                     assembled_content, outline
                 )
                 if helena_analysis:
+                    helena_analysis, helena_attribution = self._normalize_section_attribution(
+                        helena_analysis,
+                        evidence_texts,
+                        total_sections + 1,
+                        "Analise Estrategica",
+                    )
+                    section_attributions.append(helena_attribution)
                     assembled_content += "\n\n---\n\n## Analise Estrategica\n\n" + helena_analysis
                     # Salva como secao adicional
                     helena_section = ReportSection(
@@ -1831,13 +2399,144 @@ class ReportAgent:
                         report_id, total_sections + 1, helena_section
                     )
                     completed_section_titles.append("Analise Estrategica")
+                    ReportManager.save_json_artifact(
+                        report_id,
+                        "section_attribution.json",
+                        {"sections": sorted(section_attributions, key=lambda item: item["section_index"])},
+                    )
                     logger.info(f"Analise Helena concluida para relatorio {report_id}")
             except Exception as e:
                 logger.warning(f"Analise Helena falhou (nao-bloqueante): {e}")
 
+            self._apply_strategic_density_gate(report, report_id, assembled_content)
+
+            # Phase 3 QC: medir overlap relatorio<->upload + grounding por secao
+            self._switch_cost_phase("auditoria")
+            try:
+                from app.utils.report_quality import (
+                    measure_overlap, evaluate_section_grounding, render_qc_block,
+                )
+                # Coleta nomes de entidades conhecidas do grafo (best-effort)
+                known_entities: list[str] = []
+                try:
+                    if hasattr(self, "zep_tools") and self.zep_tools is not None:
+                        gd = self.zep_tools.get_graph_data() if hasattr(self.zep_tools, "get_graph_data") else None
+                        if gd and isinstance(gd, dict):
+                            for n in (gd.get("nodes") or [])[:200]:
+                                nm = n.get("name") or n.get("label") or ""
+                                if nm:
+                                    known_entities.append(nm)
+                except Exception:
+                    pass
+
+                # Avalia cada secao individualmente
+                sections_eval = []
+                for sec in outline.sections:
+                    if sec.content:
+                        sections_eval.append(evaluate_section_grounding(sec.content, known_entities))
+
+                # Mede overlap se tiver source_text
+                overlap = measure_overlap(assembled_content, source_text or "", threshold=0.30)
+                qc_block = render_qc_block(overlap, sections_eval)
+                assembled_content += qc_block
+
+                if overlap.get("alert"):
+                    logger.warning(
+                        f"QC ALERTA overlap={overlap['jaccard_5gram']:.1%} > 30% — relatorio pode estar parafraseando upload"
+                    )
+                logger.info(
+                    f"QC report_id={report_id} overlap={overlap['jaccard_5gram']:.1%} "
+                    f"sections_grounded={sum(1 for s in sections_eval if s.get('passes_gate'))}/{len(sections_eval)}"
+                )
+            except Exception as e:
+                logger.warning(f"QC pos-relatorio falhou (nao-bloqueante): {e}")
+
+            # Auditoria hard-gate de evidencias: citacoes diretas precisam existir no corpus.
+            from app.utils.report_quality import (
+                audit_report_evidence,
+                render_evidence_audit_block,
+            )
+
+            evidence_audit = audit_report_evidence(
+                assembled_content,
+                evidence_bundle.get("evidence_texts", []),
+                fail_on_unsupported_quotes=Config.REPORT_FAIL_ON_UNSUPPORTED_QUOTES,
+                fail_on_unsupported_numbers=Config.REPORT_FAIL_ON_UNSUPPORTED_NUMBERS,
+            )
+            report.evidence_audit = evidence_audit
+            ReportManager.save_json_artifact(report_id, "evidence_audit.json", evidence_audit)
+            assembled_content += render_evidence_audit_block(evidence_audit)
+
+            if not evidence_audit.get("passes_gate"):
+                report.markdown_content = assembled_content
+                report.status = ReportStatus.FAILED
+                report.error = (
+                    "Relatorio bloqueado pela auditoria de evidencias: "
+                    f"{evidence_audit.get('quotes_unsupported', 0)} citacoes e "
+                    f"{evidence_audit.get('numbers_unsupported', 0)} numeros sem suporte"
+                )
+                ReportManager.save_report(report)
+                raise ValueError(report.error)
+
+            try:
+                from .forecast_ledger import ForecastLedger
+
+                ledger = ForecastLedger()
+                first_section = outline.sections[0].title if outline.sections else "previsao central"
+                ledger.registrar_previsao(
+                    enunciado=f"Tese central monitoravel: {outline.summary or first_section}",
+                    janela="proximos 15, 30 e 60 dias",
+                    base={
+                        "simulation_id": self.simulation_id,
+                        "report_id": report_id,
+                        "graph_id": self.graph_id,
+                    },
+                    sinais=[
+                        "tese vencedora",
+                        "tese adversaria",
+                        "gatilhos de reversao",
+                    ],
+                    grau_confianca_operacional=(
+                        report.quality_gate.get("strategic_density", {}).get("final_score")
+                        if report.quality_gate
+                        else None
+                    ),
+                )
+                ReportManager.save_json_artifact(
+                    report_id,
+                    "forecast_ledger.json",
+                    {
+                        "resumo": ledger.exportar_resumo(),
+                        "previsoes": ledger.listar_previsoes(),
+                    },
+                )
+            except Exception as ledger_err:
+                logger.warning(f"Nao foi possivel gerar livro de previsoes: {ledger_err}")
+
             report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.now().isoformat()
+            self._switch_cost_phase("entrega")
+            cost_snapshot = self._save_cost_meter_snapshot(report, report_id)
+            try:
+                from .mission_bundle import MissionBundle
+
+                forecast_ledger = ReportManager.load_json_artifact(report_id, "forecast_ledger.json") or {}
+                bundle = MissionBundle().gerar_manifesto(
+                    report_id=report_id,
+                    simulation_id=self.simulation_id,
+                    custo=cost_snapshot,
+                    poderes=self.power_selection.get("poderes_selecionados", []),
+                    personas=self.power_persona_selection.get("items", []),
+                    previsoes=forecast_ledger.get("previsoes", []),
+                    arquivos=[
+                        artifact["name"]
+                        for artifact in ReportManager.list_json_artifacts(report_id)
+                    ],
+                )
+                ReportManager.save_json_artifact(report_id, "mission_bundle.json", bundle)
+            except Exception as bundle_err:
+                logger.warning(f"Nao foi possivel gerar bundle final da missao: {bundle_err}")
             
             # Calcula o tempo total
             total_time_seconds = (datetime.now() - start_time).total_seconds()
@@ -1867,11 +2566,14 @@ class ReportAgent:
                 self.console_logger = None
             
             return report
-            
+
         except Exception as e:
             logger.error(f"Falha na geracao do relatorio: {str(e)}")
             report.status = ReportStatus.FAILED
             report.error = str(e)
+            gate_result = getattr(e, "result", None)
+            if gate_result is not None and hasattr(gate_result, "to_dict"):
+                report.quality_gate = gate_result.to_dict()
             
             # Registra log de erro
             if self.report_logger:
@@ -1879,6 +2581,9 @@ class ReportAgent:
             
             # Salva o estado de falha
             try:
+                self._save_cost_meter_snapshot(report, report_id)
+                if report.quality_gate:
+                    ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
                 ReportManager.save_report(report)
                 ReportManager.update_progress(
                     report_id, "failed", -1, f"Falha na geracao do relatorio: {str(e)}",
@@ -1893,6 +2598,8 @@ class ReportAgent:
                 self.console_logger = None
             
             return report
+        finally:
+            self._clear_cost_session()
 
     def _generate_helena_analysis(
         self,
@@ -2027,7 +2734,8 @@ class ReportAgent:
         for iteration in range(max_iterations):
             response = self.llm.chat(
                 messages=messages,
-                temperature=0.5
+                temperature=0.5,
+                **self._cost_session_kwargs(),
             )
             
             # Analisa chamadas de ferramenta
@@ -2067,7 +2775,8 @@ class ReportAgent:
         # Atingiu o maximo de iteracoes, obtem a resposta final
         final_response = self.llm.chat(
             messages=messages,
-            temperature=0.5
+            temperature=0.5,
+            **self._cost_session_kwargs(),
         )
         
         # Limpa a resposta
@@ -2153,6 +2862,52 @@ class ReportManager:
     def _get_console_log_path(cls, report_id: str) -> str:
         """Obtem o caminho do arquivo de log de console"""
         return os.path.join(cls._get_report_folder(report_id), "console_log.txt")
+
+    @classmethod
+    def save_json_artifact(cls, report_id: str, filename: str, payload: Dict[str, Any]) -> None:
+        """Salva artefato JSON auxiliar dentro da pasta do relatorio."""
+        cls._ensure_report_folder(report_id)
+        safe_name = os.path.basename(filename)
+        if not safe_name.endswith(".json"):
+            safe_name += ".json"
+        path = os.path.join(cls._get_report_folder(report_id), safe_name)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    @classmethod
+    def load_json_artifact(cls, report_id: str, filename: str) -> Optional[Dict[str, Any]]:
+        """Carrega artefato JSON auxiliar salvo junto ao relatorio."""
+        safe_name = os.path.basename(filename)
+        if not safe_name.endswith(".json"):
+            safe_name += ".json"
+        path = os.path.join(cls._get_report_folder(report_id), safe_name)
+        if not os.path.exists(path):
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {"items": data}
+
+    @classmethod
+    def list_json_artifacts(cls, report_id: str) -> List[Dict[str, Any]]:
+        """Lista artefatos JSON auxiliares disponiveis para auditoria do relatorio."""
+        folder = cls._get_report_folder(report_id)
+        if not os.path.isdir(folder):
+            return []
+
+        internal_files = {"meta.json", "outline.json", "progress.json"}
+        artifacts: List[Dict[str, Any]] = []
+        for filename in sorted(os.listdir(folder)):
+            if not filename.endswith(".json") or filename in internal_files:
+                continue
+            path = os.path.join(folder, filename)
+            if not os.path.isfile(path):
+                continue
+            artifacts.append({
+                "name": filename,
+                "size": os.path.getsize(path),
+                "updated_at": datetime.fromtimestamp(os.path.getmtime(path)).isoformat(),
+            })
+        return artifacts
     
     @classmethod
     def get_console_log(cls, report_id: str, from_line: int = 0) -> Dict[str, Any]:
@@ -2693,7 +3448,9 @@ class ReportManager:
             markdown_content=markdown_content,
             created_at=data.get('created_at', ''),
             completed_at=data.get('completed_at', ''),
-            error=data.get('error')
+            error=data.get('error'),
+            quality_gate=data.get('quality_gate'),
+            evidence_audit=data.get('evidence_audit'),
         )
     
     @classmethod

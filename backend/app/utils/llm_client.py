@@ -139,6 +139,26 @@ class LLMClient:
             kwargs = dict(kwargs)
             kwargs["model"] = model_override
 
+        # Ollama: usa API NATIVA /api/chat com format=json (grammar constrained) quando precisa JSON.
+        # OpenAI compat /v1/chat/completions ignora "format". /api/chat respeita.
+        is_ollama = "11434" in base_url
+        rf = kwargs.get("response_format")
+        use_ollama_native = is_ollama and isinstance(rf, dict) and rf.get("type") == "json_object"
+        if use_ollama_native:
+            ollama_root = base_url.rstrip('/').rsplit('/v1', 1)[0]
+            url = f"{ollama_root}/api/chat"
+            kwargs = dict(kwargs)
+            kwargs.pop("response_format", None)
+            mt = kwargs.pop("max_tokens", None) or kwargs.pop("max_completion_tokens", None)
+            temp = kwargs.pop("temperature", None)
+            kwargs = {
+                "model": kwargs["model"],
+                "messages": kwargs["messages"],
+                "stream": False,
+                "format": "json",
+                "options": {k: v for k, v in {"num_predict": mt, "temperature": temp}.items() if v is not None},
+            }
+
         last_error = None
         for attempt in range(1, self.max_retries + 1):
             started_at = time.perf_counter()
@@ -159,6 +179,13 @@ class LLMClient:
                         content=msg.get("content", ""),
                         role=msg.get("role", "assistant"),
                     )))
+
+                # Parse Ollama native /api/chat response: {"message":{"content":"..."}}
+                if not choices and isinstance(data.get("message"), dict):
+                    choices = [_ChatChoice(message=_ChatMessage(
+                        content=data["message"].get("content", ""),
+                        role=data["message"].get("role", "assistant"),
+                    ))]
 
                 # Parse Anthropic-format response (content array)
                 if not choices and data.get("content"):
@@ -195,6 +222,7 @@ class LLMClient:
         max_tokens: int = 4096,
         response_format: Optional[Dict] = None,
         session_id: Optional[str] = None,
+        phase_id: Optional[str] = None,
     ) -> str:
         """Envia requisicao de chat e retorna texto limpo."""
         model_name = Config.resolve_model_name(self.model)
@@ -227,6 +255,7 @@ class LLMClient:
                 prompt_tokens=getattr(usage, 'prompt_tokens', 0) or 0,
                 completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
                 session_id=session_id,
+                phase_id=phase_id,
             )
 
         content = response.choices[0].message.content
@@ -239,6 +268,7 @@ class LLMClient:
         temperature: float = 0.3,
         max_tokens: int = 4096,
         session_id: Optional[str] = None,
+        phase_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Envia requisicao em modo JSON e retorna objeto desserializado."""
         response = self.chat(
@@ -247,6 +277,7 @@ class LLMClient:
             max_tokens=max_tokens,
             response_format={"type": "json_object"},
             session_id=session_id,
+            phase_id=phase_id,
         )
         cleaned = response.strip()
         cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)

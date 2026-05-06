@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RalphLoopMetrics",
+  "type": "object",
+  "required": [
+    "loop_id",
+    "status",
+    "mode",
+    "verification",
+    "scores",
+    "autoresearch",
+    "next_action"
+  ],
+  "properties": {
+    "loop_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "done",
+        "blocked",
+        "failed",
+        "partial"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "autoresearch",
+        "code",
+        "dream",
+        "editorial",
+        "paperclip"
+      ]
+    },
+    "target_project": {
+      "type": "string"
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "ralph_done_signal": {
+      "type": "boolean"
+    },
+    "worktree_state": {
+      "enum": [
+        "clean",
+        "dirty",
+        "unknown"
+      ]
+    },
+    "recovery_state": {
+      "enum": [
+        "none",
+        "clean_pass",
+        "clean_fail",
+        "dirty_pass",
+        "dirty_fail",
+        "unclear"
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "type",
+        "passed"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "test",
+            "lint",
+            "browser",
+            "manual",
+            "rubric",
+            "build",
+            "cli",
+            "none"
+          ]
+        },
+        "command": {
+          "type": "string"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "string"
+        }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "properties": {
+        "formato_blocos": {
+          "type": "number"
+        },
+        "verificabilidade_factual": {
+          "type": "number"
+        },
+        "acionabilidade": {
+          "type": "number"
+        },
+        "protocolo_sem_muro": {
+          "type": "number"
+        },
+        "red_team_real": {
+          "type": "number"
+        },
+        "dominio_especifico": {
+          "type": "number"
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "review_debt": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "adversarial_review": {
+          "type": "boolean"
+        },
+        "human_review_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "autoresearch": {
+      "type": "object",
+      "properties": {
+        "method_signal": {
+          "enum": [
+            "none",
+            "weak_task",
+            "weak_verification",
+            "weak_pm",
+            "weak_security",
+            "weak_next_action",
+            "repeat_blocker",
+            "review_bottleneck"
+          ]
+        },
+        "candidate_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "experiment_recommended": {
+          "type": "boolean"
+        },
+        "efesto_seed_used": {
+          "type": "boolean"
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "blocked_reason": {
+      "type": "string"
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "human_needed": {
+      "type": "boolean"
+    }
+  }
+}

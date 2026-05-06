@@ -12,7 +12,8 @@ dependencies = [
     # Framework principal
     "flask>=3.0.0",
     "flask-cors>=6.0.0",
-    
+    "waitress>=3.0.0",  # WSGI prod server p/ codex_proxy + llm_proxy (evita MemoryError do Werkzeug em payloads >5MB)
+
     # Integracao com LLM
     "openai>=1.0.0",
     

@@ -1,6 +1,7 @@
 # External Integrations
 
 **Analysis Date:** 2026-04-13
+**Last update:** 2026-05-04
 
 ## APIs & External Services
 
@@ -23,6 +24,13 @@
   - Timeout: `GRAPHITI_TIMEOUT` (default: 60s)
   - REST endpoints: `/graphs/{graph_id}/nodes`, `/graphs/{graph_id}/edges`, `/graphs/{graph_id}/query`
 
+**OASIS Local Simulation Databases:**
+- SQLite files generated per simulation/platform in `backend/uploads/simulations/{simulation_id}/`
+- Expected files: `twitter_simulation.db`, `reddit_simulation.db`
+- Key tables for audit: `trace`, `post`, `comment`, `like`, `dislike`, `follow`
+- Used by: `simulation_data_reader.py`, `run_parallel_simulation.py`, report gate
+- Purpose: prove that social actions were persisted by OASIS, not invented by the report layer
+
 **Web Scraping & Enrichment:**
 - Apify - Data enrichment from web (Google SERP, Instagram, YouTube)
   - Client: Custom `ApifyClient` wrapper (`backend/app/services/apify_enricher.py`)
@@ -43,6 +51,7 @@
   - Subdirectories: `simulations/`, `reports/`
   - Max upload size: 50MB (`Config.MAX_CONTENT_LENGTH`)
   - Allowed file types: PDF, Markdown, TXT (`Config.ALLOWED_EXTENSIONS`)
+  - Report audit artifacts: `system_gate.json`, `evidence_manifest.json`, `evidence_audit.json`
 
 **In-Memory State:**
 - Server-side project/task state stored in memory during session
@@ -116,6 +125,20 @@
 - `FLASK_HOST` - Default: 0.0.0.0
 - `FLASK_PORT` - Default: 5001
 - `APIFY_TOKEN` - Apify account token (for enrichment, optional)
+- `REPORT_MIN_ACTIONS` - minimum real actions before report delivery
+- `REPORT_REQUIRE_COMPLETED_SIMULATION` - require completed `run_state`
+- `REPORT_REQUIRE_SOURCE_TEXT` - require project/source text evidence
+- `REPORT_FAIL_ON_UNSUPPORTED_QUOTES` - fail closed on unsupported direct quotes
+- `REPORT_MIN_DISTINCT_2` - minimum semantic diversity
+- `REPORT_MIN_AGENT_ACTIVITY_ENTROPY` - minimum agent participation diversity
+- `REPORT_MIN_BEHAVIOR_ENTROPY` - minimum OASIS behavioral diversity
+- `REPORT_REQUIRE_ACTION_TYPE_DIVERSITY` - require more than one useful action type
+
+**Simulation config additions:**
+- `social_dynamics.bootstrap_enabled`
+- `social_dynamics.bootstrap_max_actions`
+- `social_dynamics.twitter_bootstrap_action_mix`
+- `social_dynamics.reddit_bootstrap_action_mix`
 
 **Secrets location:**
 - `.env` file (root of project, not committed)
@@ -132,4 +155,4 @@
 
 ---
 
-*Integration audit: 2026-04-13*
+*Integration map updated: 2026-05-04*

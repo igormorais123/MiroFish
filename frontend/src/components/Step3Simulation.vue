@@ -91,13 +91,72 @@
       </div>
 
       <div class="action-controls">
+        <div v-if="phase === 2" class="quality-gate" :class="qualityGateClass">
+          <div class="quality-gate-main">
+            <span class="gate-dot"></span>
+            <span class="quality-title">{{ qualityGateTitle }}</span>
+          </div>
+          <div v-if="reportGate" class="quality-metrics">
+            <span>Diversidade {{ formatMetric(diversityMetrics.distinct_2) }}</span>
+            <span>Variedade {{ formatMetric(diversityMetrics.action_type_entropy) }}</span>
+            <span>Interações {{ oasisTraceMetrics.interactive_actions_total || 0 }}</span>
+          </div>
+          <div v-if="gateBlocked && primaryGateIssue" class="gate-issue">
+            {{ primaryGateIssue }}
+          </div>
+        </div>
+        <section v-if="phase === 2" class="mission-selector" aria-labelledby="mission-selector-title">
+          <div class="mission-selector-header">
+            <div>
+              <h3 id="mission-selector-title">Poderes e conselheiros da missão</h3>
+              <p>Escolha forças de previsão e referências para orientar a leitura estratégica do relatório.</p>
+            </div>
+            <span class="selection-count">{{ selectedMissionCount }} selecionado{{ selectedMissionCount === 1 ? '' : 's' }}</span>
+          </div>
+
+          <div v-if="isLoadingPowerCatalog || isLoadingPowerPersonaCatalog" class="mission-state">Carregando opções...</div>
+          <div v-else-if="powerPersonaCatalogError" class="mission-state warning">
+            {{ powerPersonaCatalogError }} A geração do relatório continua disponível.
+          </div>
+          <div v-else class="mission-groups">
+            <div v-if="powerCatalog.length" class="mission-group">
+              <div class="mission-group-title">Poderes de previsão</div>
+              <label v-for="item in powerCatalog" :key="item.id" class="mission-option power-option">
+                <input
+                  type="checkbox"
+                  :checked="isPowerSelected(item.id)"
+                  @change="togglePower(item.id)"
+                >
+                <span class="mission-option-body">
+                  <span class="mission-option-name">{{ item.nome }}</span>
+                  <span v-if="item.impacto" class="mission-option-summary">{{ truncateContent(item.impacto, 120) }}</span>
+                </span>
+              </label>
+            </div>
+            <div v-for="group in powerPersonaGroups" :key="group.tipo" class="mission-group">
+              <div class="mission-group-title">{{ group.label }}</div>
+              <label v-for="item in group.items" :key="item.id" class="mission-option">
+                <input
+                  type="checkbox"
+                  :checked="isPowerPersonaSelected(item.id)"
+                  @change="togglePowerPersona(item.id)"
+                >
+                <span class="mission-option-body">
+                  <span class="mission-option-name">{{ item.nome }}</span>
+                  <span v-if="item.resumo" class="mission-option-summary">{{ truncateContent(item.resumo, 120) }}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </section>
         <button 
           class="action-btn primary"
-          :disabled="phase !== 2 || isGeneratingReport"
+          :disabled="!canGenerateReport"
+          :title="reportButtonTitle"
           @click="handleNextStep"
         >
           <span v-if="isGeneratingReport" class="loading-spinner-small"></span>
-          {{ isGeneratingReport ? 'Iniciando...' : 'Gerar relatório final' }} 
+          {{ reportButtonText }}
           <span v-if="!isGeneratingReport" class="arrow-icon">→</span>
         </button>
       </div>
@@ -293,9 +352,12 @@ import {
   startSimulation, 
   stopSimulation,
   getRunStatus, 
-  getRunStatusDetail
+  getRunStatusDetail,
+  getSimulationQuality,
+  getMissionSelection,
+  saveMissionSelection
 } from '../api/simulation'
-import { generateReport } from '../api/report'
+import { generateReport, getPowerCatalog, getPowerPersonaCatalog } from '../api/report'
 
 const props = defineProps({
   simulationId: String,
@@ -320,6 +382,20 @@ const isStarting = ref(false)
 const isStopping = ref(false)
 const startError = ref(null)
 const runStatus = ref({})
+const qualityCheck = ref(null)
+const isCheckingQuality = ref(false)
+const qualityError = ref(null)
+const qualityLoadedFor = ref(null)
+const powerPersonaCatalog = ref([])
+const powerCatalog = ref([])
+const selectedPowerIdSet = ref(new Set())
+const selectedPowerPersonaIdSet = ref(new Set())
+const isLoadingPowerCatalog = ref(false)
+const isLoadingPowerPersonaCatalog = ref(false)
+const powerPersonaCatalogError = ref(null)
+const powerPersonaCatalogLoaded = ref(false)
+const powerCatalogLoaded = ref(false)
+const missionSelectionLoadedFor = ref(null)
 const allActions = ref([]) // todas as ações acumuladas incrementalmente
 const actionIds = ref(new Set()) // ids de ações para deduplicação
 const scrollContainer = ref(null)
@@ -337,6 +413,108 @@ const twitterActionsCount = computed(() => {
 
 const redditActionsCount = computed(() => {
   return allActions.value.filter(a => a.platform === 'reddit').length
+})
+
+const reportGate = computed(() => {
+  return qualityCheck.value?.report_gate || null
+})
+
+const diversityMetrics = computed(() => {
+  return qualityCheck.value?.diversity_metrics || {}
+})
+
+const oasisTraceMetrics = computed(() => {
+  return diversityMetrics.value?.oasis_trace || {}
+})
+
+const gatePasses = computed(() => {
+  return reportGate.value?.passes_gate === true
+})
+
+const gateBlocked = computed(() => {
+  return reportGate.value?.passes_gate === false
+})
+
+const selectedPowerPersonaIds = computed(() => {
+  return Array.from(selectedPowerPersonaIdSet.value)
+})
+
+const selectedPowerIds = computed(() => {
+  return Array.from(selectedPowerIdSet.value)
+})
+
+const selectedMissionCount = computed(() => {
+  return selectedPowerIds.value.length + selectedPowerPersonaIds.value.length
+})
+
+const powerPersonaTypeLabels = {
+  persona_sintetica: 'Pessoas sintéticas',
+  consultor_lendario: 'Consultores lendários',
+  populacao: 'Populações',
+  poder_previsao: 'Poderes de previsão'
+}
+
+const powerPersonaGroups = computed(() => {
+  const grouped = new Map()
+
+  for (const item of powerPersonaCatalog.value) {
+    const tipo = item.tipo || 'outros'
+    if (!grouped.has(tipo)) grouped.set(tipo, [])
+    grouped.get(tipo).push(item)
+  }
+
+  return Object.keys(powerPersonaTypeLabels)
+    .filter((tipo) => grouped.has(tipo))
+    .map((tipo) => ({
+      tipo,
+      label: powerPersonaTypeLabels[tipo],
+      items: grouped.get(tipo)
+    }))
+})
+
+const gateIssues = computed(() => {
+  return reportGate.value?.issues || []
+})
+
+const primaryGateIssue = computed(() => {
+  const issue = gateIssues.value[0]
+  if (!issue) return ''
+  if (typeof issue === 'string') return issue
+  return issue.message || issue.code || JSON.stringify(issue)
+})
+
+const qualityGateTitle = computed(() => {
+  if (isCheckingQuality.value) return 'Verificando qualidade'
+  if (gatePasses.value) return 'Qualidade aprovada'
+  if (gateBlocked.value) return 'Relatório bloqueado'
+  if (qualityError.value) return 'Verificação indisponível'
+  return 'Verificação pendente'
+})
+
+const qualityGateClass = computed(() => ({
+  approved: gatePasses.value,
+  blocked: gateBlocked.value,
+  checking: isCheckingQuality.value,
+  unavailable: !!qualityError.value && !reportGate.value
+}))
+
+const canGenerateReport = computed(() => {
+  return phase.value === 2 && !isGeneratingReport.value && !isCheckingQuality.value && gatePasses.value
+})
+
+const reportButtonText = computed(() => {
+  if (isGeneratingReport.value) return 'Iniciando...'
+  if (phase.value !== 2) return 'Gerar relatório final'
+  if (isCheckingQuality.value) return 'Verificando qualidade...'
+  if (gateBlocked.value) return 'Relatório bloqueado'
+  if (!gatePasses.value) return 'Aguardando verificação'
+  return 'Gerar relatório final'
+})
+
+const reportButtonTitle = computed(() => {
+  if (gateBlocked.value && primaryGateIssue.value) return primaryGateIssue.value
+  if (qualityError.value) return qualityError.value
+  return ''
 })
 
 // Formatar tempo decorrido na simulação (calculado por rodadas e minutos por rodada)
@@ -363,12 +541,121 @@ const addLog = (msg) => {
   emit('add-log', msg)
 }
 
+const loadPowerPersonaCatalog = async () => {
+  if (powerPersonaCatalogLoaded.value || isLoadingPowerPersonaCatalog.value) return
+
+  isLoadingPowerPersonaCatalog.value = true
+  powerPersonaCatalogError.value = null
+
+  try {
+    const res = await getPowerPersonaCatalog({ limit: 80 })
+    if (res.success && res.data?.items) {
+      powerPersonaCatalog.value = res.data.items
+      powerPersonaCatalogLoaded.value = true
+    } else {
+      powerPersonaCatalogError.value = 'Não foi possível carregar os conselheiros.'
+    }
+  } catch (err) {
+    powerPersonaCatalogError.value = 'Não foi possível carregar os conselheiros.'
+    console.warn('Falha ao carregar catalogo de poderes/personas:', err)
+  } finally {
+    isLoadingPowerPersonaCatalog.value = false
+  }
+}
+
+const loadMissionSelection = async () => {
+  if (!props.simulationId || missionSelectionLoadedFor.value === props.simulationId) return
+
+  try {
+    const res = await getMissionSelection(props.simulationId)
+    const selection = res?.data || res
+    if (selection?.selected_power_ids?.length) {
+      selectedPowerIdSet.value = new Set(selection.selected_power_ids)
+    }
+    if (selection?.selected_power_persona_ids?.length) {
+      selectedPowerPersonaIdSet.value = new Set(selection.selected_power_persona_ids)
+    }
+    missionSelectionLoadedFor.value = props.simulationId
+  } catch (err) {
+    console.warn('Falha ao carregar selecao da missao:', err)
+  }
+}
+
+const persistMissionSelection = async () => {
+  if (!props.simulationId) return true
+
+  try {
+    await saveMissionSelection(props.simulationId, {
+      selected_power_ids: selectedPowerIds.value,
+      selected_power_persona_ids: selectedPowerPersonaIds.value,
+      modo_custo: 'superior'
+    })
+    return true
+  } catch (err) {
+    powerPersonaCatalogError.value = 'Não foi possível salvar a seleção de poderes. Tente novamente antes de gerar o relatório.'
+    addLog('✗ Não foi possível salvar a seleção de poderes da missão.')
+    console.warn('Falha ao salvar selecao da missao:', err)
+    return false
+  }
+}
+
+const loadPowerCatalog = async () => {
+  if (powerCatalogLoaded.value || isLoadingPowerCatalog.value) return
+
+  isLoadingPowerCatalog.value = true
+  try {
+    const res = await getPowerCatalog()
+    if (res.success && res.data?.items) {
+      powerCatalog.value = res.data.items
+      powerCatalogLoaded.value = true
+    }
+  } catch (err) {
+    console.warn('Falha ao carregar catalogo de poderes:', err)
+  } finally {
+    isLoadingPowerCatalog.value = false
+  }
+}
+
+const isPowerSelected = (id) => {
+  return selectedPowerIdSet.value.has(id)
+}
+
+const togglePower = (id) => {
+  const next = new Set(selectedPowerIdSet.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  selectedPowerIdSet.value = next
+}
+
+const isPowerPersonaSelected = (id) => {
+  return selectedPowerPersonaIdSet.value.has(id)
+}
+
+const togglePowerPersona = (id) => {
+  const next = new Set(selectedPowerPersonaIdSet.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  selectedPowerPersonaIdSet.value = next
+}
+
 // Redefinir todo o estado (para reiniciar a simulação)
 const resetAllState = () => {
   phase.value = 0
   runStatus.value = {}
   allActions.value = []
   actionIds.value = new Set()
+  selectedPowerIdSet.value = new Set()
+  selectedPowerPersonaIdSet.value = new Set()
+  missionSelectionLoadedFor.value = null
+  qualityCheck.value = null
+  qualityError.value = null
+  qualityLoadedFor.value = null
   prevTwitterRound.value = 0
   prevRedditRound.value = 0
   roundTimes.value = []
@@ -452,6 +739,7 @@ const handleStopSimulation = async () => {
       phase.value = 2
       stopPolling()
       emit('update-status', 'completed')
+      await loadQualityGate({ force: true })
     } else {
       addLog(`Falha ao encerrar: ${res.error || 'erro desconhecido'}`)
     }
@@ -562,6 +850,7 @@ const fetchRunStatus = async () => {
         phase.value = 2
         stopPolling()
         emit('update-status', 'completed')
+        await loadQualityGate({ force: true })
       }
     }
   } catch (err) {
@@ -701,6 +990,67 @@ const formatActionTime = (timestamp) => {
   }
 }
 
+const formatMetric = (value, digits = 2) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
+  return Number(value).toFixed(digits)
+}
+
+const summarizeIssue = (issue) => {
+  if (!issue) return ''
+  if (typeof issue === 'string') return issue
+  return issue.message || issue.code || JSON.stringify(issue)
+}
+
+const getGateIssuesFromError = (err) => {
+  const data = err?.response?.data?.data || err?.response?.data
+  const issues = data?.issues || data?.report_gate?.issues || []
+  return Array.isArray(issues) ? issues.map(summarizeIssue).filter(Boolean) : []
+}
+
+const loadQualityGate = async ({ force = false } = {}) => {
+  if (!props.simulationId) return false
+  if (isCheckingQuality.value) return gatePasses.value
+  if (!force && qualityLoadedFor.value === props.simulationId && reportGate.value) {
+    return gatePasses.value
+  }
+
+  isCheckingQuality.value = true
+  qualityError.value = null
+  addLog('Verificando qualidade sistêmica antes do relatório...')
+
+  try {
+    const res = await getSimulationQuality(props.simulationId, { require_completed: true })
+    if (res.success && res.data) {
+      qualityCheck.value = res.data
+      qualityLoadedFor.value = props.simulationId
+
+      if (res.data.report_gate?.passes_gate) {
+        addLog('✓ Qualidade sistêmica aprovada: relatório liberado')
+        return true
+      }
+
+      const issue = summarizeIssue(res.data.report_gate?.issues?.[0])
+      addLog(`Relatório bloqueado pela verificação: ${issue || 'evidência insuficiente'}`)
+      return false
+    }
+
+    qualityError.value = res.error || 'Não foi possível verificar a qualidade'
+    addLog(`Relatório bloqueado: ${qualityError.value}`)
+    return false
+  } catch (err) {
+    const issues = getGateIssuesFromError(err)
+    qualityError.value = issues[0] || err.message || 'Não foi possível verificar a qualidade'
+    if (issues.length) {
+      const gateData = err.response?.data?.data
+      qualityCheck.value = gateData?.report_gate ? gateData : { ...(qualityCheck.value || {}), report_gate: gateData }
+    }
+    addLog(`Relatório bloqueado: ${qualityError.value}`)
+    return false
+  } finally {
+    isCheckingQuality.value = false
+  }
+}
+
 const handleNextStep = async () => {
   if (!props.simulationId) {
     addLog('Erro: simulationId ausente')
@@ -711,15 +1061,35 @@ const handleNextStep = async () => {
     addLog('A solicitação de geração do relatório já foi enviada. Aguarde...')
     return
   }
+
+  const approved = await loadQualityGate()
+  if (!approved) {
+    addLog('A geração foi interrompida para evitar relatório fora do sistema consolidado.')
+    return
+  }
   
   isGeneratingReport.value = true
   addLog('Iniciando a geração do relatório...')
   
   try {
-    const res = await generateReport({
+    const reportPayload = {
       simulation_id: props.simulationId,
       force_regenerate: true
-    })
+    }
+
+    if (selectedPowerPersonaIds.value.length > 0) {
+      reportPayload.selected_power_persona_ids = selectedPowerPersonaIds.value
+    }
+    if (selectedPowerIds.value.length > 0) {
+      reportPayload.selected_power_ids = selectedPowerIds.value
+    }
+
+    const missionSelectionSaved = await persistMissionSelection()
+    if (!missionSelectionSaved) {
+      isGeneratingReport.value = false
+      return
+    }
+    const res = await generateReport(reportPayload)
     
     if (res.success && res.data) {
       const reportId = res.data.report_id
@@ -732,7 +1102,12 @@ const handleNextStep = async () => {
       isGeneratingReport.value = false
     }
   } catch (err) {
-    addLog(`✗ Erro ao iniciar a geração do relatório: ${err.message}`)
+    const issues = getGateIssuesFromError(err)
+    if (issues.length) {
+      addLog(`✗ Relatório bloqueado pela verificação sistêmica: ${issues[0]}`)
+    } else {
+      addLog(`✗ Erro ao iniciar a geração do relatório: ${err.message}`)
+    }
     isGeneratingReport.value = false
   }
 }
@@ -747,10 +1122,19 @@ watch(() => props.systemLogs?.length, () => {
   })
 })
 
+watch(phase, (newPhase) => {
+  if (newPhase === 2) {
+    loadPowerCatalog()
+    loadPowerPersonaCatalog()
+    loadMissionSelection()
+  }
+})
+
 onMounted(() => {
   addLog('Etapa 3 de execução da simulação inicializada')
   if (props.simulationId) {
     doStartSimulation()
+    loadPowerCatalog()
   }
 })
 
@@ -780,12 +1164,185 @@ onUnmounted(() => {
   align-items: center;
   border-bottom: 1px solid rgba(15, 39, 71, 0.1);
   z-index: 10;
-  height: 64px;
+  min-height: 64px;
+  gap: 16px;
 }
 
 .status-group {
   display: flex;
   gap: 12px;
+}
+
+.action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 280px;
+}
+
+.mission-selector {
+  width: min(620px, 48vw);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #0f2747;
+}
+
+.mission-selector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mission-selector h3 {
+  margin: 0 0 3px;
+  font-size: 13px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.mission-selector p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.selection-count {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5e7a34;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mission-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.mission-group-title {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8a6310;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mission-option {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.mission-option input {
+  margin: 2px 0 0;
+  accent-color: #0f2747;
+}
+
+.mission-option-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mission-option-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #0f2747;
+}
+
+.mission-option-summary,
+.mission-state {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.mission-state.warning {
+  color: #95392e;
+}
+
+.quality-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0f2747;
+}
+
+.quality-gate.approved {
+  border-color: rgba(94, 122, 52, 0.34);
+  background: rgba(94, 122, 52, 0.08);
+}
+
+.quality-gate.blocked {
+  border-color: rgba(149, 57, 46, 0.26);
+  background: rgba(149, 57, 46, 0.08);
+}
+
+.quality-gate.checking {
+  border-color: rgba(212, 160, 23, 0.34);
+  background: rgba(212, 160, 23, 0.08);
+}
+
+.quality-gate-main,
+.quality-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gate-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8b95a7;
+  flex: 0 0 auto;
+}
+
+.quality-gate.approved .gate-dot { background: #5e7a34; }
+.quality-gate.blocked .gate-dot { background: #95392e; }
+.quality-gate.checking .gate-dot { background: #d4a017; }
+
+.quality-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.quality-metrics {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #4b5563;
+}
+
+.gate-issue {
+  font-size: 10px;
+  line-height: 1.25;
+  color: #95392e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Platform Status Cards */
@@ -1336,5 +1893,51 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-right: 6px;
+}
+
+@media (max-width: 960px) {
+  .control-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+
+  .status-group,
+  .action-controls {
+    width: 100%;
+  }
+
+  .status-group {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .action-controls {
+    justify-content: space-between;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .quality-gate {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mission-selector {
+    width: 100%;
+    max-height: 320px;
+  }
+
+  .mission-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .action-btn {
+    flex: 0 0 auto;
+    max-width: 190px;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+  }
 }
 </style>

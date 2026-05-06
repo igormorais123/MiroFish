@@ -280,21 +280,21 @@
               </div>
               
               <div class="detail-section" v-if="projectData?.ontology">
-                <div class="detail-label">Tipos de relação gerados ({{ projectData.ontology.relation_types?.length || 0 }})</div>
+                <div class="detail-label">Tipos de relação gerados ({{ ontologyRelationTypes.length }})</div>
                 <div class="relation-list">
                   <div 
-                    v-for="(rel, idx) in projectData.ontology.relation_types?.slice(0, 5) || []" 
+                    v-for="(rel, idx) in ontologyRelationTypes.slice(0, 5)" 
                     :key="idx"
                     class="relation-item"
                   >
-                    <span class="rel-source">{{ rel.source_type }}</span>
+                    <span class="rel-source">{{ rel.source_type || rel.source }}</span>
                     <span class="rel-arrow">→</span>
                     <span class="rel-name">{{ rel.name }}</span>
                     <span class="rel-arrow">→</span>
-                    <span class="rel-target">{{ rel.target_type }}</span>
+                    <span class="rel-target">{{ rel.target_type || rel.target }}</span>
                   </div>
-                  <div v-if="(projectData.ontology.relation_types?.length || 0) > 5" class="relation-more">
-                    +{{ projectData.ontology.relation_types.length - 5 }} relações adicionais...
+                  <div v-if="ontologyRelationTypes.length > 5" class="relation-more">
+                    +{{ ontologyRelationTypes.length - 5 }} relações adicionais...
                   </div>
                 </div>
               </div>
@@ -481,6 +481,20 @@ const entityTypes = computed(() => {
   return Object.values(typeMap)
 })
 
+const ontologyRelationTypes = computed(() => {
+  const ontology = projectData.value?.ontology
+  if (!ontology) return []
+  const relations = ontology.relation_types || ontology.edge_types || []
+  return relations.map((rel) => {
+    const firstPair = rel.source_targets?.[0] || {}
+    return {
+      ...rel,
+      source_type: rel.source_type || firstPair.source || '',
+      target_type: rel.target_type || firstPair.target || ''
+    }
+  })
+})
+
 // Metodos
 const goHome = () => {
   router.push('/')
@@ -573,9 +587,13 @@ const initProject = async () => {
 // Tratar novo projeto - chamar API ontology/generate
 const handleNewProject = async () => {
   const pending = getPendingUpload()
+  const pendingFiles = pending.files || []
+  const requirement = (pending.simulationRequirement || '').trim()
   
-  if (!pending.isPending || pending.files.length === 0) {
-    error.value = 'Nenhum arquivo pendente para envio. Volte para a página inicial e tente novamente.'
+  if (!pending.isPending || (!requirement && pendingFiles.length === 0)) {
+    currentPhase.value = -1
+    ontologyProgress.value = null
+    error.value = 'Nenhum objetivo de simulação encontrado. Volte para a página inicial, descreva o cenário e inicie novamente.'
     loading.value = false
     return
   }
@@ -583,14 +601,18 @@ const handleNewProject = async () => {
   try {
     loading.value = true
     currentPhase.value = 0 // etapa de geração da ontologia
-    ontologyProgress.value = { message: 'Enviando arquivos e analisando documentos...' }
+    ontologyProgress.value = {
+      message: pendingFiles.length > 0
+        ? 'Enviando arquivos e analisando documentos...'
+        : 'Gerando ontologia a partir do objetivo informado...'
+    }
     
     // Construir FormData
     const formDataObj = new FormData()
-    pending.files.forEach(file => {
+    pendingFiles.forEach(file => {
       formDataObj.append('files', file)
     })
-    formDataObj.append('simulation_requirement', pending.simulationRequirement)
+    formDataObj.append('simulation_requirement', requirement)
     
     // Chamar API de geração de ontologia
     const response = await generateOntology(formDataObj)
@@ -615,10 +637,14 @@ const handleNewProject = async () => {
       await startBuildGraph()
     } else {
       error.value = response.error || 'Falha na geração da ontologia'
+      ontologyProgress.value = null
+      currentPhase.value = -1
     }
   } catch (err) {
     console.error('Handle new project error:', err)
     error.value = 'Falha ao inicializar o projeto: ' + (err.message || 'erro desconhecido')
+    ontologyProgress.value = null
+    currentPhase.value = -1
   } finally {
     loading.value = false
   }

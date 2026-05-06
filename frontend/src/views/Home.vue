@@ -420,7 +420,7 @@
                   ref="fileInput"
                   type="file"
                   multiple
-                  accept=".pdf,.md,.txt"
+                  accept=".pdf,.md,.markdown,.txt"
                   @change="handleFileSelect"
                   style="display: none"
                   :disabled="loading"
@@ -512,7 +512,7 @@ const fileInput = ref(null)
 
 // Propriedade computada: se pode submeter
 const canSubmit = computed(() => {
-  return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
+  return formData.value.simulationRequirement.trim() !== ''
 })
 
 // Disparar seleção de arquivo
@@ -549,10 +549,15 @@ const handleDrop = (e) => {
 
 // Adicionar arquivo
 const addFiles = (newFiles) => {
+  error.value = ''
   const validFiles = newFiles.filter(file => {
     const ext = file.name.split('.').pop().toLowerCase()
-    return ['pdf', 'md', 'txt'].includes(ext)
+    return ['pdf', 'md', 'markdown', 'txt'].includes(ext)
   })
+  const rejectedCount = newFiles.length - validFiles.length
+  if (rejectedCount > 0) {
+    error.value = `${rejectedCount} arquivo(s) ignorado(s). Use PDF, MD, MARKDOWN ou TXT.`
+  }
   files.value.push(...validFiles)
 }
 
