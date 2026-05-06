@@ -71,7 +71,10 @@ vercel --prod            # NÃO use sem confirmar com Igor
 
 Fonte canônica de nomes e política: [`SEGREDOS_E_AMBIENTES_MIROFISH.md`](SEGREDOS_E_AMBIENTES_MIROFISH.md).
 
-Estado observado em 2026-05-06: `vercel env ls` não retornou variáveis. Não copie `.env` local para Vercel produção sem revisar, porque valores de desenvolvimento com `localhost` quebram o ambiente publicado.
+Estado aplicado em 2026-05-06:
+
+- `VITE_BASE=/mirofish/` em **Production**. Esta variável é pública por definição (`VITE_`) e só controla o prefixo de assets do build publicado em `https://inteia.com.br/mirofish`.
+- Nenhum token server-side foi enviado para a Vercel. Não copie `.env` local para Vercel produção sem revisar, porque segredos e valores de desenvolvimento com `localhost` quebram ou vazam o ambiente publicado.
 
 Para listar (precisa Vercel CLI + login):
 

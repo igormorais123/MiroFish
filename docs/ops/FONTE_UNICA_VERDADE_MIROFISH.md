@@ -27,20 +27,23 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 
 ### VPS atual observada
 - Diretório vivo: `/opt/mirofish`
+- Clone Git limpo preparado: `/opt/mirofish-git`
 - Backend vivo: `http://127.0.0.1:5001`
 - Frontend/container dev: `http://127.0.0.1:3001`
-- Container observado: `mirofish`
-- Imagem observada: `ghcr.io/666ghj/mirofish:latest`
+- Containers observados: `mirofish-inteia` e `mirofish`
+- Imagem legada observada: `ghcr.io/666ghj/mirofish:latest`
 
 ## Estado observado em 2026-05-06
 
 1. O site público `https://inteia.com.br/mirofish` está na Vercel.
 2. A API pública sob `/mirofish/api/...` chega no backend da VPS.
 3. `/opt/mirofish` não é repositório Git.
-4. `/opt/mirofish-inteia` também não é repositório Git.
-5. O container local serve frontend dev/chinês em `3001`, diferente do frontend público da Vercel.
-6. A Vercel, o GitHub e o `/opt/mirofish/frontend/dist` tinham builds diferentes.
-7. O `deploy/docker-compose.vps.yaml` no GitHub e o da VPS divergiam de forma relevante.
+4. `/opt/mirofish-git` é o clone limpo do GitHub para reconciliação segura.
+5. `/opt/mirofish-inteia` também não é repositório Git.
+6. O container legado local serve frontend dev/chinês em `3001`, diferente do frontend público da Vercel.
+7. A Vercel, o GitHub e o `/opt/mirofish/frontend/dist` tinham builds diferentes.
+8. O `deploy/docker-compose.vps.yaml` no GitHub e o da VPS divergiam de forma relevante.
+9. Segredos vivos da VPS foram espelhados para GitHub Secrets e para o ambiente `vps-production`, sem versionar valores.
 
 ## Política de merge entre instâncias
 

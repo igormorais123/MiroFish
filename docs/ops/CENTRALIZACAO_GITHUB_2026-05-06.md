@@ -13,11 +13,12 @@ Reduzir conflito entre instancias paralelas (Claude Code, Codex, Hermes e trabal
 |------|--------|
 | Repositorio oficial | `https://github.com/igormorais123/MiroFish` |
 | Branch de producao | `main` |
-| Ultimo main confirmado localmente | `e666c7c` |
+| Ultimo main confirmado localmente | `31baa43` |
 | PR de reconciliacao Hermes | `#3` — mergeado em `main` |
 | PR de governanca Claude/Codex | `#4` — mergeado em `main` |
 | PR de centralizacao Codex | `#6` — mergeado em `main` |
-| PR de layout Codex | `#5` — aberto para revisao visual |
+| PR de layout Codex | `#5` — mergeado apos revisao |
+| PRs de metodo/infra mais recentes | `#14`, `#15`, `#16`, `#17`, `#18`, `#19` — mergeados em `main` |
 | GitHub Actions PR #4 | `backend-tests` passou em 2026-05-06 |
 | GitHub Actions PR #5 | `backend-tests` passou em 2026-05-06 |
 | GitHub Issues | habilitado em 2026-05-06 |
@@ -32,6 +33,8 @@ Reduzir conflito entre instancias paralelas (Claude Code, Codex, Hermes e trabal
 | Vercel direct production URL | `https://mirofish-inteia.vercel.app` |
 | Site publico | `https://inteia.com.br/mirofish` |
 | API publica correta | `https://inteia.com.br/mirofish/api/...` |
+| GitHub Secrets | Repositorio e ambiente `vps-production` configurados com chaves backend/LLM/OmniRoute/Zep disponiveis |
+| Vercel env vars | Somente `VITE_BASE` em Production; frontend estatico nao deve receber tokens server-side |
 
 ## PRs e controles desta rodada
 
@@ -77,7 +80,7 @@ Conteudo:
 
 URL: `https://github.com/igormorais123/MiroFish/pull/5`
 
-Status: aberto; `backend-tests` passou.
+Status: mergeado em `main`.
 
 Conteudo:
 - split adaptativo no relatorio;
@@ -86,7 +89,19 @@ Conteudo:
 - timeline de geracao mais legivel.
 
 Uso esperado:
-- revisar visualmente antes de merge, pois toca somente frontend.
+- base visual consolidada para o relatorio.
+
+### PRs #14 a #19 — consolidacao posterior
+
+Status: mergeados em `main`.
+
+Conteudo:
+- `#14`: integra licoes Helena/Vox ao plano sistemico.
+- `#15`: prepara `VITE_BASE` configuravel e checklist de metodo.
+- `#16`: reduz mascara do video da home para nao cobrir o anel visual.
+- `#17`: adiciona painel operacional do relatorio, carregamento de secoes persistidas e acoes finais.
+- `#18`: troca favicon/preview pelo espelho INTEIA e versiona assets publicos referenciados.
+- `#19`: acopla botoes do agente de relatorio aos modos reais de ferramenta no backend.
 
 ### Issue #7 — fase 2 operacional
 
@@ -173,10 +188,10 @@ Observacao: a consulta pelo conector Vercel retornou `403 Forbidden` nesta sessa
    git pull --ff-only origin main
    ```
 
-2. Revisar PR #5.
-3. Se PR #5 passar visualmente, merge em `main`.
-4. Vercel deve publicar producao automaticamente a partir de `main`.
-5. VPS so deve ser reconciliada depois do GitHub estar consolidado.
+2. Conferir PRs abertas antes de mexer em area compartilhada.
+3. Vercel deve publicar producao automaticamente a partir de `main`.
+4. VPS so deve ser reconciliada pelo clone limpo `/opt/mirofish-git`.
+5. Segredos devem ser lidos de GitHub Secrets, GitHub Environments ou `.env` vivo fora do Git.
 
 ## O que nao fazer
 
