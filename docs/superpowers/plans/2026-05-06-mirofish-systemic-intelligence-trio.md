@@ -8,7 +8,24 @@
 
 **Tech Stack:** Python 3.11/3.12, Flask, pytest, Vue 3/Vite, existing `backend/autoresearch`, existing `.ralph` files, local JSON artifacts, deterministic HTML export, optional browser/Playwright verification for visual quality.
 
+**GitHub/Branch Rule:** GitHub `origin/main` is the current source of truth for implementation. Codex must continue only on a named branch and must not work directly on `main`. Every implementation pass starts by syncing from GitHub, creating a `codex/<slug>` branch, and ending in a PR-ready diff.
+
 ---
+
+## GitHub Operating Constraint
+
+Before executing any implementation task from this plan, Codex must run the work from a branch based on GitHub `origin/main`.
+
+Required start sequence:
+
+```powershell
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+git checkout -b codex/systemic-intelligence-trio
+```
+
+If the current worktree has unrelated local changes, use a separate worktree or a clean branch rather than mixing implementation with those changes. Do not push, commit, or merge directly to `main`; publish the branch and open a PR for review.
 
 ## Systemic Review
 
@@ -1049,11 +1066,13 @@ tests pass; git diff --check emits no output.
 
 ## Execution Order
 
-1. Execute Task 1 to keep method guardrails aligned.
-2. Execute Tasks 2-4 as the first product-visible increment.
-3. Execute Task 5 after the delivery packet is visible and tested.
-4. Execute Tasks 6-8 only after export behavior is stable.
-5. After 3 to 5 Ralph runs, run AutoResearch baselines and decide whether to open a new `.autoresearch/experiments/<id>/PATCH_PROPOSTO.diff`.
+1. Sync from GitHub `origin/main` and create the implementation branch `codex/systemic-intelligence-trio`.
+2. Execute Task 1 to keep method guardrails aligned.
+3. Execute Tasks 2-4 as the first product-visible increment.
+4. Execute Task 5 after the delivery packet is visible and tested.
+5. Execute Tasks 6-8 only after export behavior is stable.
+6. After 3 to 5 Ralph runs, run AutoResearch baselines and decide whether to open a new `.autoresearch/experiments/<id>/PATCH_PROPOSTO.diff`.
+7. Push the Codex branch to GitHub and open a PR; do not merge directly to `main`.
 
 ## Self-Review
 
@@ -1072,6 +1091,7 @@ tests pass; git diff --check emits no output.
 - The first PR adds no new external service, paid API, PDF native dependency, or simulation requirement.
 - Existing report governance is reused rather than weakened.
 - The export path depends on the delivery packet, so blocked/diagnostic states remain visible.
+- GitHub remains the coordination source; Codex work is isolated in a `codex/*` branch and reviewed through PR before `main`.
 
 ### Placeholder Scan
 
