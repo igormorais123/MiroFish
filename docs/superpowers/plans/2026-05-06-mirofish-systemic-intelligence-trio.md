@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Improve Mirofish intelligence and user experience by turning its existing audited simulation/report artifacts into a clear, trustworthy delivery package, while using Ralph Loop as execution discipline, AutoResearch as method learning, and OpenSwarm only as a specialist-package pattern.
+**Goal:** Improve Mirofish intelligence and user experience by turning its existing audited simulation/report artifacts into a clear, trustworthy, verifiable delivery package. Ralph Loop provides execution discipline, AutoResearch provides method learning, OpenSwarm contributes specialist-package discipline, and the Helena Megapower/VoxSintetica projects contribute delivery-boundary, anti-hallucination, forecast, provenance, and optional document-reading patterns.
 
-**Architecture:** Mirofish remains the product intelligence core: simulation, report gate, evidence audit, mission bundle, forecast ledger, cost meter, and UI custody trail. Ralph Loop stays outside the product as the small-unit execution cadence. AutoResearch reads runs and product artifacts to improve method and rubrics; OpenSwarm contributes controlled specialist handoff ideas only for composite deliverables such as research + data + report + deck.
+**Architecture:** Mirofish remains the product intelligence core: simulation, report gate, evidence audit, mission bundle, forecast ledger, cost meter, and UI custody trail. Ralph Loop stays outside the product as the small-unit execution cadence. AutoResearch reads runs and product artifacts to improve method and rubrics. OpenSwarm contributes controlled specialist handoff ideas only for composite deliverables such as research + data + report + deck. Helena Megapower and VoxSintetica contribute contracts and operating patterns that make delivery defensible: verified bundle boundary, method checklist, claim/provenance discipline, forecast calibration, and optional local document intelligence.
 
-**Tech Stack:** Python 3.11/3.12, Flask, pytest, Vue 3/Vite, existing `backend/autoresearch`, existing `.ralph` files, local JSON artifacts, deterministic HTML export, optional browser/Playwright verification for visual quality.
+**Tech Stack:** Python 3.11/3.12, Flask, pytest, Vue 3/Vite, existing `backend/autoresearch`, existing `.ralph` files, local JSON artifacts, deterministic HTML export, optional browser/Playwright verification for visual quality. No stack migration to VoxSintetica's Next/FastAPI monorepo and no direct import of Helena Megapower harness runtime in the first implementation.
 
-**GitHub/Branch Rule:** GitHub `origin/main` is the current source of truth for implementation. Codex must continue only on a named branch and must not work directly on `main`. Every implementation pass starts by syncing from GitHub, creating a `codex/<slug>` branch, and ending in a PR-ready diff.
+**GitHub/Branch Rule:** GitHub `origin/main` is the current source of truth for implementation and planning edits. Codex must continue only on a named branch and must not work directly on `main`. Every implementation pass starts by syncing from GitHub, creating a `codex/<slug>` branch, and ending in a PR-ready diff.
 
 ---
 
@@ -92,6 +92,70 @@ AutoResearch should not execute customer work. It should improve how work is don
 - propose method patches;
 - wait for human/executor application.
 
+### Useful Helena Megapower Lessons
+
+Sources studied locally:
+
+- `C:\Users\IgorPC\.claude\projects\Proposta reestruturação INTEIA\v2_HELENA_MEGAPOWER`
+- Key files reviewed: `README.md`, `00_PRD_EXECUTAVEL.md`, `02_ARQUITETURA.md`, `04_ANTI_ALUCINACAO.md`, `05_PODER_PREDITIVO.md`, `06_HARNESS_ENGINEERING_APLICADO.md`, `19_CIR3_LEITURA_COLETIVA_HELENA.md`, `25_BOOKNAV_SISTEMA_BUSCA_LIVROS.md`, `26_HELENA_BOOKVAULT_OBSIDIAN_RAG.md`, and `booknav/README.md`.
+
+Use the philosophy and contracts, not the whole harness:
+
+- Client value is defensible decision support, not a prettier report.
+- A delivery is a report plus reproducible evidence bundle, forecast ledger, indicators, signatures, and explicit limits.
+- Hallucination can exist during exploration, but not in the delivery boundary.
+- Deterministic verifiers should beat LLM judges when a rule can be expressed in code.
+- Every new intelligence module should declare its hypothesis, metric improved, and operational cost.
+- Forecasts need window, probability, prior, base rate/reference class, indicators, resolution source, and later Brier/log-loss tracking.
+- Large/dense-document reading should be an optional sub-harness, not a default generic agent.
+- BookNavigator/BookVault patterns are useful for local source intelligence: map/index/section-first search, evidence JSONL, and Obsidian/RAG export. They are not needed in the first PR.
+
+The strongest immediate Helena contribution to Mirofish is a delivery rule: the system should say clearly whether the report is client-deliverable, why, and which audited artifacts make that statement defensible.
+
+### Useful VoxSintetica Lessons
+
+Source studied locally:
+
+- `C:\Users\IgorPC\voxsintetica-platform`
+- Key files reviewed: `AGENTS.md`, `CLAUDE.md`, `README.md`, `docs/STATUS.md`, `packages/pipeline/src/runtime/delivery-eligibility.ts`, `packages/pipeline/src/runtime/claim-delivery-gate.ts`, `packages/contracts/src/harness.ts`, `packages/contracts/src/report.ts`, `packages/contracts/src/provenance.ts`, `packages/pipeline/src/stages/12-review-gate.ts`, and `scripts/bundle.mjs`.
+
+The VoxSintetica stack is not a direct fit for Mirofish, but several contracts are directly useful:
+
+- "The consulting report exists as product only if it passes the system" maps well to Mirofish Step 4.
+- Delivery eligibility should return `eligible`, `status`, and `reasons`, not only a vague boolean.
+- A verified bundle should reject unsafe paths, absolute paths, unexpected files, missing required artifacts, and hash mismatches.
+- A method checklist should be written as a product artifact, not only an internal note.
+- Derived claims need supporting evidence; recommendations need KPI, cost/effort, deadline, and owner.
+- Public-opinion protocol should be required only when the report actually uses public opinion, network diffusion, or social propagation language.
+- Bundle verification and delivery logging are stronger product boundaries than a generated Markdown file alone.
+
+The strongest immediate VoxSintetica contribution to Mirofish is a verified delivery boundary: outside the verified bundle, a report is draft/internal; inside a passing bundle, it can be shown as a client candidate or client delivery.
+
+### Integration Boundary
+
+Adopt now:
+
+- Method checklist adapted to Mirofish reports.
+- Verified report bundle manifest with file hashes and path-safety checks.
+- Delivery boundary status in the backend packet and Step 4 UI.
+- Deterministic repair before expensive regeneration.
+- Forecast ledger extension plan, but only after the first delivery packet/export increment.
+
+Adopt later as optional modules:
+
+- Claim/provenance-lite ledger.
+- Forecast calibration with prior/base-rate/reference-class/Brier fields.
+- CIR3/BookNavigator-style document-reading adapter for large source documents.
+- Deck/commercial package only after report/export quality is stable.
+
+Do not adopt:
+
+- No VoxSintetica monorepo migration.
+- No Helena harness runtime import as a dependency in the first implementation.
+- No OpenSwarm runtime import.
+- No secrets, `.env`, provider keys, live account tokens, or private interactions from sibling projects.
+- No hidden cross-project coupling that makes Mirofish fail if Helena/Vox folders are absent.
+
 ### Maximum Useful Integration
 
 The maximum valuable integration without breaking Mirofish is:
@@ -99,6 +163,7 @@ The maximum valuable integration without breaking Mirofish is:
 ```text
 Mirofish product core
   -> delivery intelligence packet
+  -> verified delivery bundle boundary
   -> executive export package
   -> deterministic charts and visual QA
 
@@ -113,6 +178,13 @@ AutoResearch
 OpenSwarm pattern
   -> specialist lanes only for composite deliverables
   -> no runtime import
+
+Helena/Vox patterns
+  -> method checklist
+  -> anti-hallucination and claim/provenance contracts
+  -> forecast calibration roadmap
+  -> optional document-reading adapter
+  -> no stack/runtime/secrets import
 ```
 
 ## Revised Decision
@@ -127,7 +199,7 @@ What is the next best action?
 Which exports are available?
 ```
 
-Then HTML/PDF export builds on that package. This improves user experience immediately and lowers the risk of building a pretty export around a confusing report state or around a report whose final section exists but is hidden from the user.
+Then a Helena/Vox-style verified bundle boundary wraps the package before HTML/PDF export. This improves user experience immediately and lowers the risk of building a pretty export around a confusing report state, around a report whose final section exists but is hidden from the user, or around artifacts that have not been tied back to hashes, method checks, and delivery reasons.
 
 ## Scope
 
@@ -137,6 +209,7 @@ Then HTML/PDF export builds on that package. This improves user experience immed
 - Fix Step 4 to render all generated report sections, including post-outline sections.
 - Add deterministic finalization repair contracts for existing report content.
 - Add backend `report_delivery_packet.py`.
+- Add Mirofish method checklist as a lightweight Helena/Vox contract.
 - Add API endpoint `GET /api/report/<report_id>/delivery-package`.
 - Add API endpoint `POST /api/report/<report_id>/finalization/repair` for deterministic re-audit without regeneration.
 - Add Step 4 "Entrega inteligente" panel using the new packet.
@@ -144,7 +217,8 @@ Then HTML/PDF export builds on that package. This improves user experience immed
 
 ### Second PR
 
-- Add canonical HTML export and per-export manifest using the delivery packet.
+- Add verified report bundle boundary using safe paths, file hashes, method checklist, and delivery log.
+- Add canonical HTML export and per-export manifest using the delivery packet and verified bundle.
 - Add download/list endpoints and UI buttons.
 - Keep PDF optional until dependency validation is done locally.
 
@@ -154,15 +228,25 @@ Then HTML/PDF export builds on that package. This improves user experience immed
 - Add visual QA snapshot for generated HTML/export.
 - Add AutoResearch baseline targets for Ralph method readiness and report delivery quality.
 
+### Fourth PR
+
+- Add claim/provenance-lite ledger only if the verified bundle/export path is stable.
+- Extend forecast ledger with prior, base rate, reference class, indicators, resolution source, and calibration fields.
+- Add optional CIR3/BookNavigator-style document-reading adapter behind explicit config, with no hard dependency on sibling projects.
+
 ### Not In These PRs
 
 - No OpenSwarm runtime import.
 - No Agency Swarm dependency.
 - No Composio integration.
+- No VoxSintetica stack migration.
+- No Helena Megapower harness runtime import.
 - No autonomous long-running Ralph daemon.
 - No automatic production patching by AutoResearch.
+- No secrets, `.env`, API keys, browser sessions, account tokens, or private interactions copied from sibling projects.
 - No video/image agents.
 - No deck generation before report/export quality is stable.
+- No required dependency on `C:\Users\IgorPC\.claude\projects\Proposta reestruturação INTEIA\v2_HELENA_MEGAPOWER` or `C:\Users\IgorPC\voxsintetica-platform` at runtime.
 
 ## File Structure
 
