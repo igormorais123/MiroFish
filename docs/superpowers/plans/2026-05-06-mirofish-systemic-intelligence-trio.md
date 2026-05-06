@@ -8,7 +8,24 @@
 
 **Tech Stack:** Python 3.11/3.12, Flask, pytest, Vue 3/Vite, existing `backend/autoresearch`, existing `.ralph` files, local JSON artifacts, deterministic HTML export, optional browser/Playwright verification for visual quality.
 
+**GitHub/Branch Rule:** GitHub `origin/main` is the current source of truth for implementation. Codex must continue only on a named branch and must not work directly on `main`. Every implementation pass starts by syncing from GitHub, creating a `codex/<slug>` branch, and ending in a PR-ready diff.
+
 ---
+
+## GitHub Operating Constraint
+
+Before executing any implementation task from this plan, Codex must run the work from a branch based on GitHub `origin/main`.
+
+Required start sequence:
+
+```powershell
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+git checkout -b codex/systemic-intelligence-trio
+```
+
+If the current worktree has unrelated local changes, use a separate worktree or a clean branch rather than mixing implementation with those changes. Do not push, commit, or merge directly to `main`; publish the branch and open a PR for review.
 
 ## Systemic Review
 
@@ -22,6 +39,22 @@
 ### Current Mirofish Bottleneck
 
 The user still has to infer the meaning of the intelligence from scattered status panels and Markdown. The system can already decide whether a report is `publishable`, `diagnostic_only`, blocked, or legacy, but it does not yet package that decision as a reusable executive deliverable with a clear "what can I do now?" answer.
+
+### Lessons From Session 019dfe50
+
+Source session: `019dfe50-9d62-7972-88e0-a7ea69501a07`, thread "Finalizar relatorio", 2026-05-06.
+
+This session changes the implementation priority. The user had a report that had reached final assembly and Helena strategic analysis, but Step 4 still showed a blocked/unfinished experience. The backend had generated `section_06.md` with "Analise Estrategica"; the visual loop rendered only the original outline sections, so the most valuable final section was present on disk but not visible in the report flow.
+
+The same session exposed a second class of issue: the audit can be correct in principle but stale or overly literal in practice. The report was blocked because the evidence audit treated `[Sugestao operacional]` deadlines, including `48 horas`, as unsupported numeric factual claims and also counted Markdown headings like `15/30/60 Dias`. After deterministic attribution/audit fixes and reassembly, the report became `completed` and `publishable` without needing to regenerate the whole report with an LLM.
+
+Concrete product lessons:
+
+- Step 4 must render every generated section, including post-outline sections such as Helena analysis.
+- Delivery state must distinguish "content exists but stale audit blocks it" from a truly incomplete report.
+- A deterministic finalization repair path must re-run attribution, numeric audit, report metadata, progress, `full_report.md`, and delivery artifacts on existing content.
+- Numeric audit policy must treat labeled operational deadlines as operational suggestions, not factual claims, and must ignore Markdown headings as numeric claims.
+- This belongs in the current report pipeline and Step 4 UX. Ralph, OpenSwarm, and AutoResearch should support the method and checks, not own this runtime behavior.
 
 ### Useful OpenSwarm Lessons
 
@@ -84,7 +117,7 @@ OpenSwarm pattern
 
 ## Revised Decision
 
-The previous direct export plan is useful but starts one step too far downstream. The first implementation should create a `delivery package` service that turns existing report intelligence into one product-facing object:
+The previous direct export plan is useful but starts one step too far downstream. The first implementation must fix final report visibility and finalization trust, then create a `delivery package` service that turns existing report intelligence into one product-facing object:
 
 ```text
 Can this be delivered?
@@ -94,17 +127,20 @@ What is the next best action?
 Which exports are available?
 ```
 
-Then HTML/PDF export builds on that package. This improves user experience immediately and lowers the risk of building a pretty export around a confusing report state.
+Then HTML/PDF export builds on that package. This improves user experience immediately and lowers the risk of building a pretty export around a confusing report state or around a report whose final section exists but is hidden from the user.
 
 ## Scope
 
 ### First PR
 
 - Add Ralph/OpenSwarm/AutoResearch guardrails only as lightweight method files.
+- Fix Step 4 to render all generated report sections, including post-outline sections.
+- Add deterministic finalization repair contracts for existing report content.
 - Add backend `report_delivery_packet.py`.
 - Add API endpoint `GET /api/report/<report_id>/delivery-package`.
+- Add API endpoint `POST /api/report/<report_id>/finalization/repair` for deterministic re-audit without regeneration.
 - Add Step 4 "Entrega inteligente" panel using the new packet.
-- Add tests for publishable, diagnostic, blocked, and legacy states.
+- Add tests for final visibility, stale audit repair, publishable, diagnostic, blocked, and legacy states.
 
 ### Second PR
 
@@ -138,11 +174,20 @@ Then HTML/PDF export builds on that package. This improves user experience immed
 - `backend/app/services/report_delivery_packet.py`  
   Consolidates report delivery status, blockers, warnings, artifact summary, mission bundle summary, export eligibility, and next action.
 
+- `backend/app/services/report_finalization.py`
+  Deterministically rechecks existing report content, attribution, evidence audit, status, progress, `full_report.md`, and post-outline sections without calling an LLM.
+
+- `backend/tests/test_report_finalization.py`
+  Unit tests for stale audit repair, operational deadlines, Markdown heading numeric claims, and generated section discovery.
+
 - `backend/tests/test_report_delivery_packet.py`  
   Unit tests for delivery packet policy.
 
 - `backend/tests/test_report_delivery_packet_api.py`  
   API tests for the new endpoint.
+
+- `backend/tests/test_report_finalization_api.py`
+  API tests for deterministic finalization repair.
 
 - `backend/app/services/report_exporter.py`  
   Second PR service for HTML/export manifest.
@@ -169,6 +214,8 @@ Then HTML/PDF export builds on that package. This improves user experience immed
 - `.ralph/VERIFY.md`
 - `.ralph/METRICS.schema.json`
 - `backend/app/api/report.py`
+- `backend/app/services/report_attribution.py`
+- `backend/app/utils/report_quality.py`
 - `backend/autoresearch/cli.py`
 - `frontend/src/api/report.js`
 - `frontend/src/components/Step4Report.vue`
@@ -308,18 +355,216 @@ JSON parses; Select-String shows matches; git diff --check emits no output.
 
 ---
 
-## Task 2: Backend Delivery Packet
+## Task 2: Final Report Visibility And Audit Repair Contracts
+
+**Files:**
+- Create: `backend/app/services/report_finalization.py`
+- Create: `backend/tests/test_report_finalization.py`
+- Modify: `backend/app/services/report_attribution.py`
+- Modify: `backend/app/utils/report_quality.py`
+- Modify: `frontend/src/components/Step4Report.vue`
+
+- [ ] **Step 1: Write backend tests from session 019dfe50**
+
+Create `backend/tests/test_report_finalization.py` with these cases:
+
+```python
+from app.services.report_agent import (
+    Report,
+    ReportManager,
+    ReportOutline,
+    ReportSection,
+    ReportStatus,
+)
+from app.services.report_attribution import label_operational_deadlines
+from app.services.report_finalization import ReportFinalizationRepair
+from app.utils.report_quality import audit_report_evidence, extract_numeric_claims
+
+
+def test_operational_hour_deadlines_are_labeled_before_numeric_audit():
+    content = "Em 48 horas, anexar a decisao e as pecas essenciais."
+
+    result = label_operational_deadlines(content)
+
+    assert "[Sugestao operacional]" in result
+
+
+def test_audit_accepts_labeled_operational_deadline():
+    audit = audit_report_evidence(
+        "[Sugestao operacional] Em 48 horas, anexar a decisao e as pecas essenciais.",
+        ["A simulacao registrou 10 acoes."],
+        fail_on_unsupported_numbers=True,
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_labeled_inference"] == 1
+
+
+def test_extract_numeric_claims_ignores_markdown_headings():
+    claims = extract_numeric_claims(
+        "## Provas, Perguntas do Decisor e Janela de 15/30/60 Dias\n\n"
+        "Resultado principal: 40%."
+    )
+
+    assert [claim["number"] for claim in claims] == ["40%"]
+
+
+def test_repair_discovers_post_outline_section_and_rebuilds_full_report(tmp_path, monkeypatch):
+    monkeypatch.setattr(ReportManager, "REPORTS_DIR", str(tmp_path / "reports"))
+    report_id = "report_finalization_1"
+    outline = ReportOutline(
+        title="Relatorio",
+        summary="Sintese",
+        sections=[ReportSection(title="Secao Base")],
+    )
+    report = Report(
+        report_id=report_id,
+        simulation_id="sim_1",
+        graph_id="graph_1",
+        simulation_requirement="Teste",
+        status=ReportStatus.COMPLETED,
+        outline=outline,
+        markdown_content="",
+        quality_gate={"passes_gate": True, "metrics": {"delivery_mode": "client"}},
+        evidence_audit={"passes_gate": False, "issues": ["auditoria antiga"]},
+    )
+    ReportManager.save_report(report)
+    ReportManager.save_outline(report_id, outline)
+    ReportManager.save_section(report_id, 1, ReportSection(title="Secao Base", content="Texto base."))
+    ReportManager.save_section(report_id, 2, ReportSection(title="Analise Estrategica", content="[Sugestao operacional] Em 48 horas, agir."))
+
+    result = ReportFinalizationRepair().repair(report_id)
+
+    repaired = ReportManager.get_report(report_id)
+    assert result["sections_total"] == 2
+    assert "Analise Estrategica" in result["section_titles"]
+    assert "Analise Estrategica" in repaired.markdown_content
+    assert repaired.status == ReportStatus.COMPLETED
+    assert repaired.delivery_status() == "publishable"
+```
+
+- [ ] **Step 2: Run tests to expose missing contracts**
+
+Run:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_finalization.py -q
+```
+
+Expected before implementation:
+
+```text
+At least the report_finalization import or repair test fails.
+```
+
+- [ ] **Step 3: Align attribution and numeric audit policy**
+
+In `backend/app/services/report_attribution.py`, ensure the deadline regex covers:
+
+```text
+minutos, horas, dias, semanas, mes, meses
+```
+
+In `backend/app/utils/report_quality.py`, ensure:
+
+```text
+[Sugestao operacional] counts as an inference/operational marker for numeric audit.
+extract_numeric_claims skips Markdown heading lines that start with #.
+```
+
+These are not OpenSwarm or Ralph responsibilities. They are report-quality policy and must stay close to `report_attribution.py` and `report_quality.py`.
+
+- [ ] **Step 4: Implement deterministic finalization repair**
+
+Create `backend/app/services/report_finalization.py`.
+
+Required behavior:
+
+```text
+Load report and outline.
+Read all generated section_*.md files with ReportManager.get_generated_sections(report_id).
+Treat sections beyond outline length as valid generated sections, not orphan files.
+Expose inspect(report_id) as a read-only method with outline_sections_total, generated_sections_total, has_post_outline_sections, section_titles, and stale_audit_candidate.
+Reassemble full_report.md with ReportManager.assemble_full_report(report_id, outline).
+Run attribution/deadline labeling and evidence audit on the assembled content.
+Update report.markdown_content, report.evidence_audit, report.status, report.completed_at, and progress state.
+Do not call LLM, Apify, browser, external web, or simulation runner.
+Return report_id, sections_total, section_titles, audit_passed, delivery_status, repaired_artifacts.
+```
+
+The repair service is for stale audit/assembly cases. It must not hide a real evidence failure; if the re-audit still fails, keep the report blocked and return the blockers.
+
+- [ ] **Step 5: Fix Step 4 section rendering contract**
+
+In `frontend/src/components/Step4Report.vue`, add a computed list that merges planned outline sections with generated post-outline sections:
+
+```javascript
+const displaySections = computed(() => {
+  const planned = reportOutline.value?.sections || []
+  const generated = generatedSections.value || {}
+  const maxGeneratedIndex = Math.max(0, ...Object.keys(generated).map(Number))
+  const maxIndex = Math.max(planned.length, maxGeneratedIndex)
+
+  return Array.from({ length: maxIndex }, (_, index) => {
+    const sectionIndex = index + 1
+    const content = generated[sectionIndex] || ''
+    const heading = content.match(/^##\s+(.+)$/m)?.[1]
+    const plannedTitle = planned[index]?.title
+    return {
+      index: sectionIndex,
+      title: plannedTitle || heading || `Secao ${sectionIndex}`,
+      content,
+      planned: Boolean(plannedTitle),
+    }
+  })
+})
+```
+
+Change the template loop from:
+
+```vue
+v-for="(section, idx) in reportOutline.sections"
+```
+
+to:
+
+```vue
+v-for="section in displaySections"
+```
+
+Use `section.index` for completion, collapse, active state, generated content lookup, and section number. Update `totalSections` and `progressPercent` to use `displaySections.length`, so post-outline sections do not make progress exceed 100%. The visible test case is that `section_06.md` with heading `## Analise Estrategica` appears even when the original outline has only five sections.
+
+- [ ] **Step 6: Verify finalization and UI contract**
+
+Run:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_finalization.py backend\tests\test_report_attribution.py backend\tests\test_report_quality.py -q
+npm run build
+git diff --check -- backend\app\services\report_finalization.py backend\app\services\report_attribution.py backend\app\utils\report_quality.py backend\tests\test_report_finalization.py frontend\src\components\Step4Report.vue
+```
+
+Expected:
+
+```text
+Selected backend tests pass; frontend build succeeds; diff check emits no output.
+```
+
+---
+
+## Task 3: Backend Delivery Packet
 
 **Files:**
 - Create: `backend/app/services/report_delivery_packet.py`
 - Create: `backend/tests/test_report_delivery_packet.py`
+- Modify: `backend/app/services/report_finalization.py`
 
 - [ ] **Step 1: Write failing tests**
 
 Create `backend/tests/test_report_delivery_packet.py`:
 
 ```python
-from app.services.report_agent import Report, ReportManager, ReportStatus
+from app.services.report_agent import Report, ReportManager, ReportOutline, ReportSection, ReportStatus
 from app.services.report_delivery_packet import ReportDeliveryPacketBuilder
 
 
@@ -383,6 +628,29 @@ def test_packet_explains_blocked_report(tmp_path, monkeypatch):
     assert packet["client_ready"] is False
     assert packet["next_action"]["kind"] == "fix_gate"
     assert "Evidencia insuficiente" in packet["blockers"]
+
+
+def test_packet_surfaces_post_outline_sections_and_repair_candidate(tmp_path, monkeypatch):
+    monkeypatch.setattr(ReportManager, "REPORTS_DIR", str(tmp_path / "reports"))
+    outline = ReportOutline(
+        title="Relatorio",
+        summary="Sintese",
+        sections=[ReportSection(title="Secao Base")],
+    )
+    ReportManager.save_report(_report(
+        outline=outline,
+        status=ReportStatus.COMPLETED,
+        evidence_audit={"passes_gate": False, "issues": ["auditoria antiga"]},
+    ))
+    ReportManager.save_outline("report_packet_1", outline)
+    ReportManager.save_section("report_packet_1", 1, ReportSection(title="Secao Base", content="Texto."))
+    ReportManager.save_section("report_packet_1", 2, ReportSection(title="Analise Estrategica", content="Texto final."))
+
+    packet = ReportDeliveryPacketBuilder().build("report_packet_1")
+
+    assert packet["finalization"]["has_post_outline_sections"] is True
+    assert "Analise Estrategica" in packet["finalization"]["section_titles"]
+    assert packet["next_action"]["kind"] in {"repair_audit", "fix_gate"}
 ```
 
 - [ ] **Step 2: Run tests to verify failure**
@@ -409,6 +677,7 @@ from __future__ import annotations
 from typing import Any
 
 from .report_agent import ReportManager
+from .report_finalization import ReportFinalizationRepair
 
 
 class ReportDeliveryPacketError(RuntimeError):
@@ -427,6 +696,7 @@ class ReportDeliveryPacketBuilder:
         quality_gate = report.quality_gate or {}
         evidence_audit = report.evidence_audit or {}
         delivery_status = report.delivery_status()
+        finalization = ReportFinalizationRepair().inspect(report_id)
 
         blockers = self._blockers(delivery_status, quality_gate, evidence_audit)
         warnings = self._warnings(delivery_status, quality_gate)
@@ -453,7 +723,8 @@ class ReportDeliveryPacketBuilder:
                 "quotes_total": evidence_audit.get("quotes_total", 0),
                 "numbers_total": evidence_audit.get("numbers_total", 0),
             },
-            "next_action": self._next_action(delivery_status, blockers),
+            "finalization": finalization,
+            "next_action": self._next_action(delivery_status, blockers, finalization),
         }
 
     def _blockers(self, delivery_status: str, quality_gate: dict[str, Any], evidence_audit: dict[str, Any]) -> list[str]:
@@ -487,13 +758,15 @@ class ReportDeliveryPacketBuilder:
             "files_count": len(mission_bundle.get("arquivos") or []),
         }
 
-    def _next_action(self, delivery_status: str, blockers: list[str]) -> dict[str, str]:
+    def _next_action(self, delivery_status: str, blockers: list[str], finalization: dict[str, Any]) -> dict[str, str]:
         if delivery_status == "publishable":
             return {"kind": "export", "label": "Gerar pacote executivo auditavel"}
         if delivery_status == "diagnostic_only":
             return {"kind": "diagnostic_export", "label": "Gerar export diagnostico interno"}
         if delivery_status == "legacy_unverified":
             return {"kind": "regenerate", "label": "Regenerar relatorio com gate e auditoria"}
+        if finalization.get("stale_audit_candidate"):
+            return {"kind": "repair_audit", "label": "Reauditar conteudo final sem regenerar"}
         if blockers:
             return {"kind": "fix_gate", "label": "Corrigir bloqueios antes de entregar"}
         return {"kind": "inspect", "label": "Inspecionar estado do relatorio"}
@@ -510,15 +783,16 @@ Run:
 Expected:
 
 ```text
-3 passed
+4 passed
 ```
 
 ---
 
-## Task 3: Delivery Packet API
+## Task 4: Delivery Packet API
 
 **Files:**
 - Create: `backend/tests/test_report_delivery_packet_api.py`
+- Create: `backend/tests/test_report_finalization_api.py`
 - Modify: `backend/app/api/report.py`
 
 - [ ] **Step 1: Write API tests**
@@ -553,21 +827,69 @@ def test_delivery_package_api_returns_packet(tmp_path, monkeypatch):
     assert payload["data"]["next_action"]["kind"] == "export"
 ```
 
-- [ ] **Step 2: Run API test to verify failure**
+- [ ] **Step 2: Add finalization repair API test**
+
+Create `backend/tests/test_report_finalization_api.py`:
+
+```python
+from app import create_app
+from app.services.report_agent import (
+    Report,
+    ReportManager,
+    ReportOutline,
+    ReportSection,
+    ReportStatus,
+)
+
+
+def test_finalization_repair_api_reaudits_existing_content(tmp_path, monkeypatch):
+    monkeypatch.setattr(ReportManager, "REPORTS_DIR", str(tmp_path / "reports"))
+    report_id = "report_api_repair"
+    outline = ReportOutline(
+        title="Relatorio",
+        summary="Sintese",
+        sections=[ReportSection(title="Secao Base")],
+    )
+    ReportManager.save_report(Report(
+        report_id=report_id,
+        simulation_id="sim_api_repair",
+        graph_id="graph_api_repair",
+        simulation_requirement="Teste",
+        status=ReportStatus.COMPLETED,
+        outline=outline,
+        markdown_content="",
+        quality_gate={"passes_gate": True, "metrics": {"delivery_mode": "client"}},
+        evidence_audit={"passes_gate": False, "issues": ["auditoria antiga"]},
+    ))
+    ReportManager.save_outline(report_id, outline)
+    ReportManager.save_section(report_id, 1, ReportSection(title="Secao Base", content="Texto."))
+    ReportManager.save_section(report_id, 2, ReportSection(title="Analise Estrategica", content="[Sugestao operacional] Em 48 horas, agir."))
+
+    client = create_app().test_client()
+    response = client.post(f"/api/report/{report_id}/finalization/repair")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["data"]["delivery_status"] == "publishable"
+    assert "Analise Estrategica" in payload["data"]["section_titles"]
+```
+
+- [ ] **Step 3: Run API tests to verify failure**
 
 Run:
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_delivery_packet_api.py -q
+.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_delivery_packet_api.py backend\tests\test_report_finalization_api.py -q
 ```
 
 Expected:
 
 ```text
-404 NOT FOUND
+404 NOT FOUND for the new endpoints.
 ```
 
-- [ ] **Step 3: Add route**
+- [ ] **Step 4: Add routes**
 
 In `backend/app/api/report.py`, import:
 
@@ -576,6 +898,7 @@ from ..services.report_delivery_packet import (
     ReportDeliveryPacketBuilder,
     ReportDeliveryPacketError,
 )
+from ..services.report_finalization import ReportFinalizationRepair
 ```
 
 Add before the Markdown download route:
@@ -593,31 +916,43 @@ def get_report_delivery_package(report_id: str):
         logger.error(f"Falha ao montar pacote de entrega: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/finalization/repair', methods=['POST'])
+def repair_report_finalization(report_id: str):
+    """Reauditar e remontar relatorio existente sem regenerar com LLM."""
+    try:
+        result = ReportFinalizationRepair().repair(report_id)
+        return jsonify({"success": True, "data": result})
+    except Exception as e:
+        logger.error(f"Falha ao reparar finalizacao do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 ```
 
-- [ ] **Step 4: Run API test**
+- [ ] **Step 5: Run API tests**
 
 Run:
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_delivery_packet_api.py -q
+.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_delivery_packet_api.py backend\tests\test_report_finalization_api.py -q
 ```
 
 Expected:
 
 ```text
-1 passed
+2 passed
 ```
 
 ---
 
-## Task 4: Step 4 User Experience
+## Task 5: Step 4 User Experience
 
 **Files:**
 - Modify: `frontend/src/api/report.js`
 - Modify: `frontend/src/components/Step4Report.vue`
 
-- [ ] **Step 1: Add API helper**
+- [ ] **Step 1: Add API helpers**
 
 Append to `frontend/src/api/report.js`:
 
@@ -629,15 +964,24 @@ Append to `frontend/src/api/report.js`:
 export const getReportDeliveryPackage = (reportId) => {
   return service.get(`/api/report/${reportId}/delivery-package`)
 }
+
+/**
+ * Reauditar e remontar relatorio existente sem regenerar com LLM
+ * @param {string} reportId
+ */
+export const repairReportFinalization = (reportId) => {
+  return service.post(`/api/report/${reportId}/finalization/repair`)
+}
 ```
 
 - [ ] **Step 2: Add Step 4 state and fetch**
 
-In `frontend/src/components/Step4Report.vue`, import `getReportDeliveryPackage`, add:
+In `frontend/src/components/Step4Report.vue`, import `getReportDeliveryPackage` and `repairReportFinalization`, add:
 
 ```javascript
 const deliveryPackage = ref(null)
 const deliveryPackageError = ref('')
+const deliveryRepairing = ref(false)
 
 const refreshDeliveryPackage = async () => {
   if (!props.reportId) return
@@ -649,6 +993,18 @@ const refreshDeliveryPackage = async () => {
     }
   } catch (err) {
     deliveryPackageError.value = err.message || 'Pacote de entrega indisponivel'
+  }
+}
+
+const repairFinalization = async () => {
+  if (!props.reportId || deliveryRepairing.value) return
+  deliveryRepairing.value = true
+  try {
+    await repairReportFinalization(props.reportId)
+    await fetchReportAudit()
+    await refreshDeliveryPackage()
+  } finally {
+    deliveryRepairing.value = false
   }
 }
 ```
@@ -712,6 +1068,15 @@ Add the template block:
   </div>
 
   <div class="delivery-package-next">{{ deliveryNextActionLabel }}</div>
+  <button
+    v-if="deliveryPackage.next_action?.kind === 'repair_audit'"
+    class="delivery-package-action"
+    type="button"
+    :disabled="deliveryRepairing"
+    @click="repairFinalization"
+  >
+    {{ deliveryRepairing ? 'Reauditando...' : 'Reauditar sem regenerar' }}
+  </button>
 </div>
 ```
 
@@ -778,6 +1143,17 @@ Add styles that match the existing Step 4 panels:
   font-weight: 600;
   color: #0f766e;
 }
+
+.delivery-package-action {
+  margin-top: 10px;
+  border: 1px solid #0f766e;
+  background: #ffffff;
+  color: #0f766e;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
 ```
 
 - [ ] **Step 6: Run frontend build**
@@ -796,7 +1172,7 @@ vite build succeeds.
 
 ---
 
-## Task 5: Canonical HTML Export
+## Task 6: Canonical HTML Export
 
 **Files:**
 - Create: `backend/app/services/report_exporter.py`
@@ -812,6 +1188,7 @@ The export service must:
 - require `ReportDeliveryPacketBuilder().build(report_id)`;
 - allow client export only when `client_ready is True`;
 - allow diagnostic export only with `allow_diagnostic=True`;
+- use the repaired/current `full_report.md`, including generated post-outline sections;
 - write `reports/<report_id>/exports/<export_id>/<report_id>.source.html`;
 - write `manifest.json` inside the export folder;
 - write latest pointer `export_manifest.json` in report root;
@@ -862,7 +1239,7 @@ all tests pass; frontend build succeeds; git diff --check emits no output.
 
 ---
 
-## Task 6: Deterministic Charts From Local Artifacts
+## Task 7: Deterministic Charts From Local Artifacts
 
 **Files:**
 - Create: `backend/app/services/report_chart_builder.py`
@@ -925,7 +1302,7 @@ all selected tests pass; git diff --check emits no output.
 
 ---
 
-## Task 7: AutoResearch Baselines
+## Task 8: AutoResearch Baselines
 
 **Files:**
 - Create: `backend/autoresearch/targets/report_delivery.py`
@@ -944,6 +1321,8 @@ client_ready matches delivery_status
 blockers are explicit when not publishable
 next_action is present
 artifact summary includes system gate and evidence audit
+finalization section count includes post-outline generated sections
+stale audit repair candidate is explicit when evidence audit blocks existing complete content
 export manifest exists when exports exist
 ```
 
@@ -992,7 +1371,7 @@ tests pass; both baseline commands print numeric scores.
 
 ---
 
-## Task 8: Visual QA And Browser Verification
+## Task 9: Visual QA And Browser Verification
 
 **Files:**
 - Create: `backend/app/services/report_visual_quality.py`
@@ -1049,11 +1428,14 @@ tests pass; git diff --check emits no output.
 
 ## Execution Order
 
-1. Execute Task 1 to keep method guardrails aligned.
-2. Execute Tasks 2-4 as the first product-visible increment.
-3. Execute Task 5 after the delivery packet is visible and tested.
-4. Execute Tasks 6-8 only after export behavior is stable.
-5. After 3 to 5 Ralph runs, run AutoResearch baselines and decide whether to open a new `.autoresearch/experiments/<id>/PATCH_PROPOSTO.diff`.
+1. Sync from GitHub `origin/main` and create the implementation branch `codex/systemic-intelligence-trio`.
+2. Execute Task 1 to keep method guardrails aligned.
+3. Execute Task 2 first because it fixes the actual "show the end" failure found in session 019dfe50.
+4. Execute Tasks 3-5 as the first product-visible delivery-intelligence increment.
+5. Execute Task 6 after finalization and delivery packet behavior are visible and tested.
+6. Execute Tasks 7-9 only after export behavior is stable.
+7. After 3 to 5 Ralph runs, run AutoResearch baselines and decide whether to open a new `.autoresearch/experiments/<id>/PATCH_PROPOSTO.diff`.
+8. Push the Codex branch to GitHub and open a PR; do not merge directly to `main`.
 
 ## Self-Review
 
@@ -1063,8 +1445,9 @@ tests pass; git diff --check emits no output.
 - OpenSwarm: integrated as deliverable/package/handoff discipline only.
 - Ralph Loop: preserved as execution cadence with a minimal composite-package policy.
 - AutoResearch: positioned as learning/scoring layer with zero-LLM baseline targets first.
-- User experience: first product PR creates a single delivery packet and visible Step 4 panel.
-- Intelligence: delivery state, evidence, mission hash, blockers, next action, deterministic charts, and export manifest become explicit product objects.
+- Session 019dfe50: incorporated as a concrete regression source for hidden final sections, stale audit repair, operational deadlines, and Markdown-heading numeric false positives.
+- User experience: first product PR shows all final sections, adds deterministic re-audit, then creates a single delivery packet and visible Step 4 panel.
+- Intelligence: finalization state, delivery state, evidence, mission hash, blockers, next action, deterministic charts, and export manifest become explicit product objects.
 
 ### Risk Review
 
@@ -1072,6 +1455,7 @@ tests pass; git diff --check emits no output.
 - The first PR adds no new external service, paid API, PDF native dependency, or simulation requirement.
 - Existing report governance is reused rather than weakened.
 - The export path depends on the delivery packet, so blocked/diagnostic states remain visible.
+- GitHub remains the coordination source; Codex work is isolated in a `codex/*` branch and reviewed through PR before `main`.
 
 ### Placeholder Scan
 

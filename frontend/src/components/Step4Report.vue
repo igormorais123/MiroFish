@@ -19,22 +19,22 @@
           <!-- Sections List -->
           <div class="sections-list">
             <div 
-              v-for="(section, idx) in reportOutline.sections" 
-              :key="idx"
+              v-for="section in displaySections"
+              :key="section.index"
               class="report-section-item"
               :class="{ 
-                'is-active': currentSectionIndex === idx + 1,
-                'is-completed': isSectionCompleted(idx + 1),
-                'is-pending': !isSectionCompleted(idx + 1) && currentSectionIndex !== idx + 1
+                'is-active': currentSectionIndex === section.index,
+                'is-completed': isSectionCompleted(section.index),
+                'is-pending': !isSectionCompleted(section.index) && currentSectionIndex !== section.index
               }"
             >
-              <div class="section-header-row" @click="toggleSectionCollapse(idx)" :class="{ 'clickable': isSectionCompleted(idx + 1) }">
-                <span class="section-number">{{ String(idx + 1).padStart(2, '0') }}</span>
+              <div class="section-header-row" @click="toggleSectionCollapse(section.index - 1)" :class="{ 'clickable': isSectionCompleted(section.index) }">
+                <span class="section-number">{{ String(section.index).padStart(2, '0') }}</span>
                 <h3 class="section-title">{{ section.title }}</h3>
                 <svg 
-                  v-if="isSectionCompleted(idx + 1)" 
+                  v-if="isSectionCompleted(section.index)"
                   class="collapse-icon" 
-                  :class="{ 'is-collapsed': collapsedSections.has(idx) }"
+                  :class="{ 'is-collapsed': collapsedSections.has(section.index - 1) }"
                   viewBox="0 0 24 24" 
                   width="20" 
                   height="20" 
@@ -46,12 +46,12 @@
                 </svg>
               </div>
               
-              <div class="section-body" v-show="!collapsedSections.has(idx)">
+              <div class="section-body" v-show="!collapsedSections.has(section.index - 1)">
                 <!-- Completed Content -->
-                <div v-if="generatedSections[idx + 1]" class="generated-content" v-html="renderMarkdown(generatedSections[idx + 1])"></div>
+                <div v-if="generatedSections[section.index]" class="generated-content" v-html="renderMarkdown(generatedSections[section.index])"></div>
                 
                 <!-- Loading State -->
-                <div v-else-if="currentSectionIndex === idx + 1" class="loading-state">
+                <div v-else-if="currentSectionIndex === section.index" class="loading-state">
                   <div class="loading-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <circle cx="12" cy="12" r="10" stroke-width="4" stroke="#E5E7EB"></circle>
@@ -507,7 +507,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getMissionBundle } from '../api/report'
+import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle } from '../api/report'
 
 const router = useRouter()
 
@@ -1835,8 +1835,31 @@ const statusText = computed(() => {
   return 'Aguardando'
 })
 
+const extractGeneratedSectionTitle = (content, fallbackIndex) => {
+  const match = String(content || '').match(/^##\s+(.+)$/m)
+  return match?.[1]?.trim() || `Seção adicional ${fallbackIndex}`
+}
+
+const displaySections = computed(() => {
+  const outlineSections = (reportOutline.value?.sections || []).map((section, idx) => ({
+    ...section,
+    index: idx + 1
+  }))
+  const outlineCount = outlineSections.length
+  const extraSections = Object.keys(generatedSections.value)
+    .map(Number)
+    .filter(index => Number.isFinite(index) && index > outlineCount)
+    .sort((a, b) => a - b)
+    .map(index => ({
+      index,
+      title: extractGeneratedSectionTitle(generatedSections.value[index], index)
+    }))
+
+  return [...outlineSections, ...extraSections]
+})
+
 const totalSections = computed(() => {
-  return reportOutline.value?.sections?.length || 0
+  return displaySections.value.length
 })
 
 const completedSections = computed(() => {
@@ -2089,10 +2112,9 @@ const workflowSteps = computed(() => {
     meta: planningStatus === 'active' ? 'EM ANDAMENTO' : ''
   })
 
-  // Sections (if outline exists)
-  const sections = reportOutline.value?.sections || []
-  sections.forEach((section, i) => {
-    const idx = i + 1
+  // Sections, including generated post-outline sections.
+  displaySections.value.forEach((section) => {
+    const idx = section.index
     const status = (isComplete.value || !!generatedSections.value[idx])
       ? 'done'
       : (activeSectionIndex.value === idx ? 'active' : 'todo')
@@ -2482,13 +2504,22 @@ const fetchReportAudit = async () => {
   if (!props.reportId) return
 
   try {
-    const [reportRes, artifactsRes] = await Promise.all([
+    const [reportRes, artifactsRes, sectionsRes] = await Promise.all([
       getReport(props.reportId),
-      getReportArtifacts(props.reportId, true)
+      getReportArtifacts(props.reportId, true),
+      getReportSections(props.reportId)
     ])
 
     if (reportRes.success && reportRes.data) {
       reportRecord.value = reportRes.data
+      if (!reportOutline.value && reportRes.data.outline) {
+        reportOutline.value = reportRes.data.outline
+      }
+      if (reportRes.data.status === 'completed') {
+        isComplete.value = true
+        currentSectionIndex.value = null
+        emit('update-status', 'completed')
+      }
       const blocked = reportRes.data.status === 'failed' || reportRes.data.delivery_status === 'failed'
       if (blocked) {
         isBlocked.value = true
@@ -2500,6 +2531,16 @@ const fetchReportAudit = async () => {
 
     if (artifactsRes.success && artifactsRes.data) {
       reportArtifacts.value = artifactsRes.data.artifacts || []
+    }
+
+    if (sectionsRes.success && sectionsRes.data) {
+      const loadedSections = { ...generatedSections.value }
+      ;(sectionsRes.data.sections || []).forEach(section => {
+        if (section.section_index && section.content) {
+          loadedSections[section.section_index] = section.content
+        }
+      })
+      generatedSections.value = loadedSections
     }
 
     const hasMissionBundle = reportArtifacts.value.some(item => item.name === 'mission_bundle.json')
