@@ -575,7 +575,7 @@ def _report(**overrides):
         "graph_id": "graph_packet_1",
         "simulation_requirement": "Avaliar cenario institucional",
         "status": ReportStatus.COMPLETED,
-        "markdown_content": "# Relatorio\n\nConteudo.",
+        "markdown_content": "# Relatorio\n\n## Simulacao\nCenario avaliado.\n\n## Limites\nIncertezas declaradas.\n\n## Recomendacoes\nDono: Operacoes. Prazo: 30 dias. Custo/esforco: baixo. KPI: resposta.",
         "quality_gate": {"passes_gate": True, "metrics": {"delivery_mode": "client"}},
         "evidence_audit": {"passes_gate": True, "quotes_total": 0, "numbers_total": 0},
     }
@@ -596,6 +596,7 @@ def test_packet_marks_publishable_report_as_client_ready(tmp_path, monkeypatch):
 
     assert packet["delivery_status"] == "publishable"
     assert packet["client_ready"] is True
+    assert packet["method_checklist"]["passed"] is True
     assert packet["next_action"]["kind"] == "export"
     assert packet["mission"]["hash_short"] == "abc123"
 
@@ -626,7 +627,7 @@ def test_packet_explains_blocked_report(tmp_path, monkeypatch):
     packet = ReportDeliveryPacketBuilder().build("report_packet_1")
 
     assert packet["client_ready"] is False
-    assert packet["next_action"]["kind"] == "fix_gate"
+    assert packet["next_action"]["kind"] == "fix_method_or_gate"
     assert "Evidencia insuficiente" in packet["blockers"]
 
 
@@ -650,7 +651,7 @@ def test_packet_surfaces_post_outline_sections_and_repair_candidate(tmp_path, mo
 
     assert packet["finalization"]["has_post_outline_sections"] is True
     assert "Analise Estrategica" in packet["finalization"]["section_titles"]
-    assert packet["next_action"]["kind"] in {"repair_audit", "fix_gate"}
+    assert packet["next_action"]["kind"] in {"repair_audit", "fix_method_or_gate"}
 ```
 
 - [ ] **Step 2: Run tests to verify failure**
@@ -678,6 +679,7 @@ from typing import Any
 
 from .report_agent import ReportManager
 from .report_finalization import ReportFinalizationRepair
+from .report_method_checklist import build_report_method_checklist
 
 
 class ReportDeliveryPacketError(RuntimeError):
@@ -692,13 +694,26 @@ class ReportDeliveryPacketBuilder:
 
         artifacts = ReportManager.list_json_artifacts(report_id)
         artifact_names = [item["name"] for item in artifacts]
-        mission_bundle = ReportManager.load_json_artifact(report_id, "mission_bundle.json") or {}
+        artifact_values = {
+            name: ReportManager.load_json_artifact(report_id, name) or {}
+            for name in artifact_names
+        }
+        artifact_values.setdefault("system_gate.json", report.quality_gate or {})
+        artifact_values.setdefault("evidence_audit.json", report.evidence_audit or {})
+        mission_bundle = artifact_values.get("mission_bundle.json") or {}
         quality_gate = report.quality_gate or {}
         evidence_audit = report.evidence_audit or {}
         delivery_status = report.delivery_status()
         finalization = ReportFinalizationRepair().inspect(report_id)
+        method_checklist = build_report_method_checklist(
+            markdown=report.markdown_content or "",
+            artifacts=artifact_values,
+            delivery_status=delivery_status,
+        )
 
         blockers = self._blockers(delivery_status, quality_gate, evidence_audit)
+        if delivery_status == "publishable" and not method_checklist["passed"]:
+            blockers.extend(f"Metodo incompleto: {item}" for item in method_checklist["failed"])
         warnings = self._warnings(delivery_status, quality_gate)
 
         return {
@@ -706,7 +721,7 @@ class ReportDeliveryPacketBuilder:
             "simulation_id": report.simulation_id,
             "status": report.status.value if hasattr(report.status, "value") else str(report.status),
             "delivery_status": delivery_status,
-            "client_ready": delivery_status == "publishable",
+            "client_ready": delivery_status == "publishable" and not blockers,
             "blockers": blockers,
             "warnings": warnings,
             "artifact_summary": {
@@ -717,6 +732,7 @@ class ReportDeliveryPacketBuilder:
                 "has_mission_bundle": "mission_bundle.json" in artifact_names,
             },
             "mission": self._mission_summary(mission_bundle),
+            "method_checklist": method_checklist,
             "quality": {
                 "system_gate_passed": quality_gate.get("passes_gate"),
                 "evidence_audit_passed": evidence_audit.get("passes_gate"),
@@ -759,16 +775,16 @@ class ReportDeliveryPacketBuilder:
         }
 
     def _next_action(self, delivery_status: str, blockers: list[str], finalization: dict[str, Any]) -> dict[str, str]:
+        if finalization.get("stale_audit_candidate"):
+            return {"kind": "repair_audit", "label": "Reauditar conteudo final sem regenerar"}
+        if blockers:
+            return {"kind": "fix_method_or_gate", "label": "Corrigir metodo, evidencia ou gate antes de entregar"}
         if delivery_status == "publishable":
             return {"kind": "export", "label": "Gerar pacote executivo auditavel"}
         if delivery_status == "diagnostic_only":
             return {"kind": "diagnostic_export", "label": "Gerar export diagnostico interno"}
         if delivery_status == "legacy_unverified":
             return {"kind": "regenerate", "label": "Regenerar relatorio com gate e auditoria"}
-        if finalization.get("stale_audit_candidate"):
-            return {"kind": "repair_audit", "label": "Reauditar conteudo final sem regenerar"}
-        if blockers:
-            return {"kind": "fix_gate", "label": "Corrigir bloqueios antes de entregar"}
         return {"kind": "inspect", "label": "Inspecionar estado do relatorio"}
 ```
 
@@ -777,13 +793,13 @@ class ReportDeliveryPacketBuilder:
 Run:
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_delivery_packet.py -q
+.\backend\.venv\Scripts\python.exe -m pytest backend\tests\test_report_method_checklist.py backend\tests\test_report_delivery_packet.py -q
 ```
 
 Expected:
 
 ```text
-4 passed
+selected tests pass
 ```
 
 ---
