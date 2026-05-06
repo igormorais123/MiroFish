@@ -54,6 +54,7 @@ override-dependencies = [
     "tiktoken>=0.12.0",
     "cryptography>=46.0.7",
     "lxml>=6.1.0",
+    "mistune>=3.2.1",
     "nbconvert>=7.17.1",
     "nltk>=3.9.4",
     "pillow>=12.2.0",
@@ -65,7 +66,7 @@ override-dependencies = [
     "transformers>=5.0.0rc3",
     "unstructured>=0.18.18",
     "pandas>=2.2.3",
-    "torch==2.6.0+cpu",
+    "torch==2.8.0+cpu",
 ]
 
 [tool.uv.sources]
