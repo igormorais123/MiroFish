@@ -1,0 +1,175 @@
+/* ═══════════════════════════════════════════════
+   INTEIA · Linha visual canônica (Vox Sintética)
+   Tokens globais, grain editorial, focus, scrollbars
+   ═══════════════════════════════════════════════ */
+
+:root {
+  /* Inks */
+  --ink-0: #07070A;
+  --ink-1: #0C0D11;
+  --ink-2: #13141A;
+  --ink-3: #1C1E27;
+
+  /* Linhas */
+  --line: #22232D;
+  --line-2: #2E3040;
+
+  /* Paper */
+  --paper: #F5F2EA;
+  --paper-dim: #C6C2B6;
+  --paper-muted: #8A8780;
+  --paper-low: #6A6861;
+
+  /* Gold */
+  --gold: #C9952A;
+  --gold-bright: #EAB14A;
+  --gold-deep: #7A5A18;
+  --gold-glow: rgba(234, 177, 74, 0.14);
+  --gold-haze: rgba(201, 149, 42, 0.04);
+
+  /* Acentos */
+  --ember: #C55A3F;
+  --cool: #5C9EAD;
+  --mint: #3FB77C;
+
+  /* Aliases legados (compat) */
+  --inteia-navy: var(--ink-1);
+  --inteia-navy-soft: var(--ink-2);
+  --inteia-amber: var(--gold);
+  --inteia-amber-soft: var(--gold-bright);
+  --inteia-ink: var(--paper);
+  --inteia-paper: var(--ink-1);
+  --inteia-line: var(--line);
+
+  /* Tipografia */
+  --f-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --f-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Easings */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur-mid: 240ms;
+  --dur-slow: 380ms;
+
+  /* Z-index escala */
+  --z-bg: 0;
+  --z-content: 10;
+  --z-sticky: 20;
+  --z-tooltip: 30;
+  --z-overlay: 40;
+  --z-cursor: 50;
+
+  /* Mouse vars (atualizadas pelo cursor loop) */
+  --mx: 50%;
+  --my: 50%;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--ink-0);
+  color: var(--paper);
+  font-family: var(--f-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  background: var(--ink-0);
+  color: var(--paper);
+  font-family: var(--f-sans);
+}
+
+/* Selection dourada */
+::selection { background: var(--gold); color: var(--ink-0); }
+::-moz-selection { background: var(--gold); color: var(--ink-0); }
+
+/* Focus ring INTEIA */
+:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--ink-1); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--gold-deep), var(--gold));
+  border-radius: 999px;
+  border: 2px solid var(--ink-1);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--gold), var(--gold-bright));
+}
+
+button { font-family: inherit; }
+input, textarea, select { font-family: inherit; color: inherit; }
+
+/* Cursor nativo escondido em pointer fine (deixa o crosshair INTEIA mostrar) */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  body, button, a, input, textarea, select, [role="button"], [data-cursor-label] {
+    cursor: none;
+  }
+}
+
+/* Cursor crosshair INTEIA (renderizado via Teleport para body) */
+.cursor-crosshair {
+  position: fixed; top: 0; left: 0;
+  width: 40px; height: 40px;
+  pointer-events: none;
+  z-index: 99999;
+  mix-blend-mode: difference;
+  transition: width 200ms var(--ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+              height 200ms var(--ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+              opacity 120ms ease;
+  will-change: transform;
+}
+.cursor-crosshair.large { width: 72px; height: 72px; }
+.cursor-crosshair svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.cursor-crosshair .ring { fill: none; stroke: var(--gold-bright, #EAB14A); stroke-width: 1; transition: stroke-width 180ms var(--ease, ease); }
+.cursor-crosshair .dot { fill: var(--gold-bright, #EAB14A); transition: r 180ms var(--ease, ease); }
+.cursor-crosshair .tick { stroke: var(--gold-bright, #EAB14A); stroke-width: 1; stroke-linecap: square; }
+.cursor-crosshair.active .ring { stroke-width: 1.4; }
+.cursor-crosshair.active .dot { r: 2.5; }
+.cursor-crosshair__label {
+  position: absolute; top: 50%; left: 120%;
+  transform: translateY(-50%);
+  font-family: var(--f-mono, monospace); font-size: 9px;
+  color: var(--gold-bright, #EAB14A); letter-spacing: 0.18em; text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0; transition: opacity 160ms ease;
+  pointer-events: none;
+}
+.cursor-crosshair.has-label .cursor-crosshair__label { opacity: 1; }
+@media (max-width: 768px), (pointer: coarse) {
+  .cursor-crosshair { display: none; }
+  body, button, a, input, textarea, select, [role="button"], [data-cursor-label] { cursor: auto !important; }
+}
+
+/* === Modo paper (light) — usado em Home/MainView/Process etc. === */
+body[data-theme="paper"] { background: #f5f2ea; color: #14161e; }
+body[data-theme="paper"] .inteia-bg .neural-bg { mix-blend-mode: multiply; opacity: 0.55; }
+body[data-theme="paper"] .inteia-bg::before { display: none; }
+body[data-theme="paper"] .grain {
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='5'/%3E%3CfeColorMatrix values='0 0 0 0 0.20, 0 0 0 0 0.18, 0 0 0 0 0.14, 0 0 0 0.30 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* prefers-reduced-motion global */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+  }
+}

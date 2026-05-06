@@ -1708,6 +1708,67 @@ def start_simulation():
             }), 404
 
         force_restarted = False
+        existing_run_state = SimulationRunner.get_run_state(simulation_id)
+        state_platforms_completed = (
+            getattr(state, "twitter_status", None) == "completed"
+            and getattr(state, "reddit_status", None) == "completed"
+        )
+        run_state_platforms_completed = (
+            existing_run_state
+            and existing_run_state.twitter_completed
+            and existing_run_state.reddit_completed
+        )
+        run_state_completed = (
+            existing_run_state
+            and (
+                existing_run_state.runner_status == RunnerStatus.COMPLETED
+                or run_state_platforms_completed
+            )
+        )
+
+        if not force and (run_state_completed or state.status == SimulationStatus.COMPLETED or state_platforms_completed):
+            logger.info(
+                f"Simulacao {simulation_id} ja concluida; retornando execucao existente "
+                "sem reiniciar. Use force=true para reexecutar."
+            )
+            if state.status != SimulationStatus.COMPLETED:
+                state.status = SimulationStatus.COMPLETED
+                state.error = None
+                manager._save_simulation_state(state)
+
+            if existing_run_state:
+                existing_run_state.runner_status = RunnerStatus.COMPLETED
+                existing_run_state.twitter_running = False
+                existing_run_state.reddit_running = False
+                existing_run_state.twitter_completed = True
+                existing_run_state.reddit_completed = True
+                existing_run_state.error = None
+                if existing_run_state.total_rounds:
+                    existing_run_state.current_round = existing_run_state.total_rounds
+                    existing_run_state.twitter_current_round = existing_run_state.total_rounds
+                    existing_run_state.reddit_current_round = existing_run_state.total_rounds
+                SimulationRunner._save_run_state(existing_run_state)
+                response_data = existing_run_state.to_dict()
+            else:
+                response_data = {
+                    "simulation_id": simulation_id,
+                    "runner_status": "completed",
+                    "current_round": getattr(state, "current_round", 0),
+                    "total_rounds": getattr(state, "current_round", 0),
+                    "progress_percent": 100.0,
+                    "twitter_completed": True,
+                    "reddit_completed": True,
+                    "twitter_running": False,
+                    "reddit_running": False,
+                }
+            response_data["already_completed"] = True
+            response_data["force_restarted"] = False
+            response_data["graph_memory_update_enabled"] = False
+
+            return jsonify({
+                "success": True,
+                "data": response_data
+            })
 
         # Tratamento inteligente: se preparacao concluida, permite reinicio
         if state.status != SimulationStatus.READY:

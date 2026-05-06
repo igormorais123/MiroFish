@@ -72,9 +72,30 @@ import multiprocessing
 import random
 import signal
 import sqlite3
+import time
 import warnings
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
+
+
+def remove_stale_db(db_path: str, label: str) -> None:
+    """Remove banco SQLite antigo, tolerando locks breves do Windows."""
+    if not os.path.exists(db_path):
+        return
+
+    last_error: Optional[Exception] = None
+    for attempt in range(1, 6):
+        try:
+            os.remove(db_path)
+            return
+        except PermissionError as exc:
+            last_error = exc
+            if attempt < 5:
+                time.sleep(0.4 * attempt)
+                continue
+            break
+
+    raise PermissionError(f"Nao foi possivel remover {label} ainda bloqueado: {last_error}")
 
 # ============================================================
 # Fix: Python 3.13 no Windows trava em platform._wmi_query()
@@ -1285,8 +1306,7 @@ async def run_twitter_simulation(
             agent_names[agent_id] = getattr(agent, 'name', f'Agent_{agent_id}')
 
     db_path = os.path.join(simulation_dir, "twitter_simulation.db")
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    remove_stale_db(db_path, "twitter_simulation.db")
 
     result.env = oasis.make(
         agent_graph=result.agent_graph,
@@ -1506,8 +1526,7 @@ async def run_reddit_simulation(
             agent_names[agent_id] = getattr(agent, 'name', f'Agent_{agent_id}')
 
     db_path = os.path.join(simulation_dir, "reddit_simulation.db")
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    remove_stale_db(db_path, "reddit_simulation.db")
     
     result.env = oasis.make(
         agent_graph=result.agent_graph,

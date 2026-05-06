@@ -338,7 +338,7 @@
       <div class="log-content" ref="logContent">
         <div class="log-line" v-for="(log, idx) in systemLogs" :key="idx">
           <span class="log-time">{{ log.time }}</span>
-          <span class="log-msg">{{ log.msg }}</span>
+          <span class="log-msg" :title="log.msg">{{ log.msg }}</span>
         </div>
       </div>
     </div>
@@ -420,7 +420,15 @@ const reportGate = computed(() => {
 })
 
 const diversityMetrics = computed(() => {
-  return qualityCheck.value?.diversity_metrics || {}
+  const metrics = qualityCheck.value?.diversity_metrics ||
+    qualityCheck.value?.diversity ||
+    reportGate.value?.metrics?.diversity ||
+    {}
+
+  return {
+    ...metrics,
+    action_type_entropy: metrics.action_type_entropy ?? metrics.action_type_entropy_norm
+  }
 })
 
 const oasisTraceMetrics = computed(() => {
@@ -517,10 +525,19 @@ const reportButtonTitle = computed(() => {
   return ''
 })
 
+const effectiveMinutesPerRound = computed(() => {
+  const totalHours = Number(runStatus.value.total_simulation_hours || 0)
+  const totalRounds = Number(runStatus.value.total_rounds || props.maxRounds || 0)
+  if (totalHours > 0 && totalRounds > 0) {
+    return Math.max(1, Math.round((totalHours * 60) / totalRounds))
+  }
+  return Number(props.minutesPerRound || 0)
+})
+
 // Formatar tempo decorrido na simulação (calculado por rodadas e minutos por rodada)
 const formatElapsedTime = (currentRound) => {
   if (!currentRound || currentRound <= 0) return '0h 0m'
-  const totalMinutes = currentRound * props.minutesPerRound
+  const totalMinutes = currentRound * effectiveMinutesPerRound.value
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
   return `${hours}h ${minutes}m`
@@ -672,6 +689,36 @@ const doStartSimulation = async () => {
     addLog('Erro: simulationId ausente')
     return
   }
+
+  try {
+    const statusRes = await getRunStatus(props.simulationId)
+    const existingStatus = statusRes?.data
+    if (existingStatus?.runner_status === 'running') {
+      resetAllState()
+      phase.value = 1
+      runStatus.value = existingStatus
+      emit('update-status', 'processing')
+      addLog(`Execução em andamento encontrada; acompanhando PID ${existingStatus.process_pid || '-'}`)
+      startStatusPolling()
+      startDetailPolling()
+      return
+    }
+    if (existingStatus?.runner_status === 'completed' || checkPlatformsCompleted(existingStatus)) {
+      resetAllState()
+      phase.value = 2
+      runStatus.value = existingStatus
+      prevTwitterRound.value = existingStatus.twitter_current_round || 0
+      prevRedditRound.value = existingStatus.reddit_current_round || 0
+      emit('update-status', 'completed')
+      addLog('Execução concluída encontrada; exibindo resultados existentes')
+      await fetchRunStatusDetail()
+      startDetailPolling()
+      await loadQualityGate({ force: true })
+      return
+    }
+  } catch (err) {
+    addLog(`Não foi possível consultar execução anterior: ${err.message}`)
+  }
   
   // Redefinir todo o estado primeiro, garantindo que não seja afetado pela simulação anterior
   resetAllState()
@@ -685,7 +732,7 @@ const doStartSimulation = async () => {
     const params = {
       simulation_id: props.simulationId,
       platform: 'parallel',
-      force: true,  // reinicia forçadamente
+      force: false,
       enable_graph_memory_update: true  // habilita atualização dinâmica do grafo
     }
     
@@ -1148,6 +1195,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
   background:
     radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 24%),
     linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
@@ -1158,33 +1206,41 @@ onUnmounted(() => {
 /* --- Control Bar --- */
 .control-bar {
   background: rgba(255, 255, 255, 0.78);
-  padding: 12px 24px;
+  padding: 12px 18px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
   border-bottom: 1px solid rgba(15, 39, 71, 0.1);
   z-index: 10;
-  min-height: 64px;
-  gap: 16px;
+  min-height: 0;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .status-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .action-controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(360px, 1.8fr) minmax(150px, 0.45fr);
+  align-items: stretch;
   gap: 12px;
-  min-width: 280px;
+  min-width: 0;
+  width: 100%;
 }
 
 .mission-selector {
-  width: min(620px, 48vw);
-  max-height: 260px;
+  width: auto;
+  max-height: 180px;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 12px;
   border: 1px solid rgba(15, 39, 71, 0.12);
   border-radius: 6px;
@@ -1225,8 +1281,12 @@ onUnmounted(() => {
 
 .mission-groups {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px 14px;
+}
+
+.mission-group {
+  min-width: 0;
 }
 
 .mission-group-title {
@@ -1263,6 +1323,7 @@ onUnmounted(() => {
   font-weight: 700;
   line-height: 1.25;
   color: #0f2747;
+  overflow-wrap: anywhere;
 }
 
 .mission-option-summary,
@@ -1270,6 +1331,7 @@ onUnmounted(() => {
   font-size: 11px;
   line-height: 1.35;
   color: #64748b;
+  overflow-wrap: anywhere;
 }
 
 .mission-state.warning {
@@ -1280,8 +1342,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-width: 220px;
-  max-width: 320px;
+  min-width: 0;
+  max-width: none;
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid rgba(15, 39, 71, 0.12);
@@ -1334,6 +1396,8 @@ onUnmounted(() => {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: #4b5563;
+  flex-wrap: wrap;
+  gap: 4px 10px;
 }
 
 .gate-issue {
@@ -1350,13 +1414,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 12px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(15, 39, 71, 0.1);
   opacity: 0.7;
   transition: all 0.3s;
-  min-width: 140px;
+  min-width: 0;
   position: relative;
   cursor: pointer;
 }
@@ -1453,14 +1517,18 @@ onUnmounted(() => {
 .platform-status.reddit .platform-icon { color: #0f2747; }
 
 .platform-stats {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  gap: 8px 12px;
+  align-items: end;
 }
 
 .stat {
   display: flex;
-  align-items: baseline;
-  gap: 3px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
 }
 
 .stat-label {
@@ -1469,12 +1537,14 @@ onUnmounted(() => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  line-height: 1.15;
 }
 
 .stat-value {
   font-size: 11px;
   font-weight: 600;
   color: #0f2747;
+  white-space: nowrap;
 }
 
 .stat-total, .stat-unit {
@@ -1494,8 +1564,11 @@ onUnmounted(() => {
 .action-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 20px;
+  width: 100%;
+  min-height: 72px;
   font-size: 13px;
   font-weight: 600;
   border: none;
@@ -1504,6 +1577,9 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
 }
 
 .action-btn.primary {
@@ -1524,6 +1600,7 @@ onUnmounted(() => {
 /* --- Main Content Area --- */
 .main-content-area {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   position: relative;
   background: rgba(255, 255, 255, 0.72);
@@ -1576,10 +1653,11 @@ onUnmounted(() => {
 
 /* --- Timeline Feed --- */
 .timeline-feed {
-  padding: 24px 0;
+  padding: 24px 24px 32px;
   position: relative;
   min-height: 100%;
-  max-width: 900px;
+  width: 100%;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -1834,10 +1912,12 @@ onUnmounted(() => {
 .system-logs {
   background: linear-gradient(135deg, #0b1b31 0%, #102949 100%);
   color: #e5dcc7;
-  padding: 16px;
+  padding: 10px 16px 12px;
   font-family: 'JetBrains Mono', monospace;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+  max-height: 136px;
+  overflow: hidden;
 }
 
 .log-header {
@@ -1864,7 +1944,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  height: 100px;
+  height: 72px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1877,10 +1957,23 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   line-height: 1.5;
+  align-items: baseline;
+  min-width: 0;
 }
 
-.log-time { color: #555; min-width: 75px; }
-.log-msg { color: #BBB; word-break: break-all; }
+.log-time {
+  color: #8b95a7;
+  flex: 0 0 86px;
+}
+
+.log-msg {
+  color: #BBB;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 /* Loading spinner for button */
@@ -1893,6 +1986,55 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-right: 6px;
+}
+
+@container (max-width: 1400px) {
+  .timeline-axis,
+  .timeline-marker {
+    left: 24px;
+  }
+
+  .timeline-item.twitter,
+  .timeline-item.reddit {
+    justify-content: flex-start;
+    padding-left: 56px;
+    padding-right: 0;
+  }
+
+  .timeline-item.twitter .timeline-card,
+  .timeline-item.reddit .timeline-card {
+    margin: 0;
+  }
+
+  .timeline-card {
+    width: 100%;
+  }
+}
+
+@container (max-width: 980px) {
+  .action-controls {
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.45fr);
+  }
+
+  .mission-selector {
+    grid-column: 1 / -1;
+    max-height: 210px;
+  }
+}
+
+@container (max-width: 720px) {
+  .status-group,
+  .action-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-selector {
+    max-height: 240px;
+  }
+
+  .mission-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 960px) {
@@ -1908,14 +2050,13 @@ onUnmounted(() => {
   }
 
   .status-group {
-    overflow-x: auto;
+    overflow-x: visible;
     padding-bottom: 2px;
   }
 
   .action-controls {
     justify-content: space-between;
     min-width: 0;
-    flex-wrap: wrap;
   }
 
   .quality-gate {
@@ -1933,8 +2074,7 @@ onUnmounted(() => {
   }
 
   .action-btn {
-    flex: 0 0 auto;
-    max-width: 190px;
+    max-width: none;
     white-space: normal;
     text-align: center;
     justify-content: center;
