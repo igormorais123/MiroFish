@@ -2616,8 +2616,10 @@ watch(() => props.reportId, (newId) => {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.82);
+  min-height: 42px;
+  background: #fffaf0;
   border-bottom: 1px solid rgba(15, 39, 71, 0.1);
+  box-shadow: 0 1px 0 rgba(15, 39, 71, 0.06);
   font-size: 13px;
   font-weight: 600;
   color: #0f2747;
@@ -2625,7 +2627,7 @@ watch(() => props.reportId, (newId) => {
   letter-spacing: 0.04em;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 30;
 }
 
 .header-dot {
@@ -2657,6 +2659,8 @@ watch(() => props.reportId, (newId) => {
 }
 
 .header-title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: #0f2747;
@@ -2669,6 +2673,10 @@ watch(() => props.reportId, (newId) => {
 
 .header-meta {
   margin-left: auto;
+  max-width: 35%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 600;
   color: #4b5563;
@@ -2677,7 +2685,7 @@ watch(() => props.reportId, (newId) => {
 
 /* Panel header status variants */
 .panel-header--active {
-  background: rgba(212, 160, 23, 0.08);
+  background: #fff7e4;
   border-color: rgba(212, 160, 23, 0.4);
 }
 
@@ -2694,7 +2702,7 @@ watch(() => props.reportId, (newId) => {
 }
 
 .panel-header--done {
-  background: rgba(94, 122, 52, 0.06);
+  background: #f8fbf3;
 }
 
 .panel-header--done .header-index {
@@ -3810,6 +3818,8 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
   margin-top: 7px;
   padding-top: 7px;
   border-top: 1px solid rgba(15, 39, 71, 0.08);
@@ -3821,8 +3831,11 @@ watch(() => props.reportId, (newId) => {
 
 .footer-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
+  min-width: 0;
 }
 
 .elapsed-badge {
