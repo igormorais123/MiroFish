@@ -875,24 +875,14 @@ const startSimulation = () => {
 }
 /* Máscara para esconder marca d'água "Veo" no canto inferior direito do vídeo.
    Como o fundo do vídeo é preto puro, podemos cobrir totalmente sem efeito visível. */
+/* Máscara apenas no cantinho do "Veo" — pequena e sólida, sem invadir o anel dourado. */
 .brand-card-video-mask {
   position: absolute;
   right: 0; bottom: 0;
-  width: 22%; height: 18%;
-  background:
-    linear-gradient(135deg, rgba(0,0,0,0) 0%, #000 35%, #000 100%);
+  width: 11%; height: 9%;
+  background: #000;
   pointer-events: none;
   z-index: 2;
-}
-/* Segunda mask sólida apenas no cantinho onde fica o texto "Veo" — garante cobertura
-   total mesmo se o gerador mudar a posição do watermark levemente. */
-.brand-card-video-mask::after {
-  content: "";
-  position: absolute;
-  right: 0; bottom: 0;
-  width: 70%; height: 70%;
-  background: #000;
-  border-top-left-radius: 14px;
 }
 .brand-card-image-glow {
   position: absolute; inset: 0;
