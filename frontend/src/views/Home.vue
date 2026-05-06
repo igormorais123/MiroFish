@@ -93,7 +93,18 @@
             </div>
 
             <div class="brand-card-image-wrap">
-              <img src="../assets/logo/inteia_mirror.png" alt="INTEIA — Simulação estratégica" class="brand-card-image" />
+              <video
+                class="brand-card-image brand-card-video"
+                src="/hero-mirror.mp4"
+                poster="/hero-mirror-poster.jpg"
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                aria-label="INTEIA — Simulação estratégica"
+              ></video>
+              <div class="brand-card-video-mask" aria-hidden="true"></div>
               <div class="brand-card-image-glow" aria-hidden="true"></div>
             </div>
 
@@ -846,15 +857,37 @@ const startSimulation = () => {
 }
 .brand-card-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
 
-.brand-card-image-wrap { position: relative; border-radius: 14px; overflow: hidden; }
+.brand-card-image-wrap {
+  position: relative; border-radius: 14px; overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1px solid var(--line);
+}
 .brand-card-image {
   width: 100%; display: block; border-radius: 14px;
-  border: 1px solid var(--line);
+}
+.brand-card-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border: 0;
+  border-radius: 14px;
+}
+/* Máscara para esconder marca d'água "Veo" no canto inferior direito do vídeo gerado.
+   Posição calibrada para o frame 1280x720 do gerador (Veo). */
+.brand-card-video-mask {
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 14%; height: 14%;
+  background: linear-gradient(135deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 55%, #000 100%);
+  pointer-events: none;
+  z-index: 2;
 }
 .brand-card-image-glow {
   position: absolute; inset: 0;
   background: radial-gradient(ellipse at center, transparent 60%, rgba(201, 149, 42, 0.18) 100%);
   pointer-events: none;
+  z-index: 3;
 }
 
 .brand-card-footer {

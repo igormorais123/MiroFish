@@ -16,6 +16,8 @@
 
 </div>
 
+> 🤖 **Agentes IA (Claude Code, Codex, Cursor, Copilot)**: leiam **[`CLAUDE.md`](CLAUDE.md)** e **[`AGENTS.md`](AGENTS.md)** antes de editar qualquer arquivo. Múltiplas instâncias trabalham em paralelo neste repositório — a coordenação está documentada lá.
+
 ---
 
 ## Sobre
