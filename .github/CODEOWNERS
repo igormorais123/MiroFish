@@ -1,0 +1,11 @@
+# Default owner for all repository changes.
+* @igormorais123
+
+# Operational and deployment-sensitive areas.
+/.github/ @igormorais123
+/docs/ops/ @igormorais123
+/CLAUDE.md @igormorais123
+/AGENTS.md @igormorais123
+/vercel.json @igormorais123
+/Dockerfile @igormorais123
+/docker-compose.yml @igormorais123

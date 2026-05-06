@@ -13,11 +13,17 @@ Reduzir conflito entre instancias paralelas (Claude Code, Codex, Hermes e trabal
 |------|--------|
 | Repositorio oficial | `https://github.com/igormorais123/MiroFish` |
 | Branch de producao | `main` |
-| Ultimo main confirmado localmente | `fcc0606` |
-| PR de governanca | `#4` — `chore/multi-instance-governance` |
-| PR de layout Codex | `#5` — `feat/report-split-adaptive` |
+| Ultimo main confirmado localmente | `e666c7c` |
+| PR de reconciliacao Hermes | `#3` — mergeado em `main` |
+| PR de governanca Claude/Codex | `#4` — mergeado em `main` |
+| PR de centralizacao Codex | `#6` — mergeado em `main` |
+| PR de layout Codex | `#5` — aberto para revisao visual |
 | GitHub Actions PR #4 | `backend-tests` passou em 2026-05-06 |
 | GitHub Actions PR #5 | `backend-tests` passou em 2026-05-06 |
+| GitHub Issues | habilitado em 2026-05-06 |
+| Issue de controle operacional | `#7` — `ops: fase 2 da centralizacao operacional` |
+| Protecao da branch `main` | habilitada; exige PR, `backend-tests` verde e conversas resolvidas |
+| CODEOWNERS | proposto em `.github/CODEOWNERS` para marcar responsavel padrao |
 | Vercel project | `mirofish-inteia` |
 | Vercel project ID | `prj_enAVMOreJOeLH7VFrOzY9UIzF98s` |
 | Vercel team/org ID | `team_Af2JN68IUUA7lwsIGKuJiN66` |
@@ -27,11 +33,25 @@ Reduzir conflito entre instancias paralelas (Claude Code, Codex, Hermes e trabal
 | Site publico | `https://inteia.com.br/mirofish` |
 | API publica correta | `https://inteia.com.br/mirofish/api/...` |
 
-## PRs abertos nesta rodada
+## PRs e controles desta rodada
+
+### PR #3 — fonte unica de verdade
+
+URL: `https://github.com/igormorais123/MiroFish/pull/3`
+
+Status: mergeado em `main`.
+
+Conteudo:
+- `docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md`
+- `docs/ops/COMANDOS_SEGUROS_MIROFISH.md`
+- `docs/ops/RELATORIO_RECONCILIACAO_2026-05-06.md`
+- `scripts/mirofish-reconcile-check.sh`
 
 ### PR #4 — governanca multi-instancia
 
 URL: `https://github.com/igormorais123/MiroFish/pull/4`
+
+Status: mergeado em `main`.
 
 Conteudo:
 - `CLAUDE.md`
@@ -41,12 +61,23 @@ Conteudo:
 - este relatorio de centralizacao
 
 Uso esperado:
-- mergear antes de novas mudancas grandes;
 - servir como placa de entrada para todas as instancias.
+
+### PR #6 — registro operacional Codex
+
+URL: `https://github.com/igormorais123/MiroFish/pull/6`
+
+Status: mergeado em `main`.
+
+Conteudo:
+- consolidacao do estado GitHub/Vercel;
+- referencias cruzadas em `CLAUDE.md`, `AGENTS.md` e `docs/ops/VERCEL_DEPLOY.md`.
 
 ### PR #5 — layout do relatorio
 
 URL: `https://github.com/igormorais123/MiroFish/pull/5`
+
+Status: aberto; `backend-tests` passou.
 
 Conteudo:
 - split adaptativo no relatorio;
@@ -55,7 +86,16 @@ Conteudo:
 - timeline de geracao mais legivel.
 
 Uso esperado:
-- revisar depois da PR #4 ou em paralelo, pois toca somente frontend.
+- revisar visualmente antes de merge, pois toca somente frontend.
+
+### Issue #7 — fase 2 operacional
+
+URL: `https://github.com/igormorais123/MiroFish/issues/7`
+
+Status: aberta.
+
+Uso esperado:
+- concentrar pendencias de VPS, Vercel, CODEOWNERS, seguranca e decisao de merge do PR #5.
 
 ## Fluxo obrigatorio daqui em diante
 
@@ -86,6 +126,8 @@ Uso esperado:
 4. Toda mudanca entra por PR para `main`.
 
 5. Deploy de producao acontece por merge em `main`, nao por comando solto local.
+
+6. `main` esta protegido no GitHub: PR obrigatorio, `backend-tests` verde e conversas resolvidas antes do merge.
 
 ## Vercel
 
@@ -123,8 +165,7 @@ Observacao: a consulta pelo conector Vercel retornou `403 Forbidden` nesta sessa
 
 ## Ordem segura de merge/deploy
 
-1. Revisar e mergear PR #4 primeiro.
-2. Atualizar todas as instancias:
+1. Atualizar todas as instancias:
 
    ```bash
    git fetch origin
@@ -132,10 +173,10 @@ Observacao: a consulta pelo conector Vercel retornou `403 Forbidden` nesta sessa
    git pull --ff-only origin main
    ```
 
-3. Revisar PR #5.
-4. Se PR #5 passar, merge em `main`.
-5. Vercel deve publicar producao automaticamente a partir de `main`.
-6. VPS so deve ser reconciliada depois do GitHub estar consolidado.
+2. Revisar PR #5.
+3. Se PR #5 passar visualmente, merge em `main`.
+4. Vercel deve publicar producao automaticamente a partir de `main`.
+5. VPS so deve ser reconciliada depois do GitHub estar consolidado.
 
 ## O que nao fazer
 
