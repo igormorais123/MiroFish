@@ -1,0 +1,8 @@
+[desktop-1440] doc=1440 vp=1440 overflows=1 smallTargets=0
+  overflows: [{"tag":"DIV","cls":"bg-gold-glow","right":1622,"w":520}]
+[laptop-1280] doc=1280 vp=1280 overflows=1 smallTargets=0
+  overflows: [{"tag":"DIV","cls":"bg-gold-glow","right":1462,"w":520}]
+[tablet-820] doc=820 vp=820 overflows=1 smallTargets=0
+  overflows: [{"tag":"DIV","cls":"bg-gold-glow","right":1002,"w":520}]
+[mobile-390] doc=390 vp=390 overflows=13 smallTargets=0
+  overflows: [{"tag":"DIV","cls":"bg-gold-glow","right":572,"w":520},{"tag":"DIV","cls":"project-card","right":411,"w":187},{"tag":"DIV","cls":"card-header","right":398,"w":134},{"tag":"DIV","cls":"card-status-icons","right":398,"w":34},{"tag":"SPAN","cls":"status-icon unavailable","right":398,"w":10},{"tag":"DIV","cls":"card-files-wrapper","right":392,"w":136},{"tag":"DIV","cls":"project-card","right":448,"w":191},{"tag":"DIV","cls":"card-header","right":435,"w":125},{"tag":"DIV","cls":"card-status-icons","right":435,"w":32},{"tag":"SPAN","cls":"status-icon available","right":413,"w":10},{"tag":"SPAN","cl

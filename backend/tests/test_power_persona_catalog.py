@@ -74,6 +74,15 @@ def test_catalogo_deduplica_por_caminho_e_nome_normalizado(tmp_path):
     assert [item["nome"] for item in catalog] == ["Vox Norte", "Vox Sul"]
 
 
+def test_catalogo_deduplica_por_tipo_e_nome_entre_caminhos(tmp_path):
+    write_text(tmp_path / "origem_a" / "persona" / "helena.md", "# Helena\nconsultor lendario")
+    write_text(tmp_path / "origem_b" / "persona" / "helena.md", "# Helena\nconsultor lendario duplicado")
+
+    catalog = PowerPersonaCatalog(roots=[tmp_path]).build_catalog()
+
+    assert [item["nome"] for item in catalog] == ["Helena"]
+
+
 def test_catalogo_respeita_limites_e_ignora_pastas_pesadas(tmp_path):
     write_text(tmp_path / "node_modules" / "helena.md", "# Helena\nconsultor lendario")
     write_text(tmp_path / ".git" / "oracle.md", "# Oracle\nconsultor lendario")
@@ -93,6 +102,41 @@ def test_catalogo_respeita_limites_e_ignora_pastas_pesadas(tmp_path):
     assert "dist" not in catalog[0]["caminho"]
     assert ".venv" not in catalog[0]["caminho"]
     assert "backups" not in catalog[0]["caminho"]
+
+
+def test_catalogo_nao_classifica_arquivo_neutro_pelo_nome_da_raiz(tmp_path):
+    root = tmp_path / "voxsintetica-platform"
+    write_text(root / "docs" / "readme.md", "# README\nTexto tecnico de configuracao interna.")
+
+    catalog = PowerPersonaCatalog(roots=[root]).build_catalog()
+
+    assert catalog == []
+
+
+def test_catalogo_ignora_metadados_de_projeto_em_raiz_vox(tmp_path):
+    root = tmp_path / "voxsintetica-platform"
+    write_text(root / ".prettierrc.json", '{ "semi": true, "singleQuote": true }')
+    write_text(
+        root / ".turbo" / "cache" / "abc-meta.json",
+        json.dumps({"hash": "abc", "duration": 10, "sha": "deadbeef"}),
+    )
+    write_text(root / "package.json", json.dumps({"name": "@voxsintetica/app", "version": "0.0.0"}))
+    write_text(root / "docs" / "vox_real.md", "# Vox Real\nPersona sintetica de teste.")
+
+    catalog = PowerPersonaCatalog(roots=[root]).build_catalog()
+
+    assert [item["nome"] for item in catalog] == ["Vox Real"]
+
+
+def test_catalogo_default_restringe_raiz_ampla_a_pastas_de_catalogo(tmp_path, monkeypatch):
+    root = tmp_path / "voxsintetica-platform"
+    write_text(root / "docs" / "helena.md", "# Helena Doc\nConsultor lendario em documento tecnico.")
+    write_text(root / "skills" / "helena" / "persona" / "SKILL.md", "# Helena Persona\nConsultor lendario.")
+    monkeypatch.setattr(PowerPersonaCatalog, "DEFAULT_ROOTS", (root,))
+
+    catalog = PowerPersonaCatalog().build_catalog()
+
+    assert [item["nome"] for item in catalog] == ["Helena Persona"]
 
 
 def test_select_items_filtra_ids_e_tipo(tmp_path):

@@ -24,21 +24,93 @@ class PowerPersonaCatalog:
 
     ENV_ROOTS_KEY = "MIROFISH_PERSONA_ROOTS"
     DEFAULT_ROOTS = (
-        Path(r"C:\Users\IgorPC\voxsintetica-platform"),
-        Path(r"C:\Users\IgorPC\.hermes"),
-        Path(r"C:\Users\IgorPC\.claude\projects\C--Agentes-vila-inteia"),
-        Path(r"C:\Users\IgorPC\.claude\projects\Proposta reestruturação INTEIA\v2_HELENA_MEGAPOWER"),
+        Path.home() / ".hermes" / "skills",
+        Path.home()
+        / ".claude"
+        / "projects"
+        / "Proposta reestruturação INTEIA"
+        / "v2_HELENA_MEGAPOWER"
+        / "CONSELHO_ESTRATEGICO",
     )
     SUPPORTED_EXTENSIONS = {".json", ".jsonl", ".csv", ".md", ".markdown", ".yaml", ".yml"}
     IGNORED_DIRS = {
+        ".artifacts",
+        ".cache",
         ".git",
+        ".github",
+        ".husky",
+        ".mypy_cache",
+        ".next",
+        ".output",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".turbo",
+        ".vercel",
         ".venv",
         "__pycache__",
         "backups",
         "backup",
+        "build",
+        "coverage",
         "dist",
         "node_modules",
+        "out",
         "venv",
+    }
+    IGNORED_FILENAMES = {
+        ".prettierrc",
+        ".prettierrc.json",
+        "agents.md",
+        "app-build-manifest.json",
+        "blockers.md",
+        "claude.md",
+        "contributing.md",
+        "deploy.md",
+        "jsconfig.json",
+        "manifest.json",
+        "package-lock.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "react-loadable-manifest.json",
+        "readme.md",
+        "required-server-files.json",
+        "routes-manifest.json",
+        "status.md",
+        "tsconfig.base.json",
+        "tsconfig.json",
+        "turbo.json",
+        "yarn.lock",
+    }
+    CATALOG_SCOPE_KEYWORDS = (
+        "agent",
+        "agente",
+        "conselh",
+        "consultor",
+        "eleitor",
+        "persona",
+        "poder",
+        "popul",
+    )
+    STRICT_IGNORED_DIRS = {
+        "apps",
+        "auth",
+        "bin",
+        "cron",
+        "docs",
+        "fixtures",
+        "hooks",
+        "logs",
+        "memories",
+        "packages",
+        "python",
+        "reference",
+        "relatorios",
+        "reports",
+        "sandboxes",
+        "scripts",
+        "sessions",
+        "subagents",
     }
     DEFAULT_MAX_FILES = 250
     DEFAULT_MAX_FILE_SIZE = 128 * 1024
@@ -114,10 +186,12 @@ class PowerPersonaCatalog:
         max_files: int = DEFAULT_MAX_FILES,
         max_file_size: int = DEFAULT_MAX_FILE_SIZE,
     ) -> None:
+        configured_roots = bool(os.environ.get(self.ENV_ROOTS_KEY, "").strip())
         source_roots = roots if roots is not None else self.default_roots()
         self.roots = tuple(Path(root) for root in source_roots)
         self.max_files = max(0, int(max_files))
         self.max_file_size = max(1, int(max_file_size))
+        self.strict_scope = roots is None and not configured_roots
 
     @classmethod
     def default_roots(cls) -> tuple[Path, ...]:
@@ -221,15 +295,41 @@ class PowerPersonaCatalog:
                 continue
             for child in children:
                 if child.is_dir():
-                    if child.name.lower() not in self.IGNORED_DIRS:
+                    if not self._is_ignored_dir(child):
                         stack.append(child)
                     continue
-                if not self._is_small_supported_file(child):
+                if self._is_ignored_file(child) or not self._is_small_supported_file(child):
+                    continue
+                if self.strict_scope and not self._is_catalog_scoped_file(child, root):
                     continue
                 if yielded >= self.max_files:
                     return
                 yielded += 1
                 yield child
+
+    def _is_ignored_dir(self, path: Path) -> bool:
+        name = path.name.lower()
+        if self.strict_scope and name in self.STRICT_IGNORED_DIRS:
+            return True
+        return name in self.IGNORED_DIRS or name.startswith(".")
+
+    def _is_ignored_file(self, path: Path) -> bool:
+        name = path.name.lower()
+        if name in self.IGNORED_FILENAMES or name.startswith("."):
+            return True
+        return bool(re.match(r"^[0-9a-f]{12,}-(manifest|meta)\.json$", name))
+
+    def _is_catalog_scoped_file(self, path: Path, root: Path) -> bool:
+        try:
+            parts = path.relative_to(root).parts[:-1]
+        except ValueError:
+            parts = path.parts[:-1]
+        normalized_parts = [self._normalize_for_match(part) for part in parts]
+        return any(
+            keyword in part
+            for part in normalized_parts
+            for keyword in self.CATALOG_SCOPE_KEYWORDS
+        )
 
     def _is_small_supported_file(self, path: Path) -> bool:
         if path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
@@ -334,9 +434,10 @@ class PowerPersonaCatalog:
         file_text: str,
     ) -> CatalogItem | None:
         data = record if isinstance(record, dict) else {"resumo": str(record)}
+        origem = self._relative_or_name(path, root)
         haystack = " ".join(
             [
-                str(path),
+                origem,
                 path.stem,
                 str(data.get("tipo", "")),
                 str(data.get("nome", "")),
@@ -353,7 +454,6 @@ class PowerPersonaCatalog:
         resumo = self._first_value(data, self.SUMMARY_KEYS) or self._text_excerpt(file_text)
         marcador_source = f"{path.name} {nome} {resumo}"
         markers = self._extract_markers(marcador_source)
-        origem = self._relative_or_name(path, root)
         item_id = self._make_id(tipo, nome, path, index)
 
         return {
@@ -420,7 +520,10 @@ class PowerPersonaCatalog:
         seen: set[tuple[str, str]] = set()
         deduped: list[CatalogItem] = []
         for item in items:
-            key = (str(item.get("caminho")), self._normalize_for_match(str(item.get("nome", ""))))
+            key = (
+                str(item.get("tipo", "")),
+                self._normalize_for_match(str(item.get("nome", ""))),
+            )
             if key in seen:
                 continue
             seen.add(key)

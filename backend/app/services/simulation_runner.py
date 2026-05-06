@@ -230,12 +230,216 @@ class SimulationRunner:
     def get_run_state(cls, simulation_id: str) -> Optional[SimulationRunState]:
         """Obter estado de execucao"""
         if simulation_id in cls._run_states:
-            return cls._run_states[simulation_id]
+            return cls._reconcile_run_state_from_artifacts(cls._run_states[simulation_id])
         
         # Tenta carregar do arquivo
         state = cls._load_run_state(simulation_id)
+        if not state:
+            state = cls._build_run_state_from_artifacts(simulation_id)
         if state:
+            state = cls._reconcile_run_state_from_artifacts(state)
             cls._run_states[simulation_id] = state
+        return state
+
+    @classmethod
+    def _infer_timing_from_config(cls, simulation_id: str) -> dict[str, int]:
+        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        config_path = os.path.join(sim_dir, "simulation_config.json")
+        total_hours = 0
+        total_rounds = 0
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            time_config = config.get("time_config", {}) if isinstance(config, dict) else {}
+            total_hours = int(time_config.get("total_simulation_hours") or 0)
+            minutes_per_round = int(time_config.get("minutes_per_round") or 0)
+            if total_hours > 0 and minutes_per_round > 0:
+                total_rounds = int(total_hours * 60 / minutes_per_round)
+        except Exception:
+            pass
+        return {"total_hours": total_hours, "total_rounds": total_rounds}
+
+    @classmethod
+    def _build_run_state_from_artifacts(cls, simulation_id: str) -> Optional[SimulationRunState]:
+        """Reconstroi um estado minimo quando run_state.json foi perdido."""
+        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        if not os.path.isdir(sim_dir):
+            return None
+
+        has_actions = any(
+            os.path.exists(os.path.join(sim_dir, platform, "actions.jsonl"))
+            for platform in ("twitter", "reddit")
+        )
+        if not has_actions:
+            return None
+
+        timing = cls._infer_timing_from_config(simulation_id)
+        return SimulationRunState(
+            simulation_id=simulation_id,
+            runner_status=RunnerStatus.STOPPED,
+            total_rounds=timing["total_rounds"],
+            total_simulation_hours=timing["total_hours"],
+            updated_at=datetime.now().isoformat(),
+        )
+
+    @staticmethod
+    def _safe_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @classmethod
+    def _scan_action_log_summary(cls, log_path: str) -> dict[str, Any]:
+        """Extrai resumo auditavel de um actions.jsonl sem materializar todas as acoes."""
+        summary = {
+            "exists": os.path.exists(log_path),
+            "completed": False,
+            "max_round": 0,
+            "simulated_hours": 0,
+            "actions_count": 0,
+            "event_total_actions": 0,
+            "event_total_rounds": 0,
+        }
+        if not summary["exists"]:
+            return summary
+
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        row = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    if "event_type" in row:
+                        event_type = row.get("event_type")
+                        if event_type == "simulation_end":
+                            summary["completed"] = True
+                            summary["event_total_actions"] = max(
+                                summary["event_total_actions"],
+                                cls._safe_int(row.get("total_actions")),
+                            )
+                            summary["event_total_rounds"] = max(
+                                summary["event_total_rounds"],
+                                cls._safe_int(row.get("total_rounds")),
+                            )
+                        elif event_type == "round_end":
+                            round_num = cls._safe_int(row.get("round"))
+                            summary["max_round"] = max(summary["max_round"], round_num)
+                            summary["simulated_hours"] = max(
+                                summary["simulated_hours"],
+                                cls._safe_int(row.get("simulated_hours")),
+                            )
+                        continue
+
+                    if "agent_id" not in row:
+                        continue
+
+                    summary["actions_count"] += 1
+                    summary["max_round"] = max(summary["max_round"], cls._safe_int(row.get("round")))
+        except OSError as exc:
+            logger.warning(f"Falha ao resumir log de acoes: {log_path}, error={exc}")
+
+        if summary["event_total_rounds"]:
+            summary["max_round"] = max(summary["max_round"], summary["event_total_rounds"])
+        if summary["event_total_actions"] and summary["actions_count"] == 0:
+            summary["actions_count"] = summary["event_total_actions"]
+        return summary
+
+    @classmethod
+    def _reconcile_run_state_from_artifacts(
+        cls,
+        state: SimulationRunState,
+        *,
+        include_active: bool = False,
+    ) -> SimulationRunState:
+        """
+        Reconcilia run_state.json com os logs auditaveis.
+
+        Isso torna a leitura idempotente: se o processo morreu, o backend reiniciou
+        ou uma rota antiga gravou "stopped", os eventos simulation_end continuam
+        sendo a fonte de verdade para liberar relatorio.
+        """
+        if (
+            not include_active
+            and state.runner_status
+            in {RunnerStatus.STARTING, RunnerStatus.RUNNING, RunnerStatus.PAUSED, RunnerStatus.STOPPING}
+        ):
+            return state
+
+        sim_dir = os.path.join(cls.RUN_STATE_DIR, state.simulation_id)
+        twitter = cls._scan_action_log_summary(os.path.join(sim_dir, "twitter", "actions.jsonl"))
+        reddit = cls._scan_action_log_summary(os.path.join(sim_dir, "reddit", "actions.jsonl"))
+
+        changed = False
+
+        if twitter["exists"]:
+            if state.twitter_current_round != max(state.twitter_current_round, twitter["max_round"]):
+                state.twitter_current_round = max(state.twitter_current_round, twitter["max_round"])
+                changed = True
+            if state.twitter_simulated_hours != max(state.twitter_simulated_hours, twitter["simulated_hours"]):
+                state.twitter_simulated_hours = max(state.twitter_simulated_hours, twitter["simulated_hours"])
+                changed = True
+            if state.twitter_actions_count != max(state.twitter_actions_count, twitter["actions_count"]):
+                state.twitter_actions_count = max(state.twitter_actions_count, twitter["actions_count"])
+                changed = True
+            if twitter["completed"] and not state.twitter_completed:
+                state.twitter_completed = True
+                changed = True
+
+        if reddit["exists"]:
+            if state.reddit_current_round != max(state.reddit_current_round, reddit["max_round"]):
+                state.reddit_current_round = max(state.reddit_current_round, reddit["max_round"])
+                changed = True
+            if state.reddit_simulated_hours != max(state.reddit_simulated_hours, reddit["simulated_hours"]):
+                state.reddit_simulated_hours = max(state.reddit_simulated_hours, reddit["simulated_hours"])
+                changed = True
+            if state.reddit_actions_count != max(state.reddit_actions_count, reddit["actions_count"]):
+                state.reddit_actions_count = max(state.reddit_actions_count, reddit["actions_count"])
+                changed = True
+            if reddit["completed"] and not state.reddit_completed:
+                state.reddit_completed = True
+                changed = True
+
+        reconciled_round = max(state.current_round, state.twitter_current_round, state.reddit_current_round)
+        if state.current_round != reconciled_round:
+            state.current_round = reconciled_round
+            changed = True
+
+        reconciled_hours = max(state.simulated_hours, state.twitter_simulated_hours, state.reddit_simulated_hours)
+        if state.simulated_hours != reconciled_hours:
+            state.simulated_hours = reconciled_hours
+            changed = True
+
+        all_completed = cls._check_all_platforms_completed(state)
+        if all_completed and state.runner_status != RunnerStatus.COMPLETED:
+            state.runner_status = RunnerStatus.COMPLETED
+            state.twitter_running = False
+            state.reddit_running = False
+            state.error = None
+            if not state.completed_at:
+                state.completed_at = datetime.now().isoformat()
+            if state.total_rounds:
+                state.current_round = max(state.current_round, state.total_rounds)
+                if twitter["exists"]:
+                    state.twitter_current_round = max(state.twitter_current_round, state.total_rounds)
+                if reddit["exists"]:
+                    state.reddit_current_round = max(state.reddit_current_round, state.total_rounds)
+            changed = True
+
+        if changed:
+            state.updated_at = datetime.now().isoformat()
+            try:
+                cls._save_run_state(state)
+            except Exception as exc:
+                logger.warning(
+                    f"Falha ao persistir reconciliacao da simulacao {state.simulation_id}: {exc}"
+                )
+
         return state
     
     @classmethod
@@ -1273,6 +1477,21 @@ class SimulationRunner:
         
         cleaned_files = []
         errors = []
+
+        def remove_with_retry(path: str, label: str) -> bool:
+            for attempt in range(1, 6):
+                try:
+                    os.remove(path)
+                    return True
+                except PermissionError as e:
+                    if attempt < 5:
+                        time.sleep(0.4 * attempt)
+                        continue
+                    errors.append(f"Remover {label} falhou: {str(e)}")
+                    return False
+                except Exception as e:
+                    errors.append(f"Remover {label} falhou: {str(e)}")
+                    return False
         
         # Lista de arquivos a remover (incluindo banco de dados)
         files_to_delete = [
@@ -1292,11 +1511,8 @@ class SimulationRunner:
         for filename in files_to_delete:
             file_path = os.path.join(sim_dir, filename)
             if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
+                if remove_with_retry(file_path, filename):
                     cleaned_files.append(filename)
-                except Exception as e:
-                    errors.append(f"Remover {filename} falhou: {str(e)}")
         
         # Limpa logs de acoes nos diretorios de plataforma
         for dir_name in dirs_to_clean:
@@ -1304,11 +1520,8 @@ class SimulationRunner:
             if os.path.exists(dir_path):
                 actions_file = os.path.join(dir_path, "actions.jsonl")
                 if os.path.exists(actions_file):
-                    try:
-                        os.remove(actions_file)
+                    if remove_with_retry(actions_file, f"{dir_name}/actions.jsonl"):
                         cleaned_files.append(f"{dir_name}/actions.jsonl")
-                    except Exception as e:
-                        errors.append(f"Remover {dir_name}/actions.jsonl falhou: {str(e)}")
         
         # Limpa estado de execucao em memoria
         if simulation_id in cls._run_states:
@@ -1372,17 +1585,22 @@ class SimulationRunner:
                         except Exception:
                             process.kill()
                     
-                    # Atualiza run_state.json
+                    # Atualiza run_state.json sem sobrescrever uma conclusao ja auditada nos logs.
                     state = cls.get_run_state(simulation_id)
+                    state_json_status = "stopped"
                     if state:
-                        state.runner_status = RunnerStatus.STOPPED
-                        state.twitter_running = False
-                        state.reddit_running = False
-                        state.completed_at = datetime.now().isoformat()
-                        state.error = "Servidor encerrado, simulacao terminada"
-                        cls._save_run_state(state)
+                        state = cls._reconcile_run_state_from_artifacts(state, include_active=True)
+                        if state.runner_status == RunnerStatus.COMPLETED:
+                            state_json_status = "completed"
+                        else:
+                            state.runner_status = RunnerStatus.STOPPED
+                            state.twitter_running = False
+                            state.reddit_running = False
+                            state.completed_at = datetime.now().isoformat()
+                            state.error = "Servidor encerrado, simulacao terminada"
+                            cls._save_run_state(state)
                     
-                    # Tambem atualiza state.json, define estado como stopped
+                    # Tambem atualiza state.json de forma coerente com o estado reconciliado.
                     try:
                         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
                         state_file = os.path.join(sim_dir, "state.json")
@@ -1390,11 +1608,17 @@ class SimulationRunner:
                         if os.path.exists(state_file):
                             with open(state_file, 'r', encoding='utf-8') as f:
                                 state_data = json.load(f)
-                            state_data['status'] = 'stopped'
+                            state_data['status'] = state_json_status
+                            if state_json_status == "completed":
+                                state_data["twitter_status"] = "completed"
+                                state_data["reddit_status"] = "completed"
+                                state_data["error"] = None
+                            else:
+                                state_data["error"] = "Servidor encerrado, simulacao terminada"
                             state_data['updated_at'] = datetime.now().isoformat()
                             with open(state_file, 'w', encoding='utf-8') as f:
                                 json.dump(state_data, f, indent=2, ensure_ascii=False)
-                            logger.info(f"state.json atualizado para stopped: {simulation_id}")
+                            logger.info(f"state.json atualizado para {state_json_status}: {simulation_id}")
                         else:
                             logger.warning(f"state.json nao existe: {state_file}")
                     except Exception as state_err:

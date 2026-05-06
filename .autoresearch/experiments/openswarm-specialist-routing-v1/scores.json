@@ -1,0 +1,91 @@
+{
+  "experiment_id": "openswarm-specialist-routing-v1",
+  "source": {
+    "repo": "https://github.com/VRSEN/OpenSwarm",
+    "commit": "92c8062bfeb58a9e96db8b7ac72da5f95c33479e",
+    "commit_date": "2026-05-06 16:15:23 +0400",
+    "transcript": "provided_by_user"
+  },
+  "rubric": {
+    "formato_blocos": 0.18,
+    "verificabilidade_factual": 0.18,
+    "acionabilidade": 0.22,
+    "protocolo_sem_muro": 0.14,
+    "red_team_real": 0.14,
+    "dominio_especifico": 0.14
+  },
+  "variants": [
+    {
+      "id": "specialist_lanes_no_runtime",
+      "name": "Lanes especialistas dentro de AutoResearch, sem runtime multiagente",
+      "scores": {
+        "formato_blocos": 94,
+        "verificabilidade_factual": 91,
+        "acionabilidade": 95,
+        "protocolo_sem_muro": 90,
+        "red_team_real": 88,
+        "dominio_especifico": 94
+      },
+      "weighted_score": 92.1,
+      "decision": "winner"
+    },
+    {
+      "id": "context_packets",
+      "name": "Context packets obrigatorios entre PM, executor, verifier e AutoResearch",
+      "scores": {
+        "formato_blocos": 95,
+        "verificabilidade_factual": 94,
+        "acionabilidade": 86,
+        "protocolo_sem_muro": 88,
+        "red_team_real": 84,
+        "dominio_especifico": 90
+      },
+      "weighted_score": 89.4,
+      "decision": "partial"
+    },
+    {
+      "id": "deliverable_agents",
+      "name": "Adicionar agentes de entregaveis docs/slides ao Ralph",
+      "scores": {
+        "formato_blocos": 82,
+        "verificabilidade_factual": 72,
+        "acionabilidade": 70,
+        "protocolo_sem_muro": 76,
+        "red_team_real": 67,
+        "dominio_especifico": 79
+      },
+      "weighted_score": 74.2,
+      "decision": "defer"
+    },
+    {
+      "id": "full_openswarm_topology",
+      "name": "Copiar topologia OpenSwarm inteira para Ralph",
+      "scores": {
+        "formato_blocos": 70,
+        "verificabilidade_factual": 60,
+        "acionabilidade": 48,
+        "protocolo_sem_muro": 58,
+        "red_team_real": 44,
+        "dominio_especifico": 61
+      },
+      "weighted_score": 57.0,
+      "decision": "reject"
+    },
+    {
+      "id": "no_change",
+      "name": "Nao mudar o metodo",
+      "scores": {
+        "formato_blocos": 60,
+        "verificabilidade_factual": 56,
+        "acionabilidade": 45,
+        "protocolo_sem_muro": 57,
+        "red_team_real": 45,
+        "dominio_especifico": 50
+      },
+      "weighted_score": 51.8,
+      "decision": "reject"
+    }
+  ],
+  "winner": "specialist_lanes_no_runtime"
+}
+

@@ -1,0 +1,89 @@
+diff --git a/.ralph/AUTORESEARCH.md b/.ralph/AUTORESEARCH.md
+--- a/.ralph/AUTORESEARCH.md
++++ b/.ralph/AUTORESEARCH.md
+@@
+ ## Initial Learning Agenda
+ 
+ 1. Baseline implantation run.
+ 2. Read-only P0.1 readiness assessment.
+ 3. One bounded implementation or harness-improvement task.
+ 
+ After 3 runs, decide whether to propose a patch to `.ralph/VERIFY.md`, `.ralph/TASK_TEMPLATE.md`, or `.ralph/SECURITY.md`.
+ 
++## Specialist Lanes
++
++When AutoResearch studies an external method, repo, transcript, paper, or run history, classify the work into one lane before execution:
++
++- `research_intake`: collect source facts, commit/date, transcript claims, and limits.
++- `method_mapper`: map source facts to Ralph components such as `PM.md`, `VERIFY.md`, `TASK_TEMPLATE.md` or `SECURITY.md`.
++- `evaluator_designer`: define rubric, score, cases and evidence expected.
++- `patch_writer`: produce `RANKING.md`, `scores.json`, `PATCH_PROPOSTO.diff` and `DECISAO.md`.
++- `red_team`: challenge over-complexity, unsafe permissions, weak evidence and source contamination.
++
++A lane is a responsibility label, not permission to spawn a large autonomous swarm. Keep one small unit per Ralph cycle.
++
++## Context Packet
++
++For external-source AutoResearch, prefer a small context packet over raw source dumps:
++
++- source URL, commit or date;
++- verified facts;
++- claims that remain unverified;
++- method component affected;
++- proposed evidence;
++- safety limits.
++
++The next cycle should be able to continue from files without reading the original chat.
++
+ ## Good Targets
+ 
+ - `.ralph/VERIFY.md`
+ - `.ralph/TASK_TEMPLATE.md`
+ - `.ralph/SECURITY.md`
+diff --git a/.ralph/PM.md b/.ralph/PM.md
+--- a/.ralph/PM.md
++++ b/.ralph/PM.md
+@@
+ ## Blocked First
+ 
+ Handle blocked tasks before creating new ready tasks. A half-specified ready task wastes loop cycles.
+ 
++## Specialist Routing
++
++Before marking a task ready, choose exactly one owner lane:
++
++- `executor`: code/docs change with direct verification.
++- `research_intake`: read-only source study.
++- `method_mapper`: translate source/run learning into Ralph method changes.
++- `evaluator_designer`: define scoring, corpus, rubric or check.
++- `patch_writer`: create proposed diff and decision record.
++- `red_team`: adversarial review of risk, evidence or complexity.
++
++If a task needs multiple lanes, split it. The PM routes and clarifies; it does not execute the work.
++
+ ## Mirofish Intake
+ 
+ Before marking a task ready, classify it:
+diff --git a/.ralph/TASK_TEMPLATE.md b/.ralph/TASK_TEMPLATE.md
+--- a/.ralph/TASK_TEMPLATE.md
++++ b/.ralph/TASK_TEMPLATE.md
+@@
+ owner: ralphloop
++specialist_lane: executor
+ expected_minutes: 30
+ risk: low
+ labels: []
+ ---
+@@
+ ## Context
+ 
+ Relevant files, roadmap item, affected gate/report/frontend/API path, and whether the task touches external services or client deliverability.
+ 
++## Context Packet
++
++For research or AutoResearch tasks, include source URL, commit/date, verified facts, unverified claims, affected method component, expected evidence and safety limits.
++
+ ## Blockers
+ 
+ Need for API key, paid service, long simulation, deploy, client claim, or unclear acceptance criteria.
+
