@@ -141,6 +141,45 @@
             <div v-if="finalizationRepairError" class="delivery-package-message repair-error">
               {{ finalizationRepairError }}
             </div>
+            <div class="export-bundle-strip">
+              <div class="export-bundle-summary">
+                <span class="export-bundle-label">Exportação</span>
+                <span class="export-bundle-status">{{ exportBundleStatusText }}</span>
+              </div>
+              <div class="export-bundle-actions">
+                <button
+                  type="button"
+                  class="delivery-repair-btn export-action-btn"
+                  :disabled="isCreatingExport || !canCreateExportDraft"
+                  @click="createExportDraft"
+                >
+                  <span>{{ isCreatingExport ? 'Criando...' : 'Criar rascunho' }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="delivery-repair-btn export-action-btn"
+                  :disabled="isVerifyingExport || !canVerifyExportBundle"
+                  @click="verifyExportBundle"
+                >
+                  <span>{{ isVerifyingExport ? 'Verificando...' : 'Verificar pacote' }}</span>
+                </button>
+                <a
+                  v-for="file in exportDownloadFiles"
+                  :key="file.filename"
+                  class="delivery-repair-btn export-action-btn export-download-link"
+                  :href="file.url"
+                  :download="file.filename"
+                >
+                  {{ file.label }}
+                </a>
+              </div>
+              <div v-if="exportActionError" class="delivery-package-message repair-error">
+                {{ exportActionError }}
+              </div>
+              <div v-else-if="exportActionMessage" class="delivery-package-message">
+                {{ exportActionMessage }}
+              </div>
+            </div>
           </div>
 
           <div class="workflow-steps" v-if="workflowSteps.length > 0">
@@ -545,7 +584,20 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle, getReportDeliveryPackage, repairReportFinalization } from '../api/report'
+import {
+  getAgentLog,
+  getConsoleLog,
+  getReport,
+  getReportArtifacts,
+  getReportSections,
+  getMissionBundle,
+  getReportDeliveryPackage,
+  repairReportFinalization,
+  createReportExport,
+  getReportExports,
+  verifyReportExportBundle,
+  getReportExportAttachmentUrl
+} from '../api/report'
 import { escapeHtml, textToSafeHtml } from '../utils/safeMarkdown'
 
 const router = useRouter()
@@ -590,6 +642,12 @@ const missionBundleFetchedFor = ref(null)
 const deliveryPackage = ref(null)
 const isRepairingFinalization = ref(false)
 const finalizationRepairError = ref(null)
+const reportExports = ref([])
+const exportVerificationById = ref({})
+const isCreatingExport = ref(false)
+const isVerifyingExport = ref(false)
+const exportActionMessage = ref('')
+const exportActionError = ref('')
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
@@ -2114,6 +2172,85 @@ const canRepairFinalization = computed(() => {
   return deliveryPackage.value.status === 'blocked' || deliveryPackage.value.method_checks_pass === false
 })
 
+const getExportId = (item) => item?.export_id || item?.id || item?.bundle_id || item?.draft_id || ''
+
+const activeExport = computed(() => {
+  return [...reportExports.value]
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aTime = Date.parse(a.created_at || a.updated_at || a.verified_at || '') || 0
+      const bTime = Date.parse(b.created_at || b.updated_at || b.verified_at || '') || 0
+      return bTime - aTime
+    })[0] || null
+})
+
+const activeExportId = computed(() => getExportId(activeExport.value))
+
+const activeExportVerification = computed(() => {
+  if (!activeExport.value) return null
+  return exportVerificationById.value[activeExportId.value] ||
+    activeExport.value.verification ||
+    activeExport.value.bundle_verification ||
+    null
+})
+
+const asArray = (value) => Array.isArray(value) ? value : []
+
+const exportFileNames = computed(() => {
+  if (!activeExport.value) return new Set()
+  const candidates = [
+    ...asArray(activeExport.value.files),
+    ...asArray(activeExport.value.attachments),
+    ...asArray(activeExport.value.artifacts),
+    ...asArray(activeExportVerification.value?.files),
+    ...asArray(activeExportVerification.value?.attachments),
+    ...asArray(activeExportVerification.value?.artifacts)
+  ]
+  const names = candidates
+    .map(item => typeof item === 'string' ? item : item?.filename || item?.name)
+    .filter(name => ['full_report.html', 'evidence_annex.html'].includes(name))
+  return new Set(names)
+})
+
+const exportDownloadFiles = computed(() => {
+  if (!props.reportId || !activeExportId.value) return []
+  return [
+    { filename: 'full_report.html', label: 'Baixar relatório' },
+    { filename: 'evidence_annex.html', label: 'Baixar anexos' }
+  ]
+    .filter(file => exportFileNames.value.has(file.filename))
+    .map(file => ({
+      ...file,
+      url: getReportExportAttachmentUrl(props.reportId, activeExportId.value, file.filename)
+    }))
+    .filter(file => file.url)
+})
+
+const exportBundleStatusText = computed(() => {
+  if (isCreatingExport.value) return 'Criando rascunho...'
+  if (isVerifyingExport.value) return 'Verificando pacote...'
+  if (!activeExport.value) return 'Nenhum rascunho'
+  if (activeExportVerification.value?.verified === true || activeExportVerification.value?.status === 'verified') {
+    return 'Verificado'
+  }
+  if (activeExportVerification.value?.passed === false || activeExportVerification.value?.status === 'blocked') {
+    return 'Bloqueado'
+  }
+  if (exportDownloadFiles.value.length) return `${exportDownloadFiles.value.length}/2 arquivos prontos`
+  return activeExport.value.status || 'Rascunho criado'
+})
+
+const canCreateExportDraft = computed(() => {
+  if (!props.reportId || isCreatingExport.value) return false
+  return deliveryPackage.value?.status === 'ready_for_export' ||
+    deliveryPackage.value?.status === 'client_deliverable' ||
+    reportRecord.value?.status === 'completed'
+})
+
+const canVerifyExportBundle = computed(() => {
+  return !!props.reportId && !!activeExportId.value && !isVerifyingExport.value
+})
+
 const auditIssues = computed(() => {
   const issues = [
     ...(qualityGate.value?.issues || []),
@@ -2238,6 +2375,78 @@ const repairFinalization = async () => {
     }
   } finally {
     isRepairingFinalization.value = false
+  }
+}
+
+const formatExportError = (err, fallback) => {
+  if (err?.status === 409) {
+    return err?.message
+      ? `Pacote ainda não liberado: ${err.message}`
+      : 'Pacote ainda aguardando a finalização do relatório. Aguarde a liberação e tente novamente.'
+  }
+  return err?.data?.error || err?.message || fallback
+}
+
+const loadReportExports = async () => {
+  if (!props.reportId) return
+  try {
+    const res = await getReportExports(props.reportId)
+    if (res.success && res.data) {
+      reportExports.value = Array.isArray(res.data.exports) ? res.data.exports : []
+    }
+  } catch (err) {
+    if (err?.status !== 404) {
+      exportActionError.value = formatExportError(err, 'Falha ao carregar exportações')
+    }
+  }
+}
+
+const createExportDraft = async () => {
+  if (!props.reportId || isCreatingExport.value) return
+  isCreatingExport.value = true
+  exportActionError.value = ''
+  exportActionMessage.value = ''
+  try {
+    const res = await createReportExport(props.reportId)
+    if (res.success && res.data) {
+      const exportId = getExportId(res.data)
+      reportExports.value = [
+        res.data,
+        ...reportExports.value.filter(item => getExportId(item) !== exportId)
+      ]
+      exportActionMessage.value = 'Rascunho de exportação criado.'
+      await loadReportExports()
+      return
+    }
+    exportActionError.value = res.error || 'Não foi possível criar o rascunho.'
+  } catch (err) {
+    exportActionError.value = formatExportError(err, 'Falha ao criar rascunho de exportação')
+  } finally {
+    isCreatingExport.value = false
+  }
+}
+
+const verifyExportBundle = async () => {
+  if (!props.reportId || !activeExportId.value || isVerifyingExport.value) return
+  isVerifyingExport.value = true
+  exportActionError.value = ''
+  exportActionMessage.value = ''
+  try {
+    const res = await verifyReportExportBundle(props.reportId, activeExportId.value)
+    if (res.success && res.data) {
+      exportVerificationById.value = {
+        ...exportVerificationById.value,
+        [activeExportId.value]: res.data
+      }
+      exportActionMessage.value = 'Verificação concluída.'
+      await loadReportExports()
+      return
+    }
+    exportActionError.value = res.error || 'Não foi possível verificar o pacote.'
+  } catch (err) {
+    exportActionError.value = formatExportError(err, 'Falha ao verificar pacote de exportação')
+  } finally {
+    isVerifyingExport.value = false
   }
 }
 
@@ -2600,11 +2809,12 @@ const fetchReportAudit = async () => {
   if (!props.reportId) return
 
   try {
-    const [reportRes, artifactsRes, sectionsRes, deliveryRes] = await Promise.all([
+    const [reportRes, artifactsRes, sectionsRes, deliveryRes, exportsRes] = await Promise.all([
       getReport(props.reportId),
       getReportArtifacts(props.reportId, true),
       getReportSections(props.reportId),
-      getReportDeliveryPackage(props.reportId).catch(() => null)
+      getReportDeliveryPackage(props.reportId).catch(() => null),
+      getReportExports(props.reportId).catch(() => null)
     ])
 
     if (reportRes.success && reportRes.data) {
@@ -2642,6 +2852,10 @@ const fetchReportAudit = async () => {
 
     if (deliveryRes?.success && deliveryRes.data) {
       deliveryPackage.value = deliveryRes.data
+    }
+
+    if (exportsRes?.success && exportsRes.data) {
+      reportExports.value = Array.isArray(exportsRes.data.exports) ? exportsRes.data.exports : []
     }
 
     const hasMissionBundle = reportArtifacts.value.some(item => item.name === 'mission_bundle.json')
@@ -2728,6 +2942,12 @@ watch(() => props.reportId, (newId) => {
     deliveryPackage.value = null
     isRepairingFinalization.value = false
     finalizationRepairError.value = null
+    reportExports.value = []
+    exportVerificationById.value = {}
+    isCreatingExport.value = false
+    isVerifyingExport.value = false
+    exportActionMessage.value = ''
+    exportActionError.value = ''
     
     startPolling()
   }
@@ -3454,6 +3674,44 @@ watch(() => props.reportId, (newId) => {
 
 .repair-error {
   color: #991B1B;
+}
+
+.export-bundle-strip {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(107, 114, 128, 0.18);
+}
+
+.export-bundle-summary,
+.export-bundle-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.export-bundle-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #374151;
+  text-transform: uppercase;
+}
+
+.export-bundle-status {
+  font-size: 11px;
+  color: #4B5563;
+}
+
+.export-bundle-actions {
+  margin-top: 7px;
+}
+
+.export-action-btn {
+  margin-top: 0;
+}
+
+.export-download-link {
+  text-decoration: none;
 }
 
 .workflow-steps {

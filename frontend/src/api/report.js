@@ -1,5 +1,31 @@
 import service, { requestWithRetry } from './index'
 
+const getApiBasePath = () => {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/mirofish')) return '/mirofish'
+  return ''
+}
+
+const requestReportExport = async (path, options = {}) => {
+  const response = await fetch(`${getApiBasePath()}${path}`, {
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    },
+    ...options
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok || payload.success === false) {
+    const error = new Error(payload.error || payload.message || `HTTP ${response.status}`)
+    error.status = response.status
+    error.data = payload
+    throw error
+  }
+  return payload
+}
+
 /**
  * Iniciar geracao do relatorio
  * @param {Object} data - { simulation_id, force_regenerate? }
@@ -97,6 +123,29 @@ export const getReportDeliveryPackage = (reportId) => {
 
 export const repairReportFinalization = (reportId) => {
   return service.post(`/api/report/${reportId}/finalization/repair`)
+}
+
+export const createReportExport = (reportId) => {
+  return requestReportExport(`/api/report/${encodeURIComponent(reportId)}/exports`, {
+    method: 'POST'
+  })
+}
+
+export const getReportExports = (reportId) => {
+  return requestReportExport(`/api/report/${encodeURIComponent(reportId)}/exports`)
+}
+
+export const verifyReportExportBundle = (reportId, exportId) => {
+  return requestReportExport(
+    `/api/report/${encodeURIComponent(reportId)}/exports/${encodeURIComponent(exportId)}/bundle/verify`,
+    { method: 'POST' }
+  )
+}
+
+export const getReportExportAttachmentUrl = (reportId, exportId, filename) => {
+  const safeFilename = ['full_report.html', 'evidence_annex.html'].includes(filename) ? filename : ''
+  if (!safeFilename) return ''
+  return `${getApiBasePath()}/api/report/${encodeURIComponent(reportId)}/exports/${encodeURIComponent(exportId)}/${encodeURIComponent(safeFilename)}`
 }
 
 /**

@@ -16,6 +16,18 @@ from ..services.power_catalog import PowerCatalog
 from ..services.power_persona_catalog import PowerPersonaCatalog
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
+from ..services.report_bundle_verifier import (
+    ReportBundleVerificationNotFound,
+    verify_report_export_bundle,
+)
+from ..services.report_exporter import (
+    ReportExportConflict,
+    ReportExportInvalidPath,
+    ReportExportNotFound,
+    allowed_export_file_path,
+    create_report_export,
+    list_report_exports,
+)
 from ..services.report_finalization import (
     ReportFinalizationConflict,
     ReportFinalizationNotFound,
@@ -697,6 +709,82 @@ def get_report_delivery_package(report_id: str):
             "success": False,
             "error": str(e),
         }), 500
+
+
+@report_bp.route('/<report_id>/exports', methods=['POST'])
+def create_report_export_route(report_id: str):
+    """Criar rascunho de export verificavel para um relatorio."""
+    try:
+        export_manifest = create_report_export(report_id)
+        return jsonify({
+            "success": True,
+            "data": export_manifest,
+        }), 201
+    except ReportExportNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ReportExportConflict as e:
+        return jsonify({"success": False, "error": str(e)}), 409
+    except Exception as e:
+        logger.error(f"Falha ao criar export do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports', methods=['GET'])
+def list_report_exports_route(report_id: str):
+    """Listar exports existentes sem expor caminhos internos."""
+    try:
+        exports = list_report_exports(report_id)
+        return jsonify({
+            "success": True,
+            "data": {
+                "report_id": report_id,
+                "exports": exports,
+            },
+        }), 200
+    except ReportExportNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        logger.error(f"Falha ao listar exports do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports/<export_id>/bundle/verify', methods=['POST'])
+def verify_report_export_bundle_route(report_id: str, export_id: str):
+    """Verificar integridade e seguranca do bundle exportado."""
+    try:
+        verification = verify_report_export_bundle(report_id, export_id)
+        return jsonify({
+            "success": verification.get("passes") is True,
+            "data": verification,
+        }), 200
+    except ReportBundleVerificationNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        logger.error(f"Falha ao verificar bundle do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports/<export_id>/<filename>', methods=['GET'])
+def download_report_export_file_route(report_id: str, export_id: str, filename: str):
+    """Baixar apenas arquivos allowlisted no manifest do export."""
+    try:
+        path = allowed_export_file_path(report_id, export_id, filename)
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name=filename,
+        )
+    except ReportExportNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ReportExportInvalidPath as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Falha ao baixar arquivo de export do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @report_bp.route('/<report_id>/finalization/repair', methods=['POST'])
