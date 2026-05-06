@@ -497,7 +497,7 @@
       </div>
       <div class="log-content" ref="logContent">
         <div class="log-line" v-for="(log, idx) in consoleLogs" :key="idx">
-          <span class="log-msg" :class="getLogLevelClass(log)">{{ log }}</span>
+          <span class="log-msg" :class="getLogLevelClass(log)" :title="log">{{ log }}</span>
         </div>
       </div>
     </div>
@@ -2594,6 +2594,7 @@ watch(() => props.reportId, (newId) => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
   background:
     radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 24%),
     linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
@@ -2604,6 +2605,7 @@ watch(() => props.reportId, (newId) => {
 /* Main Split Layout */
 .main-split-layout {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
 }
@@ -2613,9 +2615,11 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.82);
+  padding: 10px 16px;
+  min-height: 42px;
+  background: #fffaf0;
   border-bottom: 1px solid rgba(15, 39, 71, 0.1);
+  box-shadow: 0 1px 0 rgba(15, 39, 71, 0.06);
   font-size: 13px;
   font-weight: 600;
   color: #0f2747;
@@ -2623,7 +2627,7 @@ watch(() => props.reportId, (newId) => {
   letter-spacing: 0.04em;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 30;
 }
 
 .header-dot {
@@ -2655,6 +2659,8 @@ watch(() => props.reportId, (newId) => {
 }
 
 .header-title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: #0f2747;
@@ -2667,6 +2673,10 @@ watch(() => props.reportId, (newId) => {
 
 .header-meta {
   margin-left: auto;
+  max-width: 35%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 600;
   color: #4b5563;
@@ -2675,7 +2685,7 @@ watch(() => props.reportId, (newId) => {
 
 /* Panel header status variants */
 .panel-header--active {
-  background: rgba(212, 160, 23, 0.08);
+  background: #fff7e4;
   border-color: rgba(212, 160, 23, 0.4);
 }
 
@@ -2692,7 +2702,7 @@ watch(() => props.reportId, (newId) => {
 }
 
 .panel-header--done {
-  background: rgba(94, 122, 52, 0.06);
+  background: #f8fbf3;
 }
 
 .panel-header--done .header-index {
@@ -2706,14 +2716,16 @@ watch(() => props.reportId, (newId) => {
 
 /* Left Panel - Report Style */
 .left-panel.report-style {
-  width: 45%;
-  min-width: 450px;
+  flex: 0 0 42%;
+  width: 42%;
+  min-width: 420px;
+  min-height: 0;
   background: rgba(255, 255, 255, 0.82);
   border-right: 1px solid rgba(15, 39, 71, 0.1);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 30px 50px 60px 50px;
+  padding: 24px 40px 44px 40px;
 }
 
 .left-panel::-webkit-scrollbar {
@@ -2746,14 +2758,14 @@ watch(() => props.reportId, (newId) => {
 }
 
 .report-header-block {
-  margin-bottom: 30px;
+  margin-bottom: 22px;
 }
 
 .report-meta {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .report-tag {
@@ -2775,21 +2787,21 @@ watch(() => props.reportId, (newId) => {
 
 .main-title {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
   color: #0f2747;
-  line-height: 1.2;
-  margin: 0 0 16px 0;
-  letter-spacing: -0.02em;
+  line-height: 1.18;
+  margin: 0 0 14px 0;
+  letter-spacing: 0;
 }
 
 .sub-title {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 16px;
+  font-size: 15px;
   color: #4b5563;
   font-style: italic;
   line-height: 1.6;
-  margin: 0 0 30px 0;
+  margin: 0 0 22px 0;
   font-weight: 400;
 }
 
@@ -2803,22 +2815,22 @@ watch(() => props.reportId, (newId) => {
 .sections-list {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 18px;
 }
 
 .report-section-item {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .section-header-row {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 10px;
   transition: background-color 0.2s ease;
-  padding: 8px 12px;
-  margin: -8px -12px;
+  padding: 6px 10px;
+  margin: -6px -10px;
   border-radius: 8px;
 }
 
@@ -2844,23 +2856,35 @@ watch(() => props.reportId, (newId) => {
 
 .section-number {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 16px;
+  font-size: 13px;
   color: #8b95a7;
   font-weight: 500;
+  line-height: 1.45;
+  flex: 0 0 auto;
 }
 
 .section-title {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: #0f2747;
   margin: 0;
+  line-height: 1.25;
   transition: color 0.3s ease;
+  overflow-wrap: anywhere;
 }
 
 /* States */
 .report-section-item.is-pending .section-title {
-  color: rgba(15, 39, 71, 0.24);
+  color: rgba(15, 39, 71, 0.42);
+}
+
+.report-section-item.is-pending .section-number {
+  color: rgba(15, 39, 71, 0.36);
+}
+
+.report-section-item.is-active .section-header-row {
+  background: rgba(212, 160, 23, 0.08);
 }
 
 .report-section-item.is-active .section-title,
@@ -2869,7 +2893,7 @@ watch(() => props.reportId, (newId) => {
 }
 
 .section-body {
-  padding-left: 28px;
+  padding-left: 32px;
   overflow: hidden;
 }
 
@@ -2877,7 +2901,7 @@ watch(() => props.reportId, (newId) => {
 .generated-content {
   font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
   font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.65;
   color: #374151;
 }
 
@@ -2942,7 +2966,13 @@ watch(() => props.reportId, (newId) => {
   gap: 10px;
   color: #4b5563;
   font-size: 14px;
-  margin-top: 4px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 39, 71, 0.1);
+  border-radius: 8px;
+  background: rgba(15, 39, 71, 0.03);
 }
 
 .loading-icon {
@@ -2956,8 +2986,9 @@ watch(() => props.reportId, (newId) => {
 
 .loading-text {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 15px;
+  font-size: 13px;
   color: #0f2747;
+  line-height: 1.35;
 }
 
 .cursor-blink {
@@ -3052,6 +3083,8 @@ watch(() => props.reportId, (newId) => {
 /* Right Panel */
 .right-panel {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: rgba(255, 255, 255, 0.74);
   overflow-y: auto;
   display: flex;
@@ -3102,7 +3135,7 @@ watch(() => props.reportId, (newId) => {
 
 /* Workflow Overview */
 .workflow-overview {
-  padding: 16px 20px 0 20px;
+  padding: 12px 16px 0 16px;
 }
 
 .workflow-metrics {
@@ -3175,15 +3208,15 @@ watch(() => props.reportId, (newId) => {
 .workflow-steps {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 10px;
+  gap: 8px;
+  padding-bottom: 8px;
 }
 
 .wf-step {
   display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 12px;
-  padding: 10px 12px;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding: 8px 10px;
   border: 1px solid var(--wf-divider);
   border-radius: 8px;
   background: #FFFFFF;
@@ -3209,7 +3242,7 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 24px;
+  width: 20px;
   flex-shrink: 0;
 }
 
@@ -3283,7 +3316,7 @@ watch(() => props.reportId, (newId) => {
 .workflow-divider {
   height: 1px;
   background: var(--wf-divider);
-  margin: 14px 0 0 0;
+  margin: 10px 0 0 0;
 }
 
 .audit-panel {
@@ -3662,18 +3695,18 @@ watch(() => props.reportId, (newId) => {
 
 /* Workflow Timeline */
 .workflow-timeline {
-  padding: 14px 20px 24px;
+  padding: 10px 16px 16px;
   flex: 1;
 }
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
   border: 1px solid var(--wf-divider);
-  border-radius: 8px;
+  border-radius: 7px;
   background: #FFFFFF;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
@@ -3707,13 +3740,13 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 24px;
+  width: 20px;
   flex-shrink: 0;
 }
 
 .connector-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--wf-muted-dot);
   border: 2px solid #FFFFFF;
@@ -3759,11 +3792,11 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .action-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #0f2747;
   text-transform: uppercase;
@@ -3785,8 +3818,10 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 10px;
-  padding-top: 10px;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 7px;
+  padding-top: 7px;
   border-top: 1px solid rgba(15, 39, 71, 0.08);
 }
 
@@ -3796,15 +3831,18 @@ watch(() => props.reportId, (newId) => {
 
 .footer-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
+  min-width: 0;
 }
 
 .elapsed-badge {
   font-size: 11px;
   color: #4b5563;
   background: rgba(15, 39, 71, 0.06);
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 10px;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -3827,9 +3865,9 @@ watch(() => props.reportId, (newId) => {
 }
 
 .status-message {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   border: 1px solid transparent;
 }
 
@@ -3847,8 +3885,8 @@ watch(() => props.reportId, (newId) => {
 
 .outline-badge {
   display: inline-block;
-  margin-top: 8px;
-  padding: 4px 10px;
+  margin-top: 6px;
+  padding: 3px 8px;
   background: rgba(15, 39, 71, 0.05);
   color: #4b5563;
   border: 1px solid rgba(15, 39, 71, 0.1);
@@ -3861,10 +3899,11 @@ watch(() => props.reportId, (newId) => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  max-width: 100%;
+  padding: 5px 10px;
   background: rgba(255, 255, 255, 0.76);
   border: 1px solid var(--wf-border);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .section-tag.content-ready {
@@ -3900,6 +3939,10 @@ watch(() => props.reportId, (newId) => {
   font-size: 13px;
   font-weight: 500;
   color: #0f2747;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tool-badge {
@@ -5870,10 +5913,12 @@ watch(() => props.reportId, (newId) => {
 .console-logs {
   background: linear-gradient(135deg, #0b1b31 0%, #102949 100%);
   color: #e5dcc7;
-  padding: 16px;
+  padding: 10px 16px 12px;
   font-family: 'JetBrains Mono', monospace;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+  max-height: 136px;
+  overflow: hidden;
 }
 
 .log-header {
@@ -5895,7 +5940,7 @@ watch(() => props.reportId, (newId) => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  height: 100px;
+  height: 72px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -5906,14 +5951,44 @@ watch(() => props.reportId, (newId) => {
 .log-line {
   font-size: 11px;
   line-height: 1.5;
+  min-width: 0;
 }
 
 .log-msg {
   color: #BBB;
-  word-break: break-all;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
 }
 
 .log-msg.error { color: #EF5350; }
 .log-msg.warning { color: #FFA726; }
 .log-msg.success { color: #66BB6A; }
+
+@container (max-width: 980px) {
+  .main-split-layout {
+    flex-direction: column;
+  }
+
+  .left-panel.report-style {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-height: 44%;
+    border-right: none;
+    border-bottom: 1px solid rgba(15, 39, 71, 0.1);
+    padding: 20px 24px 28px;
+  }
+
+  .right-panel {
+    flex: 1 1 auto;
+  }
+
+  .main-title {
+    font-size: 28px;
+  }
+}
 </style>
