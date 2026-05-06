@@ -68,6 +68,23 @@ export const getSimulationConfigRealtime = (simulationId) => {
 }
 
 /**
+ * Obter escolhas de poderes e personas da missao
+ * @param {string} simulationId
+ */
+export const getMissionSelection = (simulationId) => {
+  return service.get(`/api/simulation/${simulationId}/mission-selection`)
+}
+
+/**
+ * Salvar escolhas de poderes e personas da missao
+ * @param {string} simulationId
+ * @param {Object} data - { selected_power_ids?, selected_power_persona_ids?, modo_custo? }
+ */
+export const saveMissionSelection = (simulationId, data) => {
+  return service.post(`/api/simulation/${simulationId}/mission-selection`, data)
+}
+
+/**
  * Listar todas as simulacoes
  * @param {string} projectId - Opcional, filtrar por ID do projeto
  */

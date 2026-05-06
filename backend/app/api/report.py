@@ -10,6 +10,10 @@ from flask import request, jsonify, send_file
 
 from . import report_bp
 from ..config import Config
+from ..services.mission_bundle import MissionBundle
+from ..services.mission_selection import MissionSelection
+from ..services.power_catalog import PowerCatalog
+from ..services.power_persona_catalog import PowerPersonaCatalog
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.simulation_manager import SimulationManager
 from ..models.project import ProjectManager
@@ -17,6 +21,215 @@ from ..models.task import TaskManager, TaskStatus
 from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.api.report')
+
+
+POWER_PERSONA_CATALOG_LIMIT = 100
+POWER_PERSONA_CONTEXT_LIMIT = 4000
+
+
+def _safe_limit(value, default=POWER_PERSONA_CATALOG_LIMIT, maximum=POWER_PERSONA_CATALOG_LIMIT):
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(limit, maximum))
+
+
+def _build_power_persona_catalog():
+    return PowerPersonaCatalog(max_files=PowerPersonaCatalog.DEFAULT_MAX_FILES).build_catalog()
+
+
+def _filter_power_persona_catalog(catalog, tipo=None, q=None, limit=POWER_PERSONA_CATALOG_LIMIT):
+    query = (q or "").strip().lower()
+    filtered = []
+    for item in catalog:
+        if tipo and item.get("tipo") != tipo:
+            continue
+        if query:
+            haystack = " ".join(
+                str(item.get(key, ""))
+                for key in ("id", "nome", "tipo", "fonte", "origem", "resumo")
+            ).lower()
+            if query not in haystack:
+                continue
+        filtered.append(item)
+        if len(filtered) >= limit:
+            break
+    return filtered
+
+
+def _extract_power_persona_ids(value):
+    if not isinstance(value, list):
+        return []
+    ids = []
+    for item in value:
+        if isinstance(item, dict):
+            item_id = item.get("id")
+        else:
+            item_id = item
+        if item_id is not None:
+            ids.append(str(item_id))
+    return ids
+
+
+def _build_power_persona_context_from_payload(data):
+    selected_ids = []
+    selected_ids.extend(_extract_power_persona_ids(data.get("selected_power_persona_ids")))
+    selected_ids.extend(_extract_power_persona_ids(data.get("selected_personas")))
+    selected_ids.extend(_extract_power_persona_ids(data.get("selected_ids")))
+
+    seen = set()
+    selected_ids = [item_id for item_id in selected_ids if not (item_id in seen or seen.add(item_id))]
+    if not selected_ids:
+        return "", {"selected_ids": [], "items": [], "count": 0, "preview": ""}
+
+    tipo = data.get("tipo")
+    builder = PowerPersonaCatalog(max_files=PowerPersonaCatalog.DEFAULT_MAX_FILES)
+    catalog = builder.build_catalog()
+    selected_items = builder.select_items(catalog, selected_ids, tipo=tipo)
+    context = builder.build_context_pack(selected_items, max_chars=POWER_PERSONA_CONTEXT_LIMIT)
+    preview = context[:500] + "..." if len(context) > 500 else context
+    metadata = {
+        "selected_ids": selected_ids,
+        "tipo": tipo,
+        "count": len(selected_items),
+        "items": [
+            {
+                "id": item.get("id"),
+                "nome": item.get("nome"),
+                "tipo": item.get("tipo"),
+                "fonte": item.get("fonte"),
+                "origem": item.get("origem"),
+                "resumo_preview": (item.get("resumo") or "")[:240],
+            }
+            for item in selected_items
+        ],
+        "preview": preview,
+    }
+    return context, metadata
+
+
+def _merge_saved_mission_selection(simulation_id, data):
+    merged = dict(data or {})
+    saved = MissionSelection().load(simulation_id)
+    if not merged.get("selected_power_ids") and not merged.get("selected_powers"):
+        saved_power_ids = saved.get("selected_power_ids") or []
+        if saved_power_ids:
+            merged["selected_power_ids"] = saved_power_ids
+    if not merged.get("selected_power_persona_ids") and not merged.get("selected_personas"):
+        saved_persona_ids = saved.get("selected_power_persona_ids") or []
+        if saved_persona_ids:
+            merged["selected_power_persona_ids"] = saved_persona_ids
+    return merged
+
+
+def _extract_power_ids(data):
+    selected_ids = []
+    selected_ids.extend(_extract_power_persona_ids(data.get("selected_power_ids")))
+    selected_ids.extend(_extract_power_persona_ids(data.get("selected_powers")))
+    seen = set()
+    return [item_id for item_id in selected_ids if not (item_id in seen or seen.add(item_id))]
+
+
+def _build_power_selection_from_payload(data):
+    selected_ids = _extract_power_ids(data)
+    base_tokens = data.get("base_tokens", 0)
+    base_value_brl = data.get("base_value_brl", 0)
+    estimate = PowerCatalog().estimate_selection(
+        selected_ids,
+        base_tokens=base_tokens,
+        base_value_brl=base_value_brl,
+    )
+    return {
+        "selected_ids": selected_ids,
+        **estimate,
+    }
+
+
+@report_bp.route('/power-catalog', methods=['GET'])
+def get_power_catalog():
+    """Expor poderes formais da missao."""
+    try:
+        categoria = request.args.get('categoria')
+        tipo = request.args.get('tipo')
+        powers = PowerCatalog().list_powers(tipo=tipo, categoria=categoria)
+        return jsonify({
+            "success": True,
+            "data": {
+                "items": powers,
+                "count": len(powers),
+            }
+        })
+    except Exception as e:
+        logger.error(f"Falha ao listar poderes da missao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/power-estimate', methods=['POST'])
+def estimate_powers():
+    """Estimar impacto comercial dos poderes selecionados."""
+    try:
+        data = request.get_json() or {}
+        return jsonify({
+            "success": True,
+            "data": _build_power_selection_from_payload(data),
+        })
+    except Exception as e:
+        logger.error(f"Falha ao estimar poderes da missao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/power-persona-catalog', methods=['GET'])
+def get_power_persona_catalog():
+    """Expor catalogo seguro de poderes e personas externas."""
+    try:
+        tipo = request.args.get('tipo')
+        q = request.args.get('q')
+        limit = _safe_limit(request.args.get('limit'))
+        catalog = _build_power_persona_catalog()
+        items = _filter_power_persona_catalog(catalog, tipo=tipo, q=q, limit=limit)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "items": items,
+                "count": len(items),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao listar catalogo de poderes/personas: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@report_bp.route('/power-persona-context', methods=['POST'])
+def build_power_persona_context():
+    """Montar pacote de contexto em portugues para itens selecionados."""
+    try:
+        data = request.get_json() or {}
+        context, metadata = _build_power_persona_context_from_payload(data)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "context": context,
+                **metadata,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao montar contexto de poderes/personas: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 # ============== Interface de geracao de relatorio ==============
@@ -56,8 +269,11 @@ def generate_report():
                 "error": "Informe o simulation_id"
             }), 400
 
+        data = _merge_saved_mission_selection(simulation_id, data)
         force_regenerate = data.get('force_regenerate', False)
         delivery_mode = data.get('delivery_mode')
+        power_persona_context, power_persona_selection = _build_power_persona_context_from_payload(data)
+        power_selection = _build_power_selection_from_payload(data)
 
         # Obter informacoes da simulacao
         manager = SimulationManager()
@@ -159,7 +375,10 @@ def generate_report():
                 agent = ReportAgent(
                     graph_id=graph_id,
                     simulation_id=simulation_id,
-                    simulation_requirement=simulation_requirement
+                    simulation_requirement=simulation_requirement,
+                    power_persona_context=power_persona_context,
+                    power_persona_selection=power_persona_selection,
+                    power_selection=power_selection,
                 )
 
                 # Callback de progresso
@@ -490,6 +709,78 @@ def get_report_artifact(report_id: str, artifact_name: str):
             "success": False,
             "error": str(e)
         }), 500
+
+
+@report_bp.route('/<report_id>/mission-bundle', methods=['GET'])
+def get_mission_bundle(report_id: str):
+    """Gerar manifesto final da missao a partir dos artefatos do relatorio."""
+    try:
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({"success": False, "error": "Relatório não encontrado"}), 404
+        if report.status != ReportStatus.COMPLETED:
+            status_value = report.status.value if hasattr(report.status, "value") else str(report.status)
+            return jsonify({
+                "success": False,
+                "error": "Pacote final ainda não está pronto",
+                "data": {
+                    "status": status_value,
+                },
+            }), 409
+
+        existing_bundle = ReportManager.load_json_artifact(report_id, "mission_bundle.json")
+        if isinstance(existing_bundle, dict):
+            return jsonify({
+                "success": True,
+                "data": existing_bundle,
+            })
+
+        artifacts = ReportManager.list_json_artifacts(report_id)
+        artifact_names = [artifact["name"] for artifact in artifacts]
+        required_artifacts = {
+            "cost_meter.json": ReportManager.load_json_artifact(report_id, "cost_meter.json"),
+            "power_selection.json": ReportManager.load_json_artifact(report_id, "power_selection.json"),
+            "power_persona_context.json": ReportManager.load_json_artifact(report_id, "power_persona_context.json"),
+            "forecast_ledger.json": ReportManager.load_json_artifact(report_id, "forecast_ledger.json"),
+        }
+        missing_artifacts = [
+            name
+            for name, payload in required_artifacts.items()
+            if payload is None
+        ]
+        if missing_artifacts:
+            return jsonify({
+                "success": False,
+                "error": "Pacote final aguardando arquivos essenciais",
+                "data": {
+                    "arquivos_pendentes": missing_artifacts,
+                },
+            }), 409
+
+        cost_meter = required_artifacts["cost_meter.json"] or {}
+        power_selection = required_artifacts["power_selection.json"] or {}
+        persona_selection = required_artifacts["power_persona_context.json"] or {}
+        forecast_ledger = required_artifacts["forecast_ledger.json"] or {}
+
+        bundle = MissionBundle().gerar_manifesto(
+            report_id=report.report_id,
+            simulation_id=report.simulation_id,
+            custo=cost_meter,
+            poderes=power_selection.get("poderes_selecionados", []),
+            personas=persona_selection.get("items", []),
+            previsoes=forecast_ledger.get("previsoes", []),
+            arquivos=artifact_names,
+        )
+        ReportManager.save_json_artifact(report_id, "mission_bundle.json", bundle)
+
+        return jsonify({
+            "success": True,
+            "data": bundle,
+        })
+    except Exception as e:
+        logger.error(f"Falha ao gerar bundle da missao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @report_bp.route('/<report_id>/download', methods=['GET'])

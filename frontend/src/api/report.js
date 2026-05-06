@@ -9,6 +9,38 @@ export const generateReport = (data) => {
 }
 
 /**
+ * Obter catalogo formal de poderes da missão
+ * @param {Object} params - { categoria?, tipo? }
+ */
+export const getPowerCatalog = (params = {}) => {
+  return service.get('/api/report/power-catalog', { params })
+}
+
+/**
+ * Estimar impacto comercial dos poderes selecionados
+ * @param {Object} payload - { selected_power_ids?, base_tokens?, base_value_brl? }
+ */
+export const estimatePowers = (payload) => {
+  return service.post('/api/report/power-estimate', payload)
+}
+
+/**
+ * Obter catalogo seguro de poderes e personas
+ * @param {Object} params - { tipo?, q?, limit? }
+ */
+export const getPowerPersonaCatalog = (params = {}) => {
+  return service.get('/api/report/power-persona-catalog', { params })
+}
+
+/**
+ * Montar contexto de poderes e personas selecionados
+ * @param {Object} payload - { selected_power_persona_ids?, tipo? }
+ */
+export const buildPowerPersonaContext = (payload) => {
+  return service.post('/api/report/power-persona-context', payload)
+}
+
+/**
  * Obter status de geracao do relatorio
  * @param {string} reportId
  */
@@ -58,6 +90,14 @@ export const getReportArtifacts = (reportId, includeContent = false) => {
  */
 export const getReportArtifact = (reportId, artifactName) => {
   return service.get(`/api/report/${reportId}/artifacts/${artifactName}`)
+}
+
+/**
+ * Gerar manifesto final da missão
+ * @param {string} reportId
+ */
+export const getMissionBundle = (reportId) => {
+  return service.get(`/api/report/${reportId}/mission-bundle`)
 }
 
 /**

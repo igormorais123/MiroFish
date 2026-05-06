@@ -222,6 +222,7 @@ class LLMClient:
         max_tokens: int = 4096,
         response_format: Optional[Dict] = None,
         session_id: Optional[str] = None,
+        phase_id: Optional[str] = None,
     ) -> str:
         """Envia requisicao de chat e retorna texto limpo."""
         model_name = Config.resolve_model_name(self.model)
@@ -254,6 +255,7 @@ class LLMClient:
                 prompt_tokens=getattr(usage, 'prompt_tokens', 0) or 0,
                 completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
                 session_id=session_id,
+                phase_id=phase_id,
             )
 
         content = response.choices[0].message.content
@@ -266,6 +268,7 @@ class LLMClient:
         temperature: float = 0.3,
         max_tokens: int = 4096,
         session_id: Optional[str] = None,
+        phase_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Envia requisicao em modo JSON e retorna objeto desserializado."""
         response = self.chat(
@@ -274,6 +277,7 @@ class LLMClient:
             max_tokens=max_tokens,
             response_format={"type": "json_object"},
             session_id=session_id,
+            phase_id=phase_id,
         )
         cleaned = response.strip()
         cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)

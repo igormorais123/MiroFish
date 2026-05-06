@@ -84,5 +84,8 @@ memory/
 logs_*.log
 logs_backend*.log
 
+# Saidas locais de analise e extracao
+analysis_outputs/
+
 # Plataformas de grafo locais (instancias, nao versionar)
 graph_platforms/

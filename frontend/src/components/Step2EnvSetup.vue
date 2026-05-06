@@ -15,7 +15,7 @@
         </div>
         
         <div class="card-content">
-          <p class="api-note">POST /api/simulation/create</p>
+          <p class="api-note">Criando sala de simulação</p>
           <p class="description">
             Cria uma nova instância de simulação e carrega o modelo de parâmetros do mundo simulado.
           </p>
@@ -41,12 +41,12 @@
         </div>
       </div>
 
-      <!-- Enriquecimento Apify (opcional) -->
+      <!-- Enriquecimento externo (opcional) -->
       <div class="step-card enrichment-card" :class="{ 'active': phase === 0 || phase === 1 }">
         <div class="card-header">
           <div class="step-info">
             <span class="step-num" style="background: #c9952a; color: #1a1a2e;">A</span>
-            <span class="step-title">Enriquecimento Apify</span>
+            <span class="step-title">Enriquecimento de dados externos</span>
           </div>
           <div class="step-status">
             <span class="badge" style="background: rgba(201,149,42,0.15); color: #c9952a;">Opcional</span>
@@ -54,7 +54,7 @@
         </div>
         <div class="card-content">
           <p class="description">
-            Adiciona fatos web e perfis sociais reais ao contexto antes da geração de agentes. Melhora a fidelidade da simulação.
+            Adiciona fatos públicos e perfis sociais reais ao contexto antes da geração de participantes sintéticos. Melhora a fidelidade da simulação.
           </p>
           <div class="enrichment-toggle">
             <label class="toggle-label">
@@ -82,7 +82,7 @@
               ></textarea>
             </div>
             <div class="field-group">
-              <label class="field-label">Posts marcados — tagged (sem @, um por linha)</label>
+              <label class="field-label">Publicações em que o perfil foi marcado (sem @, uma por linha)</label>
               <textarea
                 v-model="enrichTagged"
                 class="field-input"
@@ -103,12 +103,12 @@
         </div>
       </div>
 
-      <!-- Step 02: Geração de perfis dos agentes -->
+      <!-- Step 02: Geração de perfis dos participantes -->
       <div class="step-card" :class="{ 'active': phase === 1, 'completed': phase > 1 }">
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">02</span>
-            <span class="step-title">Gerar perfis dos agentes</span>
+            <span class="step-title">Gerar perfis dos participantes</span>
           </div>
           <div class="step-status">
             <span v-if="phase > 1" class="badge success">Concluído</span>
@@ -118,7 +118,7 @@
         </div>
 
         <div class="card-content">
-          <p class="api-note">POST /api/simulation/prepare</p>
+          <p class="api-note">Preparando participantes sintéticos</p>
           <p class="description">
             Usa o contexto e o grafo de conhecimento para inicializar os indivíduos simulados e atribuir comportamento e memória com base nos dados de origem.
           </p>
@@ -127,11 +127,11 @@
           <div v-if="profiles.length > 0" class="stats-grid">
             <div class="stat-card">
               <span class="stat-value">{{ profiles.length }}</span>
-              <span class="stat-label">Agentes atuais</span>
+              <span class="stat-label">Participantes atuais</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ expectedTotal || '-' }}</span>
-              <span class="stat-label">Total estimado de agentes</span>
+              <span class="stat-label">Total estimado de participantes</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ totalTopicsCount }}</span>
@@ -142,7 +142,7 @@
           <!-- Profiles List Preview -->
           <div v-if="profiles.length > 0" class="profiles-preview">
             <div class="preview-header">
-              <span class="preview-title">Perfis de agentes gerados</span>
+              <span class="preview-title">Perfis de participantes gerados</span>
             </div>
             <div class="profiles-list">
               <div 
@@ -180,7 +180,7 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">03</span>
-            <span class="step-title">Gerar configuração dual</span>
+            <span class="step-title">Gerar configuração das arenas</span>
           </div>
           <div class="step-status">
             <span v-if="phase > 2" class="badge success">Concluído</span>
@@ -190,9 +190,9 @@
         </div>
 
         <div class="card-content">
-          <p class="api-note">POST /api/simulation/prepare</p>
+          <p class="api-note">Gerando configuração da missão</p>
           <p class="description">
-            O LLM define o ritmo do tempo, algoritmo de recomendação, janelas de atividade, frequência de fala e gatilhos de evento de cada agente.
+            O modelo de IA define o ritmo do tempo, regras de circulação, janelas de atividade, frequência de fala e gatilhos de evento de cada participante.
           </p>
           
           <!-- Config Preview -->
@@ -213,7 +213,7 @@
                   <span class="config-item-value">{{ Math.floor((simulationConfig.time_config?.total_simulation_hours * 60 / simulationConfig.time_config?.minutes_per_round)) || '-' }} rodadas</span>
                 </div>
                 <div class="config-item">
-                  <span class="config-item-label">Agentes ativos por hora</span>
+                  <span class="config-item-label">Participantes ativos por hora</span>
                   <span class="config-item-value">{{ simulationConfig.time_config?.agents_per_hour_min }}-{{ simulationConfig.time_config?.agents_per_hour_max }}</span>
                 </div>
               </div>
@@ -244,7 +244,7 @@
             <!-- Configuração dos agentes -->
             <div class="config-block">
               <div class="config-block-header">
-                <span class="config-block-title">Configuração dos agentes</span>
+                <span class="config-block-title">Configuração dos participantes</span>
                 <span class="config-block-badge">{{ simulationConfig.agent_configs?.length || 0 }} itens</span>
               </div>
               <div class="agents-cards">
@@ -256,7 +256,7 @@
                   <!-- Cabeçalho do cartão -->
                   <div class="agent-card-header">
                     <div class="agent-identity">
-                      <span class="agent-id">Agent {{ agent.agent_id }}</span>
+                      <span class="agent-id">Participante {{ agent.agent_id }}</span>
                       <span class="agent-name">{{ agent.entity_name }}</span>
                     </div>
                     <div class="agent-tags">
@@ -290,7 +290,7 @@
                   <div class="agent-params">
                     <div class="param-group">
                       <div class="param-item">
-                        <span class="param-label">Posts/h</span>
+                        <span class="param-label">Publicações por hora</span>
                         <span class="param-value">{{ agent.posts_per_hour }}</span>
                       </div>
                       <div class="param-item">
@@ -392,7 +392,7 @@
             <!-- Justificativa da configuração do LLM -->
             <div v-if="simulationConfig.generation_reasoning" class="config-block">
               <div class="config-block-header">
-                <span class="config-block-title">Justificativa da configuração do LLM</span>
+                <span class="config-block-title">Justificativa do motor de configuração</span>
               </div>
               <div class="reasoning-content">
                 <div 
@@ -423,7 +423,7 @@
         </div>
 
         <div class="card-content">
-          <p class="api-note">POST /api/simulation/prepare</p>
+          <p class="api-note">Organizando eventos iniciais</p>
           <p class="description">
             Gera automaticamente os eventos iniciais e os tópicos quentes que definem o estado inicial do mundo simulado.
           </p>
@@ -467,7 +467,7 @@
                     <div class="post-header">
                       <span class="post-role">{{ post.poster_type }}</span>
                       <span class="post-agent-info">
-                        <span class="post-id">Agent {{ post.poster_agent_id }}</span>
+                        <span class="post-id">Participante {{ post.poster_agent_id }}</span>
                         <span class="post-username">@{{ getAgentUsername(post.poster_agent_id) }}</span>
                       </span>
                     </div>
@@ -494,7 +494,7 @@
         </div>
 
         <div class="card-content">
-          <p class="api-note">POST /api/simulation/start</p>
+          <p class="api-note">Iniciando execução da missão</p>
           <p class="description">O ambiente de simulação está pronto. Você já pode iniciar a execução.</p>
           
           <!-- Configuração de rodadas - exibido apenas após a geração da configuração e cálculo das rodadas -->
@@ -519,7 +519,7 @@
                     <span class="val-unit">rodadas</span>
                   </div>
                   <div class="slider-meta-info">
-                    <span>Com 100 agentes, o tempo estimado é de {{ Math.round(customMaxRounds * 0.6) }} minutos</span>
+                    <span>Com 100 participantes, o tempo estimado é de {{ Math.round(customMaxRounds * 0.6) }} minutos</span>
                   </div>
                 </div>
 
@@ -559,7 +559,7 @@
                           <circle cx="12" cy="12" r="10"></circle>
                           <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
-                        Com 100 agentes, o tempo estimado é de {{ Math.round(autoGeneratedRounds * 0.6) }} minutos
+                        Com 100 participantes, o tempo estimado é de {{ Math.round(autoGeneratedRounds * 0.6) }} minutos
                       </span>
                     </div>
                     <div class="auto-desc">
@@ -730,7 +730,7 @@ let lastLoggedMessage = ''
 let lastLoggedProfileCount = 0
 let lastLoggedConfigStage = ''
 
-// Enriquecimento Apify
+// Enriquecimento externo
 const enrichQueries = ref('')
 const enrichActors = ref('')
 const enrichTagged = ref('')
@@ -866,7 +866,7 @@ const startPrepareSimulation = async () => {
     if (enrichAuto.value) preparePayload.enrich_auto = true
     const enrichTotal = queries.length + actors.length + tagged.length + ytUrls.length
     if (enrichTotal > 0 || enrichAuto.value) {
-      addLog(`Enriquecimento Apify: ${queries.length} buscas, ${actors.length} perfis IG, ${tagged.length} tagged, ${ytUrls.length} YT${enrichAuto.value ? ' + auto' : ''}`)
+      addLog(`Enriquecimento externo: ${queries.length} buscas, ${actors.length} perfis sociais, ${tagged.length} marcações, ${ytUrls.length} vídeos${enrichAuto.value ? ' + automático' : ''}`)
     }
     const res = await prepareSimulation(preparePayload)
     
@@ -1016,15 +1016,15 @@ const fetchProfilesRealtime = async () => {
         lastLoggedProfileCount = currentCount
         const total = expectedTotal.value || '?'
         const latestProfile = profiles.value[currentCount - 1]
-        const profileName = latestProfile?.name || latestProfile?.username || `Agent_${currentCount}`
+        const profileName = latestProfile?.name || latestProfile?.username || `Participante_${currentCount}`
         if (currentCount === 1) {
-          addLog('Iniciando a geração dos perfis dos agentes...')
+          addLog('Iniciando a geração dos perfis dos participantes...')
         }
-        addLog(`→ Perfil de agente ${currentCount}/${total}: ${profileName} (${latestProfile?.profession || 'profissão desconhecida'})`)
+        addLog(`→ Perfil de participante ${currentCount}/${total}: ${profileName} (${latestProfile?.profession || 'profissão desconhecida'})`)
         
         // Se todos foram gerados
         if (expectedTotal.value && currentCount >= expectedTotal.value) {
-          addLog(`✓ Todos os ${currentCount} perfis de agentes foram gerados`)
+          addLog(`✓ Todos os ${currentCount} perfis de participantes foram gerados`)
         }
       }
     }
@@ -1058,9 +1058,9 @@ const fetchConfigRealtime = async () => {
       if (data.generation_stage && data.generation_stage !== lastLoggedConfigStage) {
         lastLoggedConfigStage = data.generation_stage
         if (data.generation_stage === 'generating_profiles') {
-          addLog('Gerando a configuração dos perfis dos agentes...')
+          addLog('Gerando a configuração dos perfis dos participantes...')
         } else if (data.generation_stage === 'generating_config') {
-          addLog('Chamando o LLM para gerar os parâmetros da simulação...')
+          addLog('Chamando o modelo de IA para gerar os parâmetros da simulação...')
         }
       }
       
@@ -1071,7 +1071,7 @@ const fetchConfigRealtime = async () => {
         
         // Exibir resumo detalhado da configuração
         if (data.summary) {
-          addLog(`  ├─ Quantidade de agentes: ${data.summary.total_agents}`)
+          addLog(`  ├─ Quantidade de participantes: ${data.summary.total_agents}`)
           addLog(`  ├─ Duração da simulação: ${data.summary.simulation_hours} horas`)
           addLog(`  ├─ Postagens iniciais: ${data.summary.initial_posts_count}`)
           addLog(`  ├─ Tópicos quentes: ${data.summary.hot_topics_count}`)
@@ -1107,7 +1107,7 @@ const loadPreparedData = async () => {
 
   // Obter Profiles uma última vez
   await fetchProfilesRealtime()
-  addLog(`${profiles.value.length} perfis de agentes carregados`)
+  addLog(`${profiles.value.length} perfis de participantes carregados`)
 
   // Obter configuração (usando interface em tempo real)
   try {
@@ -1119,7 +1119,7 @@ const loadPreparedData = async () => {
         
         // Exibir resumo detalhado da configuração
         if (res.data.summary) {
-          addLog(`  ├─ Quantidade de agentes: ${res.data.summary.total_agents}`)
+          addLog(`  ├─ Quantidade de participantes: ${res.data.summary.total_agents}`)
           addLog(`  ├─ Duração da simulação: ${res.data.summary.simulation_hours} horas`)
           addLog(`  └─ Postagens iniciais: ${res.data.summary.initial_posts_count}`)
         }

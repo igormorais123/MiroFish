@@ -11,6 +11,7 @@ from . import simulation_bp
 from ..config import Config
 from ..services.zep_entity_reader import ZepEntityReader
 from ..services.oasis_profile_generator import OasisProfileGenerator
+from ..services.mission_selection import MissionSelection
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
 from ..utils.logger import get_logger
@@ -211,6 +212,61 @@ def create_simulation():
 
     except Exception as e:
         logger.error(f"Falha ao criar simulacao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/mission-selection', methods=['GET'])
+def get_mission_selection(simulation_id: str):
+    """Obter poderes e personas escolhidos para a missao."""
+    try:
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": f"Simulação não encontrada: {simulation_id}"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "data": MissionSelection().load(simulation_id)
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao obter selecao da missao: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/mission-selection', methods=['POST'])
+def save_mission_selection(simulation_id: str):
+    """Salvar poderes e personas escolhidos para a missao."""
+    try:
+        manager = SimulationManager()
+        state = manager.get_simulation(simulation_id)
+        if not state:
+            return jsonify({
+                "success": False,
+                "error": f"Simulação não encontrada: {simulation_id}"
+            }), 404
+
+        data = request.get_json() or {}
+        data["simulation_id"] = simulation_id
+        selection = MissionSelection().save(simulation_id, data)
+        return jsonify({
+            "success": True,
+            "data": selection
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao salvar selecao da missao: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
@@ -447,7 +503,7 @@ def prepare_simulation():
         # Obtem texto do documento
         document_text = ProjectManager.get_extracted_text(state.project_id) or ""
 
-        # Enriquecimento Apify (opcional)
+        # Enriquecimento externo (opcional)
         enrich_queries = data.get('enrich_queries', [])
         enrich_actors = data.get('enrich_actors', [])
         enrich_ig_posts = data.get('enrich_ig_posts', [])
@@ -504,12 +560,11 @@ def prepare_simulation():
                     )
                     enrich_result = {
                         "block": (
-                            "# Enriquecimento Apify\n\n"
-                            "Apify foi solicitado, mas nao retornou dentro do "
+                            "# Enriquecimento externo\n\n"
+                            "A coleta externa foi solicitada, mas nao retornou dentro do "
                             f"limite operacional de {timeout_seconds:.0f}s. "
                             "A simulacao prosseguiu com o briefing consolidado "
-                            "e deve tratar a ausencia de enriquecimento externo "
-                            "como limitacao metodologica.\n"
+                            "e registrou a coleta externa como pendente.\n"
                         )
                     }
 

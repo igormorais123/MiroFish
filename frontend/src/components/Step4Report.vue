@@ -9,7 +9,7 @@
           <div class="report-header-block">
             <div class="report-meta">
               <span class="report-tag">Relatório de previsão</span>
-              <span class="report-id">ID: {{ reportId || 'REF-2024-X92' }}</span>
+              <span class="report-id">Missão {{ reportId || 'em preparo' }}</span>
             </div>
             <h1 class="main-title">{{ reportOutline.title }}</h1>
             <p class="sub-title">{{ reportOutline.summary }}</p>
@@ -97,7 +97,7 @@
               <span class="metric-value mono">{{ formatElapsedTime }}</span>
             </div>
             <div class="metric">
-              <span class="metric-label">Ferramentas</span>
+              <span class="metric-label">Recursos</span>
               <span class="metric-value mono">{{ totalToolCalls }}</span>
             </div>
             <div class="metric metric-right">
@@ -154,11 +154,11 @@
               <span class="audit-value mono">{{ formatMetric(gateMetrics.total_actions_count, 0) }}</span>
             </div>
             <div class="audit-metric">
-              <span class="audit-label">Distinct-2</span>
+              <span class="audit-label">Diversidade textual</span>
               <span class="audit-value mono">{{ formatMetric(diversityMetrics.distinct_2) }}</span>
             </div>
             <div class="audit-metric">
-              <span class="audit-label">Entropia</span>
+              <span class="audit-label">Variedade de ações</span>
               <span class="audit-value mono">{{ formatMetric(diversityMetrics.action_type_entropy_norm) }}</span>
             </div>
             <div class="audit-metric">
@@ -179,6 +179,78 @@
             <div v-for="issue in auditIssues.slice(0, 2)" :key="issue" class="audit-issue">
               {{ issue }}
             </div>
+          </div>
+        </div>
+
+        <div v-if="costMeterVisible" class="value-panel" :class="`value-panel--${costMeterStateClass}`">
+          <div class="value-header">
+            <div class="value-title-row">
+              <span class="value-dot"></span>
+              <span class="value-title">Valor da missão</span>
+            </div>
+            <span class="value-status">{{ formatCostMeterState(costMeter.estado) }}</span>
+          </div>
+
+          <div class="value-summary">
+            <div class="value-total">
+              <span class="value-label">Investimento computado</span>
+              <span class="value-amount mono">{{ formatBrl(costMeter.inteia_value_brl) }}</span>
+            </div>
+            <div class="value-token-total">
+              <span class="value-label">Uso computacional total</span>
+              <span class="value-count mono">{{ formatInteger(costMeter.total_tokens) }}</span>
+            </div>
+          </div>
+
+          <div v-if="costMeterPhases.length" class="value-phases">
+            <div
+              v-for="phase in costMeterPhases"
+              :key="phase.key"
+              class="value-phase"
+            >
+              <span class="value-phase-name">{{ phase.label }}</span>
+              <span class="value-phase-state">{{ formatCostMeterState(phase.estado) }}</span>
+              <span class="value-phase-amount mono">{{ formatBrl(phase.inteia_value_brl) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="missionBundleVisible" class="mission-bundle-panel">
+          <div class="mission-bundle-header">
+            <div>
+              <div class="mission-bundle-kicker">Pacote final</div>
+              <div class="mission-bundle-title">{{ missionBundle.titulo || 'Manifesto final da missão' }}</div>
+            </div>
+            <span v-if="missionBundleHashShort" class="mission-bundle-hash mono">{{ missionBundleHashShort }}</span>
+          </div>
+
+          <div class="mission-bundle-grid">
+            <div class="mission-bundle-stat">
+              <span class="mission-bundle-label">Poderes</span>
+              <span class="mission-bundle-value mono">{{ missionBundlePowers.length }}</span>
+            </div>
+            <div class="mission-bundle-stat">
+              <span class="mission-bundle-label">Participantes</span>
+              <span class="mission-bundle-value mono">{{ missionBundleParticipants.length }}</span>
+            </div>
+            <div class="mission-bundle-stat">
+              <span class="mission-bundle-label">Previsões</span>
+              <span class="mission-bundle-value mono">{{ missionBundleForecasts.length }}</span>
+            </div>
+            <div class="mission-bundle-stat">
+              <span class="mission-bundle-label">Arquivos</span>
+              <span class="mission-bundle-value mono">{{ missionBundleFiles.length }}</span>
+            </div>
+          </div>
+
+          <div v-if="missionBundlePowers.length" class="mission-bundle-list">
+            <span
+              v-for="power in missionBundlePowers.slice(0, 4)"
+              :key="power.id || power.nome || power.name"
+              class="mission-bundle-chip"
+            >
+              {{ power.nome || power.name || power.id }}
+            </span>
           </div>
         </div>
 
@@ -395,7 +467,7 @@
                     
                     <!-- Tool Result: Raw/Structured View -->
                     <button v-if="log.action === 'tool_result'" class="action-btn" @click.stop="toggleRawResult(log.timestamp, $event)">
-                      {{ showRawResult[log.timestamp] ? 'Visão estruturada' : 'Saída bruta' }}
+                      {{ showRawResult[log.timestamp] ? 'Resumo organizado' : 'Ver detalhes' }}
                     </button>
                     
                     <!-- LLM Response: Show/Hide Response -->
@@ -420,8 +492,8 @@
     <!-- Bottom Console Logs -->
     <div class="console-logs">
       <div class="log-header">
-        <span class="log-title">SAÍDA DO CONSOLE</span>
-        <span class="log-id">{{ reportId || 'SEM_RELATÓRIO' }}</span>
+        <span class="log-title">REGISTRO DE EXECUÇÃO</span>
+        <span class="log-id">{{ reportId || 'Missão em preparo' }}</span>
       </div>
       <div class="log-content" ref="logContent">
         <div class="log-line" v-for="(log, idx) in consoleLogs" :key="idx">
@@ -435,7 +507,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, getReport, getReportArtifacts } from '../api/report'
+import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getMissionBundle } from '../api/report'
 
 const router = useRouter()
 
@@ -475,6 +547,7 @@ const showRawResult = reactive({})
 const reportRecord = ref(null)
 const reportArtifacts = ref([])
 const auditLoadError = ref(null)
+const missionBundleFetchedFor = ref(null)
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
@@ -552,7 +625,7 @@ const toolConfig = {
     icon: 'globe' // Icone de globo - representa busca panoramica
   },
   'interview_agents': {
-    name: 'Entrevista com agentes',
+    name: 'Entrevista com participantes',
     color: 'green',
     icon: 'users' // Icone de usuarios - representa dialogo
   },
@@ -1470,7 +1543,7 @@ const InterviewDisplay = {
       // Header Section
       h('div', { class: 'interview-header' }, [
         h('div', { class: 'header-main' }, [
-          h('div', { class: 'header-title' }, 'Entrevista com agentes'),
+          h('div', { class: 'header-title' }, 'Entrevista com participantes'),
           h('div', { class: 'header-stats' }, [
             h('span', { class: 'stat-item' }, [
               h('span', { class: 'stat-value' }, props.result.successCount || props.result.interviews.length),
@@ -1810,6 +1883,93 @@ const evidenceManifest = computed(() => {
   return artifactContentByName('evidence_manifest.json') || null
 })
 
+const parseArtifactContent = (content) => {
+  if (!content) return null
+  if (typeof content === 'object') return content
+  try {
+    return JSON.parse(content)
+  } catch {
+    return null
+  }
+}
+
+const costMeter = computed(() => {
+  return qualityGate.value?.cost_meter || parseArtifactContent(artifactContentByName('cost_meter.json')) || null
+})
+
+const costMeterVisible = computed(() => {
+  return !!costMeter.value && (
+    costMeter.value.inteia_value_brl !== undefined ||
+    costMeter.value.total_tokens !== undefined ||
+    costMeter.value.estado !== undefined
+  )
+})
+
+const costMeterPhases = computed(() => {
+  const phases = costMeter.value?.phases
+  if (!phases || typeof phases !== 'object') return []
+
+  return Object.entries(phases)
+    .map(([key, phase]) => ({
+      key,
+      label: phase?.rotulo || phase?.label || `Fase ${key}`,
+      estado: phase?.estado,
+      inteia_value_brl: phase?.inteia_value_brl
+    }))
+    .filter(phase => phase.label || phase.estado || phase.inteia_value_brl !== undefined)
+    .slice(0, 6)
+})
+
+const costMeterStateClass = computed(() => {
+  if (costMeter.value?.estado === 'concluida') return 'done'
+  if (costMeter.value?.estado === 'em_andamento') return 'running'
+  return 'pending'
+})
+
+const missionBundle = computed(() => {
+  return parseArtifactContent(artifactContentByName('mission_bundle.json')) || null
+})
+
+const missionBundleVisible = computed(() => {
+  return reportRecord.value?.status === 'completed' && !!missionBundle.value && (
+    missionBundlePowers.value.length > 0 ||
+    missionBundleParticipants.value.length > 0 ||
+    missionBundleForecasts.value.length > 0 ||
+    missionBundleFiles.value.length > 0 ||
+    !!missionBundleHashShort.value
+  )
+})
+
+const missionBundlePowers = computed(() => {
+  return Array.isArray(missionBundle.value?.poderes_mobilizados)
+    ? missionBundle.value.poderes_mobilizados
+    : []
+})
+
+const missionBundleParticipants = computed(() => {
+  return Array.isArray(missionBundle.value?.participantes)
+    ? missionBundle.value.participantes
+    : []
+})
+
+const missionBundleForecasts = computed(() => {
+  return Array.isArray(missionBundle.value?.previsoes_congeladas)
+    ? missionBundle.value.previsoes_congeladas
+    : []
+})
+
+const missionBundleFiles = computed(() => {
+  return Array.isArray(missionBundle.value?.arquivos)
+    ? missionBundle.value.arquivos
+    : []
+})
+
+const missionBundleHashShort = computed(() => {
+  const hash = missionBundle.value?.hashes?.manifesto
+  if (!hash) return ''
+  return `${String(hash).slice(0, 10)}...${String(hash).slice(-6)}`
+})
+
 const gateMetrics = computed(() => {
   return qualityGate.value?.metrics || evidenceManifest.value?.quality_gate?.metrics || {}
 })
@@ -1866,10 +2026,10 @@ const auditIssues = computed(() => {
     ...(evidenceAudit.value?.unsupported_quotes || []).map(q => `Citação sem suporte: ${q}`)
   ]
   if (!issues.length && auditMissing.value) {
-    return ['Relatório sem gate estrutural ou auditoria de citações; tratar como legado não publicável.']
+    return ['Relatório sem verificação estrutural ou conferência de citações; gere uma nova versão antes da entrega.']
   }
   if (!issues.length && diagnosticOnly.value) {
-    return ['Relatório em modo diagnóstico/smoke; não usar como entrega publicável.']
+    return ['Relatório gerado em modo de teste; gere uma versão completa antes da entrega.']
   }
   if (!issues.length && auditLoadError.value) return [auditLoadError.value]
   return issues.map(item => typeof item === 'string' ? item : JSON.stringify(item)).filter(Boolean)
@@ -2000,6 +2160,31 @@ const formatResultSize = (length) => {
 const formatMetric = (value, digits = 2) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
   return Number(value).toFixed(digits)
+}
+
+const formatBrl = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(value))
+}
+
+const formatInteger = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
+  return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(Number(value))
+}
+
+const formatCostMeterState = (state) => {
+  const labels = {
+    concluida: 'Concluída',
+    em_andamento: 'Em andamento',
+    pendente: 'Pendente',
+    falha: 'Falha'
+  }
+  return labels[state] || state || 'Pendente'
 }
 
 const truncateText = (text, maxLen) => {
@@ -2139,9 +2324,9 @@ const getActionLabel = (action) => {
     'section_start': 'Seção iniciada',
     'section_content': 'Conteúdo gerado',
     'section_complete': 'Seção concluída',
-    'tool_call': 'Execução de ferramenta',
-    'tool_result': 'Resultado da ferramenta',
-    'llm_response': 'Resposta do modelo',
+    'tool_call': 'Recurso acionado',
+    'tool_result': 'Resultado do recurso',
+    'llm_response': 'Síntese da inteligência',
     'report_complete': 'Concluído'
   }
   return labels[action] || action
@@ -2317,6 +2502,23 @@ const fetchReportAudit = async () => {
       reportArtifacts.value = artifactsRes.data.artifacts || []
     }
 
+    const hasMissionBundle = reportArtifacts.value.some(item => item.name === 'mission_bundle.json')
+    const reportCompleted = reportRecord.value?.status === 'completed'
+    if (reportCompleted && !hasMissionBundle && missionBundleFetchedFor.value !== props.reportId) {
+      try {
+        const bundleRes = await getMissionBundle(props.reportId)
+        if (bundleRes.success && bundleRes.data) {
+          reportArtifacts.value = [
+            ...reportArtifacts.value,
+            { name: 'mission_bundle.json', content: bundleRes.data }
+          ]
+        }
+        missionBundleFetchedFor.value = props.reportId
+      } catch (bundleErr) {
+        console.warn('Pacote final ainda indisponível:', bundleErr)
+      }
+    }
+
     auditLoadError.value = null
   } catch (err) {
     auditLoadError.value = err.message || 'Falha ao carregar auditoria'
@@ -2379,6 +2581,7 @@ watch(() => props.reportId, (newId) => {
     startTime.value = null
     reportRecord.value = null
     reportArtifacts.value = []
+    missionBundleFetchedFor.value = null
     auditLoadError.value = null
     
     startPolling()
@@ -3200,6 +3403,261 @@ watch(() => props.reportId, (newId) => {
   border: 1px solid rgba(185, 28, 28, 0.12);
   border-radius: 6px;
   padding: 6px 8px;
+}
+
+.value-panel {
+  margin: 12px 20px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+}
+
+.value-panel--done {
+  border-color: #D1FAE5;
+}
+
+.value-panel--running {
+  border-color: #BFDBFE;
+}
+
+.value-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.value-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.value-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #B45309;
+  flex: 0 0 auto;
+}
+
+.value-panel--done .value-dot {
+  background: #10B981;
+}
+
+.value-panel--running .value-dot {
+  background: #2563EB;
+}
+
+.value-title,
+.value-status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.value-title {
+  color: #111827;
+}
+
+.value-status {
+  color: #6B7280;
+  flex: 0 0 auto;
+}
+
+.value-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.value-total,
+.value-token-total {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.value-label {
+  font-size: 10px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.value-count {
+  font-size: 12px;
+  color: #374151;
+}
+
+.value-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.value-phase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.value-phase-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.value-phase-state {
+  font-size: 10px;
+  color: #6B7280;
+  white-space: nowrap;
+}
+
+.value-phase-amount {
+  font-size: 11px;
+  color: #111827;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .value-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .value-phase {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .value-phase-state {
+    grid-column: 1 / -1;
+  }
+}
+
+.mission-bundle-panel {
+  margin: 12px 20px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%);
+}
+
+.mission-bundle-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mission-bundle-kicker {
+  margin-bottom: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #B45309;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mission-bundle-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.25;
+}
+
+.mission-bundle-hash {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(180, 83, 9, 0.08);
+  color: #92400E;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mission-bundle-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mission-bundle-stat {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(180, 83, 9, 0.1);
+}
+
+.mission-bundle-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mission-bundle-value {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.mission-bundle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.mission-bundle-chip {
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(15, 39, 71, 0.08);
+  color: #0F2747;
+  font-size: 10px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .mission-bundle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mission-bundle-header {
+    flex-direction: column;
+  }
 }
 
 /* Workflow Timeline */
