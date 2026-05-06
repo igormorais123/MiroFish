@@ -194,21 +194,34 @@ const initProject = async () => {
 
 const handleNewProject = async () => {
   const pending = getPendingUpload()
-  if (!pending.isPending || pending.files.length === 0) {
-    error.value = 'Nenhum arquivo pendente encontrado.'
-    addLog('Erro: Nenhum arquivo pendente encontrado para novo projeto.')
+  const pendingFiles = pending.files || []
+  const requirement = (pending.simulationRequirement || '').trim()
+
+  if (!pending.isPending || (!requirement && pendingFiles.length === 0)) {
+    error.value = 'Nenhum objetivo de simulação encontrado. Volte para a página inicial, descreva o cenário e inicie novamente.'
+    currentPhase.value = -1
+    ontologyProgress.value = null
+    addLog('Erro: nenhum objetivo de simulação encontrado para novo projeto.')
     return
   }
   
   try {
     loading.value = true
     currentPhase.value = 0
-    ontologyProgress.value = { message: 'Enviando e analisando documentos...' }
-    addLog('Iniciando geracao de ontologia: Enviando arquivos...')
+    ontologyProgress.value = {
+      message: pendingFiles.length > 0
+        ? 'Enviando arquivos e analisando documentos...'
+        : 'Gerando ontologia a partir do objetivo informado...'
+    }
+    addLog(
+      pendingFiles.length > 0
+        ? 'Iniciando geracao de ontologia: enviando arquivos...'
+        : 'Iniciando geracao de ontologia a partir do objetivo informado...'
+    )
     
     const formData = new FormData()
-    pending.files.forEach(f => formData.append('files', f))
-    formData.append('simulation_requirement', pending.simulationRequirement)
+    pendingFiles.forEach(f => formData.append('files', f))
+    formData.append('simulation_requirement', requirement)
     
     const res = await generateOntology(formData)
     if (res.success) {
@@ -222,10 +235,14 @@ const handleNewProject = async () => {
       await startBuildGraph()
     } else {
       error.value = res.error || 'Falha na geracao da ontologia'
+      ontologyProgress.value = null
+      currentPhase.value = -1
       addLog(`Erro ao gerar ontologia: ${error.value}`)
     }
   } catch (err) {
     error.value = err.message
+    ontologyProgress.value = null
+    currentPhase.value = -1
     addLog(`Exception in handleNewProject: ${err.message}`)
   } finally {
     loading.value = false
