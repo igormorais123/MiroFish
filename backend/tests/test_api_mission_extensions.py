@@ -49,6 +49,10 @@ def test_get_mission_bundle_gera_e_salva_manifesto(monkeypatch):
     assert data["data"]["poderes_mobilizados"][0]["nome"] == "Modo Rápido"
     assert data["data"]["previsoes_congeladas"][0]["titulo"] == "Cenario A"
     assert saved[("report_api_bundle", "mission_bundle.json")] == data["data"]
+    enriched_ledger = saved[("report_api_bundle", "forecast_ledger.json")]
+    assert enriched_ledger["calibracao"]["schema"] == "mirofish.forecast_calibration.v1"
+    assert enriched_ledger["chart_data"]["schema"] == "mirofish.forecast_chart_data.v1"
+    assert enriched_ledger["previsoes"][0]["titulo"] == "Cenario A"
 
 
 def test_get_mission_bundle_retorna_existente_sem_regravar(monkeypatch):

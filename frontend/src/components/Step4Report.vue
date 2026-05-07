@@ -141,6 +141,76 @@
             <div v-if="finalizationRepairError" class="delivery-package-message repair-error">
               {{ finalizationRepairError }}
             </div>
+            <div class="executive-package-strip">
+              <div class="export-bundle-summary">
+                <span class="export-bundle-label">Pacote executivo</span>
+                <span class="export-bundle-status">{{ executivePackageStatusText }}</span>
+              </div>
+              <div class="export-bundle-actions">
+                <button
+                  type="button"
+                  class="delivery-repair-btn export-action-btn"
+                  :disabled="isCreatingExecutivePackage || !canCreateExecutivePackage"
+                  @click="createExecutivePackageManifest"
+                >
+                  <span>{{ isCreatingExecutivePackage ? 'Gerando...' : 'Gerar pacote' }}</span>
+                </button>
+                <a
+                  v-for="file in executivePackageDownloadFiles"
+                  :key="file.filename"
+                  class="delivery-repair-btn export-action-btn export-download-link"
+                  :href="file.url"
+                  :download="file.filename"
+                >
+                  {{ file.label }}
+                </a>
+              </div>
+              <div v-if="executivePackageError" class="delivery-package-message repair-error">
+                {{ executivePackageError }}
+              </div>
+              <div v-else-if="executivePackageMessage" class="delivery-package-message">
+                {{ executivePackageMessage }}
+              </div>
+            </div>
+            <div class="export-bundle-strip">
+              <div class="export-bundle-summary">
+                <span class="export-bundle-label">Exportação</span>
+                <span class="export-bundle-status">{{ exportBundleStatusText }}</span>
+              </div>
+              <div class="export-bundle-actions">
+                <button
+                  type="button"
+                  class="delivery-repair-btn export-action-btn"
+                  :disabled="isCreatingExport || !canCreateExportDraft"
+                  @click="createExportDraft"
+                >
+                  <span>{{ isCreatingExport ? 'Criando...' : 'Criar rascunho' }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="delivery-repair-btn export-action-btn"
+                  :disabled="isVerifyingExport || !canVerifyExportBundle"
+                  @click="verifyExportBundle"
+                >
+                  <span>{{ isVerifyingExport ? 'Verificando...' : 'Verificar pacote' }}</span>
+                </button>
+                <a
+                  v-for="file in exportDownloadFiles"
+                  :key="file.filename"
+                  class="delivery-repair-btn export-action-btn export-download-link"
+                  :href="file.url"
+                  :download="file.filename"
+                >
+                  {{ file.label }}
+                </a>
+              </div>
+              <div v-if="exportActionError" class="delivery-package-message repair-error">
+                {{ exportActionError }}
+              </div>
+              <div v-else-if="exportActionMessage" class="delivery-package-message">
+                {{ exportActionMessage }}
+              </div>
+            </div>
           </div>
 
           <div class="workflow-steps" v-if="workflowSteps.length > 0">
@@ -249,6 +319,52 @@
               <span class="value-phase-name">{{ phase.label }}</span>
               <span class="value-phase-state">{{ formatCostMeterState(phase.estado) }}</span>
               <span class="value-phase-amount mono">{{ formatBrl(phase.inteia_value_brl) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="forecastCalibrationVisible" class="forecast-panel" :class="forecastCalibrationPanelClass">
+          <div class="forecast-header">
+            <div class="forecast-title-row">
+              <span class="forecast-dot"></span>
+              <span class="forecast-title">Previsões</span>
+            </div>
+            <span class="forecast-status">{{ forecastCalibrationStatusText }}</span>
+          </div>
+
+          <div class="forecast-metrics">
+            <div class="forecast-metric">
+              <span class="forecast-label">Total</span>
+              <span class="forecast-value mono">{{ formatInteger(forecastCalibration.total) }}</span>
+            </div>
+            <div class="forecast-metric">
+              <span class="forecast-label">Resolvidas</span>
+              <span class="forecast-value mono">{{ formatInteger(forecastCalibration.resolved) }}</span>
+            </div>
+            <div class="forecast-metric">
+              <span class="forecast-label">Com prob.</span>
+              <span class="forecast-value mono">{{ formatInteger(forecastCalibration.probabilistic) }}</span>
+            </div>
+            <div class="forecast-metric">
+              <span class="forecast-label">Brier médio</span>
+              <span class="forecast-value mono">{{ formatMetric(forecastCalibration.mean_brier_score, 3) }}</span>
+            </div>
+          </div>
+
+          <div v-if="forecastStatusPoints.length" class="forecast-status-bars">
+            <div
+              v-for="point in forecastStatusPoints"
+              :key="point.label"
+              class="forecast-status-row"
+            >
+              <span class="forecast-status-label">{{ point.label }}</span>
+              <span class="forecast-status-track">
+                <span
+                  class="forecast-status-fill"
+                  :style="{ width: forecastBarWidth(point.value) }"
+                ></span>
+              </span>
+              <span class="forecast-status-count mono">{{ formatInteger(point.value) }}</span>
             </div>
           </div>
         </div>
@@ -545,7 +661,22 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle, getReportDeliveryPackage, repairReportFinalization } from '../api/report'
+import {
+  getAgentLog,
+  getConsoleLog,
+  getReport,
+  getReportArtifacts,
+  getReportSections,
+  getMissionBundle,
+  getReportDeliveryPackage,
+  repairReportFinalization,
+  createExecutivePackage,
+  createReportExport,
+  getReportExports,
+  verifyReportExportBundle,
+  getReportExportAttachmentUrl,
+  getExecutivePackageAttachmentUrl
+} from '../api/report'
 import { escapeHtml, textToSafeHtml } from '../utils/safeMarkdown'
 
 const router = useRouter()
@@ -590,6 +721,16 @@ const missionBundleFetchedFor = ref(null)
 const deliveryPackage = ref(null)
 const isRepairingFinalization = ref(false)
 const finalizationRepairError = ref(null)
+const executivePackageManifest = ref(null)
+const isCreatingExecutivePackage = ref(false)
+const executivePackageMessage = ref('')
+const executivePackageError = ref('')
+const reportExports = ref([])
+const exportVerificationById = ref({})
+const isCreatingExport = ref(false)
+const isVerifyingExport = ref(false)
+const exportActionMessage = ref('')
+const exportActionError = ref('')
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
@@ -1989,6 +2130,53 @@ const costMeterStateClass = computed(() => {
   return 'pending'
 })
 
+const forecastLedger = computed(() => {
+  return parseArtifactContent(artifactContentByName('forecast_ledger.json')) || null
+})
+
+const forecastCalibration = computed(() => {
+  return forecastLedger.value?.calibracao || null
+})
+
+const forecastChartData = computed(() => {
+  return forecastLedger.value?.chart_data || null
+})
+
+const forecastStatusPoints = computed(() => {
+  const series = forecastChartData.value?.series
+  if (!Array.isArray(series)) return []
+  const statusSeries = series.find(item => item?.id === 'status_counts')
+  if (!Array.isArray(statusSeries?.points)) return []
+
+  return statusSeries.points
+    .map(point => ({
+      label: point?.label || 'Sem status',
+      value: Number(point?.value || 0)
+    }))
+    .filter(point => point.value > 0)
+})
+
+const forecastCalibrationVisible = computed(() => {
+  return reportRecord.value?.status === 'completed' && !!forecastCalibration.value && Number(forecastCalibration.value.total || 0) > 0
+})
+
+const forecastCalibrationPanelClass = computed(() => ({
+  resolved: Number(forecastCalibration.value?.resolved || 0) > 0,
+  waiting: Number(forecastCalibration.value?.resolved || 0) === 0
+}))
+
+const forecastCalibrationStatusText = computed(() => {
+  const resolved = Number(forecastCalibration.value?.resolved || 0)
+  const probabilistic = Number(forecastCalibration.value?.probabilistic || 0)
+  if (resolved > 0 && probabilistic > 0) return 'Calibração ativa'
+  if (resolved > 0) return 'Resolvidas'
+  return 'Aguardando resolução'
+})
+
+const forecastMaxStatusCount = computed(() => {
+  return Math.max(1, ...forecastStatusPoints.value.map(point => point.value))
+})
+
 const missionBundle = computed(() => {
   return parseArtifactContent(artifactContentByName('mission_bundle.json')) || null
 })
@@ -2112,6 +2300,127 @@ const canRepairFinalization = computed(() => {
   if (!deliveryPackage.value) return false
   if (deliveryPackage.value.status === 'report_in_progress') return false
   return deliveryPackage.value.status === 'blocked' || deliveryPackage.value.method_checks_pass === false
+})
+
+const existingExecutivePackageManifest = computed(() => {
+  return executivePackageManifest.value ||
+    parseArtifactContent(artifactContentByName('executive_package_manifest.json')) ||
+    null
+})
+
+const canCreateExecutivePackage = computed(() => {
+  return !!props.reportId &&
+    !isCreatingExecutivePackage.value &&
+    reportRecord.value?.delivery_status === 'publishable' &&
+    evidenceAudit.value?.passes_gate !== false &&
+    !gateBlocked.value &&
+    !diagnosticOnly.value
+})
+
+const executivePackageStatusText = computed(() => {
+  if (isCreatingExecutivePackage.value) return 'Gerando'
+  if (existingExecutivePackageManifest.value?.status === 'created') return 'Criado'
+  if (canCreateExecutivePackage.value) return 'Disponível'
+  if (reportRecord.value?.delivery_status === 'diagnostic_only') return 'Indisponível em diagnóstico'
+  if (reportRecord.value?.delivery_status && reportRecord.value.delivery_status !== 'publishable') return 'Aguardando aprovação'
+  return 'Aguardando relatório publicável'
+})
+
+const executivePackageDownloadFiles = computed(() => {
+  if (!props.reportId || existingExecutivePackageManifest.value?.status !== 'created') return []
+  const labels = {
+    'executive_summary.html': 'Resumo',
+    'evidence_annex.html': 'Anexo',
+    'executive_package_manifest.json': 'Manifesto'
+  }
+  const filenames = (existingExecutivePackageManifest.value.files || [])
+    .map(item => item?.filename)
+    .filter(filename => labels[filename])
+
+  return [...new Set(filenames)].map(filename => ({
+    filename,
+    label: labels[filename],
+    url: getExecutivePackageAttachmentUrl(props.reportId, filename)
+  })).filter(file => file.url)
+})
+
+const getExportId = (item) => item?.export_id || item?.id || item?.bundle_id || item?.draft_id || ''
+
+const activeExport = computed(() => {
+  return [...reportExports.value]
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aTime = Date.parse(a.created_at || a.updated_at || a.verified_at || '') || 0
+      const bTime = Date.parse(b.created_at || b.updated_at || b.verified_at || '') || 0
+      return bTime - aTime
+    })[0] || null
+})
+
+const activeExportId = computed(() => getExportId(activeExport.value))
+
+const activeExportVerification = computed(() => {
+  if (!activeExport.value) return null
+  return exportVerificationById.value[activeExportId.value] ||
+    activeExport.value.verification ||
+    activeExport.value.bundle_verification ||
+    null
+})
+
+const asArray = (value) => Array.isArray(value) ? value : []
+
+const exportFileNames = computed(() => {
+  if (!activeExport.value) return new Set()
+  const candidates = [
+    ...asArray(activeExport.value.files),
+    ...asArray(activeExport.value.attachments),
+    ...asArray(activeExport.value.artifacts),
+    ...asArray(activeExportVerification.value?.files),
+    ...asArray(activeExportVerification.value?.attachments),
+    ...asArray(activeExportVerification.value?.artifacts)
+  ]
+  const names = candidates
+    .map(item => typeof item === 'string' ? item : item?.filename || item?.name)
+    .filter(name => ['full_report.html', 'evidence_annex.html'].includes(name))
+  return new Set(names)
+})
+
+const exportDownloadFiles = computed(() => {
+  if (!props.reportId || !activeExportId.value) return []
+  return [
+    { filename: 'full_report.html', label: 'Baixar relatório' },
+    { filename: 'evidence_annex.html', label: 'Baixar anexos' }
+  ]
+    .filter(file => exportFileNames.value.has(file.filename))
+    .map(file => ({
+      ...file,
+      url: getReportExportAttachmentUrl(props.reportId, activeExportId.value, file.filename)
+    }))
+    .filter(file => file.url)
+})
+
+const exportBundleStatusText = computed(() => {
+  if (isCreatingExport.value) return 'Criando rascunho...'
+  if (isVerifyingExport.value) return 'Verificando pacote...'
+  if (!activeExport.value) return 'Nenhum rascunho'
+  if (activeExportVerification.value?.verified === true || activeExportVerification.value?.status === 'verified') {
+    return 'Verificado'
+  }
+  if (activeExportVerification.value?.passed === false || activeExportVerification.value?.status === 'blocked') {
+    return 'Bloqueado'
+  }
+  if (exportDownloadFiles.value.length) return `${exportDownloadFiles.value.length}/2 arquivos prontos`
+  return activeExport.value.status || 'Rascunho criado'
+})
+
+const canCreateExportDraft = computed(() => {
+  if (!props.reportId || isCreatingExport.value) return false
+  return deliveryPackage.value?.status === 'ready_for_export' ||
+    deliveryPackage.value?.status === 'client_deliverable' ||
+    reportRecord.value?.status === 'completed'
+})
+
+const canVerifyExportBundle = computed(() => {
+  return !!props.reportId && !!activeExportId.value && !isVerifyingExport.value
 })
 
 const auditIssues = computed(() => {
@@ -2241,6 +2550,99 @@ const repairFinalization = async () => {
   }
 }
 
+const formatExportError = (err, fallback) => {
+  if (err?.status === 409) {
+    return err?.message
+      ? `Pacote ainda não liberado: ${err.message}`
+      : 'Pacote ainda aguardando a finalização do relatório. Aguarde a liberação e tente novamente.'
+  }
+  return err?.data?.error || err?.message || fallback
+}
+
+const loadReportExports = async () => {
+  if (!props.reportId) return
+  try {
+    const res = await getReportExports(props.reportId)
+    if (res.success && res.data) {
+      reportExports.value = Array.isArray(res.data.exports) ? res.data.exports : []
+    }
+  } catch (err) {
+    if (err?.status !== 404) {
+      exportActionError.value = formatExportError(err, 'Falha ao carregar exportações')
+    }
+  }
+}
+
+const createExecutivePackageManifest = async () => {
+  if (!props.reportId || isCreatingExecutivePackage.value || !canCreateExecutivePackage.value) return
+  isCreatingExecutivePackage.value = true
+  executivePackageError.value = ''
+  executivePackageMessage.value = ''
+  try {
+    const res = await createExecutivePackage(props.reportId)
+    if (res.success && res.data) {
+      executivePackageManifest.value = res.data
+      executivePackageMessage.value = 'Pacote executivo criado com manifesto auditável.'
+      await fetchReportAudit()
+      return
+    }
+    executivePackageError.value = res.error || 'Não foi possível gerar o pacote executivo.'
+  } catch (err) {
+    executivePackageError.value = err?.response?.data?.error || err?.message || 'Falha ao gerar pacote executivo'
+  } finally {
+    isCreatingExecutivePackage.value = false
+  }
+}
+
+const createExportDraft = async () => {
+  if (!props.reportId || isCreatingExport.value) return
+  isCreatingExport.value = true
+  exportActionError.value = ''
+  exportActionMessage.value = ''
+  try {
+    const res = await createReportExport(props.reportId)
+    if (res.success && res.data) {
+      const exportId = getExportId(res.data)
+      reportExports.value = [
+        res.data,
+        ...reportExports.value.filter(item => getExportId(item) !== exportId)
+      ]
+      exportActionMessage.value = 'Rascunho de exportação criado.'
+      await loadReportExports()
+      return
+    }
+    exportActionError.value = res.error || 'Não foi possível criar o rascunho.'
+  } catch (err) {
+    exportActionError.value = formatExportError(err, 'Falha ao criar rascunho de exportação')
+  } finally {
+    isCreatingExport.value = false
+  }
+}
+
+const verifyExportBundle = async () => {
+  if (!props.reportId || !activeExportId.value || isVerifyingExport.value) return
+  isVerifyingExport.value = true
+  exportActionError.value = ''
+  exportActionMessage.value = ''
+  try {
+    const res = await verifyReportExportBundle(props.reportId, activeExportId.value)
+    if (res.success && res.data) {
+      exportVerificationById.value = {
+        ...exportVerificationById.value,
+        [activeExportId.value]: res.data
+      }
+      exportActionMessage.value = 'Verificação concluída.'
+      await loadReportExports()
+      return
+    }
+    exportActionError.value = res.error || 'Não foi possível verificar o pacote.'
+  } catch (err) {
+    exportActionError.value = formatExportError(err, 'Falha ao verificar pacote de exportação')
+  } finally {
+    isVerifyingExport.value = false
+  }
+}
+
 const isSectionCompleted = (sectionIndex) => {
   return !!generatedSections.value[sectionIndex]
 }
@@ -2302,6 +2704,12 @@ const formatCostMeterState = (state) => {
     falha: 'Falha'
   }
   return labels[state] || state || 'Pendente'
+}
+
+const forecastBarWidth = (value) => {
+  const numeric = Number(value || 0)
+  if (numeric <= 0) return '0%'
+  return `${Math.max(6, Math.round((numeric / forecastMaxStatusCount.value) * 100))}%`
 }
 
 const truncateText = (text, maxLen) => {
@@ -2600,11 +3008,12 @@ const fetchReportAudit = async () => {
   if (!props.reportId) return
 
   try {
-    const [reportRes, artifactsRes, sectionsRes, deliveryRes] = await Promise.all([
+    const [reportRes, artifactsRes, sectionsRes, deliveryRes, exportsRes] = await Promise.all([
       getReport(props.reportId),
       getReportArtifacts(props.reportId, true),
       getReportSections(props.reportId),
-      getReportDeliveryPackage(props.reportId).catch(() => null)
+      getReportDeliveryPackage(props.reportId).catch(() => null),
+      getReportExports(props.reportId).catch(() => null)
     ])
 
     if (reportRes.success && reportRes.data) {
@@ -2642,6 +3051,10 @@ const fetchReportAudit = async () => {
 
     if (deliveryRes?.success && deliveryRes.data) {
       deliveryPackage.value = deliveryRes.data
+    }
+
+    if (exportsRes?.success && exportsRes.data) {
+      reportExports.value = Array.isArray(exportsRes.data.exports) ? exportsRes.data.exports : []
     }
 
     const hasMissionBundle = reportArtifacts.value.some(item => item.name === 'mission_bundle.json')
@@ -2728,6 +3141,16 @@ watch(() => props.reportId, (newId) => {
     deliveryPackage.value = null
     isRepairingFinalization.value = false
     finalizationRepairError.value = null
+    executivePackageManifest.value = null
+    isCreatingExecutivePackage.value = false
+    executivePackageMessage.value = ''
+    executivePackageError.value = ''
+    reportExports.value = []
+    exportVerificationById.value = {}
+    isCreatingExport.value = false
+    isVerifyingExport.value = false
+    exportActionMessage.value = ''
+    exportActionError.value = ''
     
     startPolling()
   }
@@ -3456,6 +3879,45 @@ watch(() => props.reportId, (newId) => {
   color: #991B1B;
 }
 
+.executive-package-strip,
+.export-bundle-strip {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(107, 114, 128, 0.18);
+}
+
+.export-bundle-summary,
+.export-bundle-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.export-bundle-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #374151;
+  text-transform: uppercase;
+}
+
+.export-bundle-status {
+  font-size: 11px;
+  color: #4B5563;
+}
+
+.export-bundle-actions {
+  margin-top: 7px;
+}
+
+.export-action-btn {
+  margin-top: 0;
+}
+
+.export-download-link {
+  text-decoration: none;
+}
+
 .workflow-steps {
   display: flex;
   flex-direction: column;
@@ -3838,6 +4300,163 @@ watch(() => props.reportId, (newId) => {
 
   .value-phase-state {
     grid-column: 1 / -1;
+  }
+}
+
+.forecast-panel {
+  margin: 12px 20px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+.forecast-panel.resolved {
+  border-color: #A7F3D0;
+}
+
+.forecast-panel.waiting {
+  border-color: #FDE68A;
+}
+
+.forecast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forecast-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.forecast-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #D97706;
+  flex: 0 0 auto;
+}
+
+.forecast-panel.resolved .forecast-dot {
+  background: #059669;
+}
+
+.forecast-title,
+.forecast-status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.forecast-title {
+  color: #111827;
+}
+
+.forecast-status {
+  color: #6B7280;
+  flex: 0 0 auto;
+}
+
+.forecast-panel.resolved .forecast-status {
+  color: #047857;
+}
+
+.forecast-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.forecast-metric {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(15, 39, 71, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.forecast-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.forecast-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.forecast-status-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.forecast-status-row {
+  display: grid;
+  grid-template-columns: minmax(86px, 0.8fr) minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.forecast-status-label,
+.forecast-status-count {
+  font-size: 11px;
+  color: #374151;
+}
+
+.forecast-status-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forecast-status-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #E5E7EB;
+}
+
+.forecast-status-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0F766E;
+}
+
+@media (max-width: 720px) {
+  .forecast-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .forecast-status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
   }
 }
 
