@@ -93,6 +93,8 @@ class ForecastLedger:
         resolution_source: str | None = None,
         resolved_at: str | None = None,
         outcome: bool | None = None,
+        brier_score: float | None = None,
+        log_loss: float | None = None,
     ) -> dict[str, Any]:
         """Registra uma previsao e retorna a entrada existente quando houver duplicata."""
         if status not in VALID_FORECAST_STATUSES:
@@ -100,8 +102,12 @@ class ForecastLedger:
         probability = _validate_probability(probability, "probability")
         prior = _validate_probability(prior, "prior")
         base_rate = _validate_probability(base_rate, "base_rate")
-        brier_score = _brier_score(probability, outcome)
-        log_loss = _log_loss(probability, outcome)
+        brier_score = _validate_optional_number(brier_score, "brier_score")
+        log_loss = _validate_optional_number(log_loss, "log_loss")
+        if brier_score is None:
+            brier_score = _brier_score(probability, outcome)
+        if log_loss is None:
+            log_loss = _log_loss(probability, outcome)
 
         forecast_id = id or stable_forecast_id(
             enunciado=enunciado,
@@ -212,6 +218,15 @@ def _validate_probability(value: float | None, field_name: str) -> float | None:
     numeric = float(value)
     if numeric < 0 or numeric > 1:
         raise ValueError(f"{field_name} deve estar entre 0 e 1")
+    return numeric
+
+
+def _validate_optional_number(value: float | None, field_name: str) -> float | None:
+    if value is None:
+        return None
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise ValueError(f"{field_name} deve ser finito")
     return numeric
 
 

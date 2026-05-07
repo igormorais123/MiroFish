@@ -55,6 +55,52 @@ def test_get_mission_bundle_gera_e_salva_manifesto(monkeypatch):
     assert enriched_ledger["previsoes"][0]["titulo"] == "Cenario A"
 
 
+def test_get_mission_bundle_skips_invalid_legacy_forecasts(monkeypatch):
+    app = Flask(__name__)
+    saved = {}
+    artifacts = [{"name": "cost_meter.json"}, {"name": "forecast_ledger.json"}]
+    payloads = {
+        "mission_bundle.json": None,
+        "cost_meter.json": {"inteia_value_brl": 1200},
+        "power_selection.json": {"poderes_selecionados": [{"id": "modo_rapido", "nome": "Modo Rápido"}]},
+        "power_persona_context.json": {"items": [{"id": "persona_1", "nome": "Persona 1"}]},
+        "forecast_ledger.json": {
+            "previsoes": [
+                {"titulo": "Cenario A", "status": "rascunho"},
+                {"titulo": "Cenario B", "status": "congelada"},
+            ]
+        },
+    }
+    report = Report(
+        report_id="report_api_bundle_invalid_forecast",
+        simulation_id="sim_api_bundle_invalid_forecast",
+        graph_id="graph_api_bundle_invalid_forecast",
+        simulation_requirement="teste",
+        status=ReportStatus.COMPLETED,
+    )
+
+    monkeypatch.setattr(ReportManager, "get_report", lambda report_id: report)
+    monkeypatch.setattr(ReportManager, "list_json_artifacts", lambda report_id: artifacts)
+    monkeypatch.setattr(
+        ReportManager,
+        "load_json_artifact",
+        lambda report_id, filename: payloads.get(filename),
+    )
+    monkeypatch.setattr(
+        ReportManager,
+        "save_json_artifact",
+        lambda report_id, filename, payload: saved.__setitem__((report_id, filename), payload),
+    )
+
+    with app.test_request_context("/api/report/report_api_bundle_invalid_forecast/mission-bundle"):
+        response = report_api.get_mission_bundle("report_api_bundle_invalid_forecast")
+
+    assert response.get_json()["success"] is True
+    enriched_ledger = saved[("report_api_bundle_invalid_forecast", "forecast_ledger.json")]
+    assert enriched_ledger["forecast_warnings"]["skipped_invalid_forecasts"] == 1
+    assert enriched_ledger["calibracao"]["total"] == 1
+
+
 def test_get_mission_bundle_retorna_existente_sem_regravar(monkeypatch):
     app = Flask(__name__)
     saved = {}

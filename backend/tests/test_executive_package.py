@@ -72,6 +72,12 @@ def test_executive_package_creates_manifest_and_html(report_store):
     assert "&lt;script&gt;" in summary
     assert "evidence_manifest.json" in annex
     assert saved_manifest["report_id"] == report.report_id
+    manifest_file = next(
+        item for item in saved_manifest["files"]
+        if item["filename"] == "executive_package_manifest.json"
+    )
+    assert manifest_file["sha256"] is None
+    assert manifest_file["hash_note"]
     assert ReportManager.load_json_artifact(report.report_id, "executive_package_manifest.json")["status"] == "created"
 
 

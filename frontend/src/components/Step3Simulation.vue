@@ -528,8 +528,8 @@ const readinessTitle = computed(() => {
     ready_for_report: 'Pronto para relatório',
     report_in_progress: 'Relatório em andamento',
     report_blocked: 'Relatório bloqueado',
-    diagnostic_only: 'Execução diagnóstica',
-    ready_for_export: 'Pronto para pacote executivo'
+    report_diagnostic: 'Execução diagnóstica',
+    ready_for_verified_delivery: 'Pronto para pacote executivo'
   }
   return labels[readiness.value?.status] || 'Prontidão pendente'
 })
@@ -541,14 +541,18 @@ const readinessAction = computed(() => {
   const labels = {
     select_simulation: 'Selecionar uma simulação válida',
     finish_simulation: 'Aguardar ou concluir a simulação',
+    fix_simulation_or_source_material: 'Ajustar simulação ou material-base',
     fix_simulation_quality: 'Reexecutar com mais interações',
     review_source_material: 'Revisar o material-base',
     review_blockers: 'Resolver bloqueio principal',
     generate_report: 'Gerar relatório auditável',
     wait_report: 'Aguardar relatório',
     regenerate_report: 'Regenerar relatório',
+    repair_or_review_blockers: 'Reparar ou revisar bloqueios',
     rerun_complete_simulation: 'Gerar execução completa',
-    build_executive_package: 'Gerar pacote executivo'
+    review_diagnostic_only: 'Revisar diagnóstico',
+    build_executive_package: 'Gerar pacote executivo',
+    open_delivery_package: 'Abrir pacote final'
   }
   return labels[action?.kind || action] || 'Aguardar verificação'
 })
@@ -559,8 +563,8 @@ const readinessBlockingIssues = computed(() => {
 })
 
 const readinessGateClass = computed(() => ({
-  approved: ['ready_for_report', 'ready_for_export'].includes(readiness.value?.status),
-  blocked: ['blocked', 'report_blocked', 'diagnostic_only', 'missing'].includes(readiness.value?.status),
+  approved: ['ready_for_report', 'ready_for_verified_delivery'].includes(readiness.value?.status),
+  blocked: ['blocked', 'report_blocked', 'report_diagnostic', 'missing'].includes(readiness.value?.status),
   checking: readiness.value?.status === 'report_in_progress'
 }))
 

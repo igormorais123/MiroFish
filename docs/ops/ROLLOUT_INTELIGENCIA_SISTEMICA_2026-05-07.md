@@ -113,6 +113,18 @@ Termos internos como Ralph, Swarm, AutoResearch, lane e handoff nao aparecem na 
 
 ## Ordem segura de merge
 
+Atualizacao de fechamento: o PR #25 foi mergeado primeiro em `main`. Depois disso, as revisoes automatizadas abriram conversas tecnicas nos PRs empilhados #26 a #36. Para nao levar bugs conhecidos em cadeia nem depender de varias branches `BEHIND`, o restante da pilha deve ser consolidado em um PR unico final criado a partir da `main` atualizada.
+
+Ordem final recomendada:
+
+1. #25 ja mergeado em `main`.
+2. Mergear o PR consolidado final `codex/final-systemic-intelligence-stack`.
+3. Fechar #26 a #36 como substituidos pelo PR consolidado, se ainda estiverem abertos.
+4. Aguardar Vercel production apos o merge do consolidado.
+5. Executar a validacao pos-merge descrita abaixo.
+
+Historico original da pilha:
+
 1. Confirmar que `main` esta atualizado e sem incidentes.
 2. Conferir checks de #25.
 3. Mergear #25.

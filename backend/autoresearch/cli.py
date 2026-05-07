@@ -211,6 +211,8 @@ TARGET_BUILDERS = {
     "ralph": setup_ralph_target,
 }
 
+READ_ONLY_TARGETS = {"report_delivery", "ralph"}
+
 
 def run_baseline(args):
     """Mede score baseline sem modificar nada."""
@@ -268,7 +270,7 @@ def main():
 
     # Comando: run
     run_parser = subparsers.add_parser("run", help="Executa loop de otimizacao")
-    run_parser.add_argument("--target", required=True, choices=TARGET_BUILDERS.keys())
+    run_parser.add_argument("--target", required=True, choices=[name for name in TARGET_BUILDERS if name not in READ_ONLY_TARGETS])
     run_parser.add_argument("--budget", type=float, default=5.0, help="Budget em USD")
     run_parser.add_argument("--hours", type=float, default=8.0, help="Horas maximas")
     run_parser.add_argument("--model", default=None, help="Modelo para hipoteses")

@@ -2402,10 +2402,20 @@ const exportBundleStatusText = computed(() => {
   if (isCreatingExport.value) return 'Criando rascunho...'
   if (isVerifyingExport.value) return 'Verificando pacote...'
   if (!activeExport.value) return 'Nenhum rascunho'
-  if (activeExportVerification.value?.verified === true || activeExportVerification.value?.status === 'verified') {
+  if (
+    activeExportVerification.value?.verified === true ||
+    activeExportVerification.value?.passes === true ||
+    activeExportVerification.value?.bundle_verified === true ||
+    activeExportVerification.value?.status === 'verified'
+  ) {
     return 'Verificado'
   }
-  if (activeExportVerification.value?.passed === false || activeExportVerification.value?.status === 'blocked') {
+  if (
+    activeExportVerification.value?.passed === false ||
+    activeExportVerification.value?.passes === false ||
+    activeExportVerification.value?.bundle_verified === false ||
+    activeExportVerification.value?.status === 'blocked'
+  ) {
     return 'Bloqueado'
   }
   if (exportDownloadFiles.value.length) return `${exportDownloadFiles.value.length}/2 arquivos prontos`

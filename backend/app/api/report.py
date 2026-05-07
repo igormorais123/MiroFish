@@ -199,11 +199,21 @@ def _enrich_forecast_ledger_payload(payload):
             "resolved_at": forecast.get("resolved_at"),
             "outcome": forecast.get("outcome"),
         })
-    ledger = ForecastLedger(normalized_forecasts)
+    ledger = ForecastLedger()
+    skipped_forecasts = 0
+    for forecast in normalized_forecasts:
+        try:
+            ledger.registrar_previsao(**forecast)
+        except (TypeError, ValueError):
+            skipped_forecasts += 1
     enriched = dict(payload)
     enriched.setdefault("resumo", ledger.exportar_resumo())
     enriched.setdefault("calibracao", ledger.exportar_calibracao())
     enriched.setdefault("chart_data", ledger.exportar_grafico_deterministico())
+    if skipped_forecasts:
+        enriched["forecast_warnings"] = {
+            "skipped_invalid_forecasts": skipped_forecasts,
+        }
     return enriched
 
 

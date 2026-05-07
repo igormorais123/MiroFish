@@ -17,7 +17,7 @@ const requestReportExport = async (path, options = {}) => {
   })
 
   const payload = await response.json().catch(() => ({}))
-  if (!response.ok || payload.success === false) {
+  if (!response.ok || (payload.success === false && !options.allowFailurePayload)) {
     const error = new Error(payload.error || payload.message || `HTTP ${response.status}`)
     error.status = response.status
     error.data = payload
@@ -152,7 +152,7 @@ export const getReportExports = (reportId) => {
 export const verifyReportExportBundle = (reportId, exportId) => {
   return requestReportExport(
     `/api/report/${encodeURIComponent(reportId)}/exports/${encodeURIComponent(exportId)}/bundle/verify`,
-    { method: 'POST' }
+    { method: 'POST', allowFailurePayload: true }
   )
 }
 

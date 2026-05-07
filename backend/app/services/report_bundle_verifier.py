@@ -141,7 +141,18 @@ def verify_report_export_bundle(report_id: str, export_id: str) -> dict[str, Any
         "All expected files are present." if not missing else f"Missing expected files: {missing}",
     ))
 
+    bundle_hashes = {}
+    for item in list(bundle_manifest.get("files") or []) + list(export_manifest.get("files") or []):
+        if isinstance(item, dict) and item.get("sha256"):
+            bundle_hashes[item.get("filename")] = item.get("sha256")
     hash_failures = []
+    missing_hashes = []
+    hash_required = (set(expected_files) | {"report_bundle_manifest.json"}) - {"export_manifest.json"}
+    for filename in sorted(hash_required):
+        if not _safe_manifest_filename(filename):
+            continue
+        if filename not in bundle_hashes:
+            missing_hashes.append(filename)
     for item in bundle_manifest.get("files") or []:
         filename = item.get("filename")
         expected_hash = item.get("sha256")
@@ -154,8 +165,10 @@ def verify_report_export_bundle(report_id: str, export_id: str) -> dict[str, Any
             hash_failures.append(filename)
     checks.append(_check(
         "hashes_match",
-        not hash_failures,
-        "All file hashes match." if not hash_failures else f"Hash mismatch: {hash_failures}",
+        not hash_failures and not missing_hashes,
+        "All expected file hashes are present and match."
+        if not hash_failures and not missing_hashes
+        else f"Hash mismatch: {hash_failures}; missing hashes: {missing_hashes}",
     ))
 
     renderer_metadata = bundle_manifest.get("renderer_metadata") or {}

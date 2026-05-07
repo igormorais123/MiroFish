@@ -203,8 +203,9 @@ def build_executive_package(report_id: str, *, output_dir: Path | None = None) -
     _write_json(manifest_path, manifest)
     manifest["files"].append({
         "filename": "executive_package_manifest.json",
-        "sha256": _sha256_file(manifest_path),
+        "sha256": None,
         "size": manifest_path.stat().st_size,
+        "hash_note": "self hash omitted to avoid invalidating the manifest on final write",
     })
     _write_json(manifest_path, manifest)
 

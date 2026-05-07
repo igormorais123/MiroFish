@@ -114,6 +114,26 @@ def test_forecast_ledger_calculates_brier_and_log_loss_for_resolved_forecast():
     assert entry["log_loss"] == pytest.approx(0.223144)
 
 
+def test_forecast_ledger_round_trips_exported_entries_with_scores():
+    ledger = ForecastLedger()
+    ledger.registrar_previsao(
+        enunciado="A entrega sera aceita sem retrabalho critico.",
+        janela="14 dias",
+        base={"report_id": "rep-1"},
+        sinais=["bundle verificado"],
+        grau_confianca_operacional="alto",
+        probability=0.8,
+        outcome=True,
+        status="confirmada",
+        criado_em="2026-05-05T10:00:00+00:00",
+    )
+    exported = ledger.listar_previsoes()
+
+    restored = ForecastLedger(exported).listar_previsoes()
+
+    assert restored == exported
+
+
 def test_forecast_ledger_rejects_probability_outside_unit_interval():
     ledger = ForecastLedger()
 

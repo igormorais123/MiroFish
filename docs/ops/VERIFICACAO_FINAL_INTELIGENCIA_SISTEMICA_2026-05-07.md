@@ -148,6 +148,8 @@ Checks AutoResearch confirmados:
 
 Na ultima verificacao, os PRs #25 a #35 estavam abertos, empilhados, `MERGEABLE` e com Vercel green. O PR #25 tambem tinha o check de backend do GitHub Actions em sucesso.
 
+Atualizacao de fechamento: o PR #25 foi mergeado em `main`. As conversas tecnicas abertas nos PRs #26 a #36 foram tratadas no PR consolidado `codex/final-systemic-intelligence-stack`, que traz o restante da pilha e os reparos de revisao em uma branch nova baseada na `main` atualizada.
+
 Ordem obrigatoria:
 
 1. #25 `codex/pr2-method-checklist-repair-main`
@@ -205,3 +207,5 @@ O plano esta compativel com o sistema atual da pilha. A implementacao entregou g
 - OpenSwarm foi incorporado como padrao de handoff, nao como dependencia.
 
 A proxima acao recomendada e abrir este PR documental, aguardar checks e iniciar merge da cadeia no GitHub a partir do PR #25.
+
+Atualizacao final: depois do merge do #25, a proxima acao recomendada passou a ser mergear o PR consolidado final e fechar os PRs empilhados antigos como substituidos.

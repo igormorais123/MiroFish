@@ -113,6 +113,30 @@ def test_verifier_rejects_hash_mismatch(report_store):
     assert any(item["id"] == "hashes_match" and item["passes"] is False for item in result["checks"])
 
 
+def test_verifier_rejects_expected_file_without_manifest_hash(report_store):
+    report, manifest, export_dir = _create_export(report_store)
+    bundle_manifest = _load_bundle_manifest(export_dir)
+    bundle_manifest["files"] = [
+        item for item in bundle_manifest["files"]
+        if item.get("filename") != "full_report.html"
+    ]
+    _write_bundle_manifest(export_dir, bundle_manifest)
+    export_manifest = json.loads((export_dir / "export_manifest.json").read_text(encoding="utf-8"))
+    export_manifest["files"] = [
+        item for item in export_manifest["files"]
+        if item.get("filename") != "full_report.html"
+    ]
+    (export_dir / "export_manifest.json").write_text(
+        json.dumps(export_manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    result = verify_report_export_bundle(report.report_id, manifest["export_id"])
+
+    assert result["passes"] is False
+    assert any(item["id"] == "hashes_match" and item["passes"] is False for item in result["checks"])
+
+
 def test_verifier_rejects_missing_renderer_metadata(report_store):
     report, manifest, export_dir = _create_export(report_store)
     bundle_manifest = _load_bundle_manifest(export_dir)
