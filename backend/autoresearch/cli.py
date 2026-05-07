@@ -6,6 +6,8 @@ Uso:
     python -m backend.autoresearch.cli --target skill --skill-name advogado-sobre-humano --budget 3
     python -m backend.autoresearch.cli --target genetic --personas /path/to/banco.json
     python -m backend.autoresearch.cli --target frontend --budget 2 --hours 4
+    python -m backend.autoresearch.cli baseline report_delivery
+    python -m backend.autoresearch.cli baseline ralph
     python -m backend.autoresearch.cli --baseline hookify  (mede score atual sem otimizar)
 """
 
@@ -154,12 +156,62 @@ def setup_frontend_target(args):
     )
 
 
+def setup_report_delivery_target(args):
+    """Configura alvo de score da fronteira de entrega de relatorios."""
+    from .targets.report_delivery import (
+        ReportDeliveryAsset, ReportDeliveryConstraints, ReportDeliveryEvaluator,
+    )
+    from .targets.base import TargetConfig
+
+    asset = ReportDeliveryAsset(PROJECT_ROOT)
+    constraints = ReportDeliveryConstraints(PROJECT_ROOT)
+    evaluator = ReportDeliveryEvaluator(PROJECT_ROOT)
+
+    return TargetConfig(
+        name="report_delivery",
+        description="Score deterministico da entrega verificavel de relatorios",
+        constraints=constraints,
+        asset=asset,
+        evaluator=evaluator,
+        hypothesis_model=args.model or "haiku-tasks",
+        max_hours=args.hours,
+        budget_usd=args.budget,
+    )
+
+
+def setup_ralph_target(args):
+    """Configura alvo de score do metodo RalphLoop + AutoResearch."""
+    from .targets.ralph_method import (
+        RalphMethodAsset, RalphMethodConstraints, RalphMethodEvaluator,
+    )
+    from .targets.base import TargetConfig
+
+    asset = RalphMethodAsset(PROJECT_ROOT)
+    constraints = RalphMethodConstraints(PROJECT_ROOT)
+    evaluator = RalphMethodEvaluator(PROJECT_ROOT)
+
+    return TargetConfig(
+        name="ralph_method",
+        description="Score deterministico do metodo RalphLoop no Mirofish",
+        constraints=constraints,
+        asset=asset,
+        evaluator=evaluator,
+        hypothesis_model=args.model or "haiku-tasks",
+        max_hours=args.hours,
+        budget_usd=args.budget,
+    )
+
+
 TARGET_BUILDERS = {
     "hookify": setup_hookify_target,
     "skill": setup_skill_target,
     "genetic": setup_genetic_target,
     "frontend": setup_frontend_target,
+    "report_delivery": setup_report_delivery_target,
+    "ralph": setup_ralph_target,
 }
+
+READ_ONLY_TARGETS = {"report_delivery", "ralph"}
 
 
 def run_baseline(args):
@@ -176,6 +228,17 @@ def run_baseline(args):
 
     score = target.evaluator.measure(target.asset)
     print(f"Score baseline: {score:.4f}")
+
+    if args.baseline_target in {"report_delivery", "ralph"} and hasattr(target.evaluator, "detailed_report"):
+        report = target.evaluator.detailed_report(target.asset)
+        print("\nChecks:")
+        for item in report.get("checks", []):
+            marker = "PASS" if item.get("passes") else "FAIL"
+            print(f"  {marker}: {item.get('id')}")
+        if report.get("recommendations"):
+            print("\nRecomendacoes:")
+            for recommendation in report["recommendations"]:
+                print(f"  - {recommendation}")
 
     # Relatorio detalhado se hookify
     if args.baseline_target == "hookify":
@@ -207,7 +270,7 @@ def main():
 
     # Comando: run
     run_parser = subparsers.add_parser("run", help="Executa loop de otimizacao")
-    run_parser.add_argument("--target", required=True, choices=TARGET_BUILDERS.keys())
+    run_parser.add_argument("--target", required=True, choices=[name for name in TARGET_BUILDERS if name not in READ_ONLY_TARGETS])
     run_parser.add_argument("--budget", type=float, default=5.0, help="Budget em USD")
     run_parser.add_argument("--hours", type=float, default=8.0, help="Horas maximas")
     run_parser.add_argument("--model", default=None, help="Modelo para hipoteses")

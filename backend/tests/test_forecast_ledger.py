@@ -84,3 +84,113 @@ def test_forecast_ledger_rejects_invalid_status():
             status="rascunho",
         )
 
+
+def test_forecast_ledger_calculates_brier_and_log_loss_for_resolved_forecast():
+    ledger = ForecastLedger()
+
+    entry = ledger.registrar_previsao(
+        enunciado="A entrega sera aceita sem retrabalho critico.",
+        janela="14 dias",
+        base={"report_id": "rep-1"},
+        sinais=["bundle verificado"],
+        grau_confianca_operacional="alto",
+        probability=0.8,
+        prior=0.6,
+        base_rate=0.55,
+        reference_class="relatorios verificaveis",
+        indicators=["sem blocker", "hash ok"],
+        outcome=True,
+        status="confirmada",
+        resolved_at="2026-05-20T10:00:00+00:00",
+        resolution_source="aceite do cliente",
+        criado_em="2026-05-05T10:00:00+00:00",
+    )
+
+    assert entry["probability"] == 0.8
+    assert entry["prior"] == 0.6
+    assert entry["base_rate"] == 0.55
+    assert entry["reference_class"] == "relatorios verificaveis"
+    assert entry["brier_score"] == 0.04
+    assert entry["log_loss"] == pytest.approx(0.223144)
+
+
+def test_forecast_ledger_round_trips_exported_entries_with_scores():
+    ledger = ForecastLedger()
+    ledger.registrar_previsao(
+        enunciado="A entrega sera aceita sem retrabalho critico.",
+        janela="14 dias",
+        base={"report_id": "rep-1"},
+        sinais=["bundle verificado"],
+        grau_confianca_operacional="alto",
+        probability=0.8,
+        outcome=True,
+        status="confirmada",
+        criado_em="2026-05-05T10:00:00+00:00",
+    )
+    exported = ledger.listar_previsoes()
+
+    restored = ForecastLedger(exported).listar_previsoes()
+
+    assert restored == exported
+
+
+def test_forecast_ledger_rejects_probability_outside_unit_interval():
+    ledger = ForecastLedger()
+
+    with pytest.raises(ValueError):
+        ledger.registrar_previsao(
+            enunciado="Previsao impossivel",
+            janela="7 dias",
+            base={},
+            sinais=[],
+            grau_confianca_operacional="baixo",
+            probability=1.2,
+        )
+
+
+def test_forecast_ledger_exports_calibration_summary_and_chart_data():
+    ledger = ForecastLedger()
+    ledger.registrar_previsao(
+        enunciado="Previsao confirmada",
+        janela="7 dias",
+        base={"fonte": "a"},
+        sinais=["a"],
+        grau_confianca_operacional="medio",
+        status="confirmada",
+        probability=0.75,
+        outcome=True,
+        criado_em="2026-05-05T10:00:00+00:00",
+    )
+    ledger.registrar_previsao(
+        enunciado="Previsao revertida",
+        janela="7 dias",
+        base={"fonte": "b"},
+        sinais=["b"],
+        grau_confianca_operacional="medio",
+        status="revertida",
+        probability=0.8,
+        outcome=False,
+        criado_em="2026-05-05T10:00:00+00:00",
+    )
+    ledger.registrar_previsao(
+        enunciado="Previsao aberta",
+        janela="7 dias",
+        base={"fonte": "c"},
+        sinais=["c"],
+        grau_confianca_operacional="baixo",
+        status="em_observacao",
+        criado_em="2026-05-05T10:00:00+00:00",
+    )
+
+    summary = ledger.exportar_calibracao()
+    chart = ledger.exportar_grafico_deterministico()
+
+    assert summary["schema"] == "mirofish.forecast_calibration.v1"
+    assert summary["total"] == 3
+    assert summary["resolved"] == 2
+    assert summary["probabilistic"] == 2
+    assert summary["mean_brier_score"] == pytest.approx((0.0625 + 0.64) / 2)
+    assert chart["schema"] == "mirofish.forecast_chart_data.v1"
+    assert chart["series"][0]["id"] == "status_counts"
+    assert chart["series"][0]["points"] == sorted(chart["series"][0]["points"], key=lambda item: item["label"])
+

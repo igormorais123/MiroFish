@@ -14,8 +14,28 @@ from ..services.mission_bundle import MissionBundle
 from ..services.mission_selection import MissionSelection
 from ..services.power_catalog import PowerCatalog
 from ..services.power_persona_catalog import PowerPersonaCatalog
+from ..services.forecast_ledger import ForecastLedger
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
+from ..services.executive_package import (
+    ExecutivePackageConflict,
+    ExecutivePackageInvalidPath,
+    ExecutivePackageNotFound,
+    allowed_executive_package_file_path,
+    build_executive_package,
+)
+from ..services.report_bundle_verifier import (
+    ReportBundleVerificationNotFound,
+    verify_report_export_bundle,
+)
+from ..services.report_exporter import (
+    ReportExportConflict,
+    ReportExportInvalidPath,
+    ReportExportNotFound,
+    allowed_export_file_path,
+    create_report_export,
+    list_report_exports,
+)
 from ..services.report_finalization import (
     ReportFinalizationConflict,
     ReportFinalizationNotFound,
@@ -150,6 +170,51 @@ def _build_power_selection_from_payload(data):
         "selected_ids": selected_ids,
         **estimate,
     }
+
+
+def _enrich_forecast_ledger_payload(payload):
+    """Completa artefatos antigos de forecast com calibracao e chart_data."""
+    if not isinstance(payload, dict):
+        return payload
+    forecasts = payload.get("previsoes") or []
+    normalized_forecasts = []
+    for forecast in forecasts:
+        if not isinstance(forecast, dict):
+            continue
+        normalized_forecasts.append({
+            "enunciado": forecast.get("enunciado") or forecast.get("titulo") or "Previsao sem enunciado",
+            "janela": forecast.get("janela") or "janela nao informada",
+            "base": forecast.get("base") or forecast.get("fonte") or {},
+            "sinais": forecast.get("sinais") or forecast.get("indicadores") or [],
+            "grau_confianca_operacional": forecast.get("grau_confianca_operacional"),
+            "status": forecast.get("status") or "congelada",
+            "criado_em": forecast.get("criado_em"),
+            "id": forecast.get("id"),
+            "probability": forecast.get("probability"),
+            "prior": forecast.get("prior"),
+            "base_rate": forecast.get("base_rate"),
+            "reference_class": forecast.get("reference_class"),
+            "indicators": forecast.get("indicators"),
+            "resolution_source": forecast.get("resolution_source"),
+            "resolved_at": forecast.get("resolved_at"),
+            "outcome": forecast.get("outcome"),
+        })
+    ledger = ForecastLedger()
+    skipped_forecasts = 0
+    for forecast in normalized_forecasts:
+        try:
+            ledger.registrar_previsao(**forecast)
+        except (TypeError, ValueError):
+            skipped_forecasts += 1
+    enriched = dict(payload)
+    enriched.setdefault("resumo", ledger.exportar_resumo())
+    enriched.setdefault("calibracao", ledger.exportar_calibracao())
+    enriched.setdefault("chart_data", ledger.exportar_grafico_deterministico())
+    if skipped_forecasts:
+        enriched["forecast_warnings"] = {
+            "skipped_invalid_forecasts": skipped_forecasts,
+        }
+    return enriched
 
 
 @report_bp.route('/power-catalog', methods=['GET'])
@@ -699,6 +764,128 @@ def get_report_delivery_package(report_id: str):
         }), 500
 
 
+@report_bp.route('/<report_id>/executive-package', methods=['POST'])
+def create_executive_package_route(report_id: str):
+    """Criar pacote executivo apenas para relatorio publicavel."""
+    try:
+        manifest = build_executive_package(report_id)
+        return jsonify({
+            "success": True,
+            "data": manifest,
+        }), 200
+    except ExecutivePackageNotFound as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 404
+    except ExecutivePackageConflict as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 400
+    except Exception as e:
+        logger.error(f"Falha ao criar pacote executivo: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/executive-package/<filename>', methods=['GET'])
+def download_executive_package_file_route(report_id: str, filename: str):
+    """Baixar apenas arquivos allowlisted no manifesto do pacote executivo."""
+    try:
+        path = allowed_executive_package_file_path(report_id, filename)
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name=path.name,
+            mimetype='application/json' if path.suffix == '.json' else 'text/html',
+        )
+    except ExecutivePackageNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ExecutivePackageInvalidPath as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Falha ao baixar arquivo do pacote executivo: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports', methods=['POST'])
+def create_report_export_route(report_id: str):
+    """Criar rascunho de export verificavel para um relatorio."""
+    try:
+        export_manifest = create_report_export(report_id)
+        return jsonify({
+            "success": True,
+            "data": export_manifest,
+        }), 201
+    except ReportExportNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ReportExportConflict as e:
+        return jsonify({"success": False, "error": str(e)}), 409
+    except Exception as e:
+        logger.error(f"Falha ao criar export do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports', methods=['GET'])
+def list_report_exports_route(report_id: str):
+    """Listar exports existentes sem expor caminhos internos."""
+    try:
+        exports = list_report_exports(report_id)
+        return jsonify({
+            "success": True,
+            "data": {
+                "report_id": report_id,
+                "exports": exports,
+            },
+        }), 200
+    except ReportExportNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        logger.error(f"Falha ao listar exports do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports/<export_id>/bundle/verify', methods=['POST'])
+def verify_report_export_bundle_route(report_id: str, export_id: str):
+    """Verificar integridade e seguranca do bundle exportado."""
+    try:
+        verification = verify_report_export_bundle(report_id, export_id)
+        return jsonify({
+            "success": verification.get("passes") is True,
+            "data": verification,
+        }), 200
+    except ReportBundleVerificationNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        logger.error(f"Falha ao verificar bundle do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/exports/<export_id>/<filename>', methods=['GET'])
+def download_report_export_file_route(report_id: str, export_id: str, filename: str):
+    """Baixar apenas arquivos allowlisted no manifest do export."""
+    try:
+        path = allowed_export_file_path(report_id, export_id, filename)
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name=filename,
+        )
+    except ReportExportNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ReportExportInvalidPath as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Falha ao baixar arquivo de export do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @report_bp.route('/<report_id>/finalization/repair', methods=['POST'])
 def repair_report_finalization_route(report_id: str):
     """Reparar finalizacao do relatorio sem chamar LLM."""
@@ -814,6 +1001,10 @@ def get_mission_bundle(report_id: str):
         power_selection = required_artifacts["power_selection.json"] or {}
         persona_selection = required_artifacts["power_persona_context.json"] or {}
         forecast_ledger = required_artifacts["forecast_ledger.json"] or {}
+        enriched_forecast_ledger = _enrich_forecast_ledger_payload(forecast_ledger)
+        if enriched_forecast_ledger != forecast_ledger:
+            ReportManager.save_json_artifact(report_id, "forecast_ledger.json", enriched_forecast_ledger)
+            forecast_ledger = enriched_forecast_ledger
 
         bundle = MissionBundle().gerar_manifesto(
             report_id=report.report_id,

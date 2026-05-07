@@ -2554,6 +2554,8 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                     {
                         "resumo": ledger.exportar_resumo(),
                         "previsoes": ledger.listar_previsoes(),
+                        "calibracao": ledger.exportar_calibracao(),
+                        "chart_data": ledger.exportar_grafico_deterministico(),
                     },
                 )
             except Exception as ledger_err:

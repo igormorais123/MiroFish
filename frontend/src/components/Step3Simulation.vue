@@ -105,14 +105,17 @@
             {{ primaryGateIssue }}
           </div>
         </div>
-        <div v-if="phase === 2 && readiness" class="quality-gate readiness-gate" :class="{ approved: readiness.status === 'ready_for_report', blocked: readiness.status === 'blocked' || readiness.status === 'report_blocked' }">
+        <div v-if="phase === 2 && readiness" class="quality-gate readiness-gate" :class="readinessGateClass">
           <div class="quality-gate-main">
             <span class="gate-dot"></span>
             <span class="quality-title">{{ readinessTitle }}</span>
           </div>
           <div class="quality-metrics">
             <span>{{ readinessAction }}</span>
-            <span v-if="readiness.blockers?.length">{{ readiness.blockers.length }} bloqueio{{ readiness.blockers.length === 1 ? '' : 's' }}</span>
+            <span v-if="readinessBlockingIssues.length">{{ readinessBlockingIssues.length }} bloqueio{{ readinessBlockingIssues.length === 1 ? '' : 's' }}</span>
+          </div>
+          <div v-if="readinessBlockingIssues.length" class="gate-issue">
+            {{ readinessBlockingIssues[0] }}
           </div>
         </div>
         <section v-if="phase === 2" class="mission-selector" aria-labelledby="mission-selector-title">
@@ -520,27 +523,50 @@ const qualityGateClass = computed(() => ({
 
 const readinessTitle = computed(() => {
   const labels = {
-    blocked: 'Próxima ação bloqueada',
+    missing: 'Simulação indisponível',
+    blocked: 'Ajuste necessário',
     ready_for_report: 'Pronto para relatório',
     report_in_progress: 'Relatório em andamento',
     report_blocked: 'Relatório bloqueado',
-    report_diagnostic: 'Diagnóstico interno',
-    ready_for_verified_delivery: 'Pronto para entrega'
+    report_diagnostic: 'Execução diagnóstica',
+    ready_for_verified_delivery: 'Pronto para pacote executivo'
   }
   return labels[readiness.value?.status] || 'Prontidão pendente'
 })
 
 const readinessAction = computed(() => {
+  const action = readiness.value?.next_action
+  if (action?.label) return action.label
+
   const labels = {
-    fix_simulation_or_source_material: 'Corrigir simulação ou fonte',
-    generate_report: 'Gerar relatório',
+    select_simulation: 'Selecionar uma simulação válida',
+    finish_simulation: 'Aguardar ou concluir a simulação',
+    fix_simulation_or_source_material: 'Ajustar simulação ou material-base',
+    fix_simulation_quality: 'Reexecutar com mais interações',
+    review_source_material: 'Revisar o material-base',
+    review_blockers: 'Resolver bloqueio principal',
+    generate_report: 'Gerar relatório auditável',
     wait_report: 'Aguardar relatório',
-    repair_or_review_blockers: 'Revisar bloqueios',
+    regenerate_report: 'Regenerar relatório',
+    repair_or_review_blockers: 'Reparar ou revisar bloqueios',
+    rerun_complete_simulation: 'Gerar execução completa',
     review_diagnostic_only: 'Revisar diagnóstico',
-    open_delivery_package: 'Abrir pacote de entrega'
+    build_executive_package: 'Gerar pacote executivo',
+    open_delivery_package: 'Abrir pacote final'
   }
-  return labels[readiness.value?.next_action] || 'Aguardar verificação'
+  return labels[action?.kind || action] || 'Aguardar verificação'
 })
+
+const readinessBlockingIssues = computed(() => {
+  const issues = readiness.value?.blocking_issues || readiness.value?.blockers || []
+  return Array.isArray(issues) ? issues.filter(Boolean) : []
+})
+
+const readinessGateClass = computed(() => ({
+  approved: ['ready_for_report', 'ready_for_verified_delivery'].includes(readiness.value?.status),
+  blocked: ['blocked', 'report_blocked', 'report_diagnostic', 'missing'].includes(readiness.value?.status),
+  checking: readiness.value?.status === 'report_in_progress'
+}))
 
 const canGenerateReport = computed(() => {
   const backendAllowsReport = !readiness.value || readiness.value.status === 'ready_for_report'
