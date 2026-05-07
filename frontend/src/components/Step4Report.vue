@@ -184,7 +184,7 @@
                   :disabled="isCreatingExport || !canCreateExportDraft"
                   @click="createExportDraft"
                 >
-                  <span>{{ isCreatingExport ? 'Criando...' : 'Criar rascunho' }}</span>
+                  <span>{{ isCreatingExport ? 'Criando...' : 'Criar HTML INTEIA' }}</span>
                 </button>
                 <button
                   type="button"
@@ -2387,7 +2387,7 @@ const exportFileNames = computed(() => {
 const exportDownloadFiles = computed(() => {
   if (!props.reportId || !activeExportId.value) return []
   return [
-    { filename: 'full_report.html', label: 'Baixar relatório' },
+    { filename: 'full_report.html', label: 'Baixar HTML INTEIA' },
     { filename: 'evidence_annex.html', label: 'Baixar anexos' }
   ]
     .filter(file => exportFileNames.value.has(file.filename))
