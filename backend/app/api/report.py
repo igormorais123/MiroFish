@@ -14,6 +14,7 @@ from ..services.mission_bundle import MissionBundle
 from ..services.mission_selection import MissionSelection
 from ..services.power_catalog import PowerCatalog
 from ..services.power_persona_catalog import PowerPersonaCatalog
+from ..services.forecast_ledger import ForecastLedger
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
 from ..services.report_bundle_verifier import (
@@ -162,6 +163,41 @@ def _build_power_selection_from_payload(data):
         "selected_ids": selected_ids,
         **estimate,
     }
+
+
+def _enrich_forecast_ledger_payload(payload):
+    """Completa artefatos antigos de forecast com calibracao e chart_data."""
+    if not isinstance(payload, dict):
+        return payload
+    forecasts = payload.get("previsoes") or []
+    normalized_forecasts = []
+    for forecast in forecasts:
+        if not isinstance(forecast, dict):
+            continue
+        normalized_forecasts.append({
+            "enunciado": forecast.get("enunciado") or forecast.get("titulo") or "Previsao sem enunciado",
+            "janela": forecast.get("janela") or "janela nao informada",
+            "base": forecast.get("base") or forecast.get("fonte") or {},
+            "sinais": forecast.get("sinais") or forecast.get("indicadores") or [],
+            "grau_confianca_operacional": forecast.get("grau_confianca_operacional"),
+            "status": forecast.get("status") or "congelada",
+            "criado_em": forecast.get("criado_em"),
+            "id": forecast.get("id"),
+            "probability": forecast.get("probability"),
+            "prior": forecast.get("prior"),
+            "base_rate": forecast.get("base_rate"),
+            "reference_class": forecast.get("reference_class"),
+            "indicators": forecast.get("indicators"),
+            "resolution_source": forecast.get("resolution_source"),
+            "resolved_at": forecast.get("resolved_at"),
+            "outcome": forecast.get("outcome"),
+        })
+    ledger = ForecastLedger(normalized_forecasts)
+    enriched = dict(payload)
+    enriched.setdefault("resumo", ledger.exportar_resumo())
+    enriched.setdefault("calibracao", ledger.exportar_calibracao())
+    enriched.setdefault("chart_data", ledger.exportar_grafico_deterministico())
+    return enriched
 
 
 @report_bp.route('/power-catalog', methods=['GET'])
@@ -902,6 +938,10 @@ def get_mission_bundle(report_id: str):
         power_selection = required_artifacts["power_selection.json"] or {}
         persona_selection = required_artifacts["power_persona_context.json"] or {}
         forecast_ledger = required_artifacts["forecast_ledger.json"] or {}
+        enriched_forecast_ledger = _enrich_forecast_ledger_payload(forecast_ledger)
+        if enriched_forecast_ledger != forecast_ledger:
+            ReportManager.save_json_artifact(report_id, "forecast_ledger.json", enriched_forecast_ledger)
+            forecast_ledger = enriched_forecast_ledger
 
         bundle = MissionBundle().gerar_manifesto(
             report_id=report.report_id,
