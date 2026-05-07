@@ -17,6 +17,11 @@ from ..services.power_persona_catalog import PowerPersonaCatalog
 from ..services.forecast_ledger import ForecastLedger
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
+from ..services.executive_package import (
+    ExecutivePackageConflict,
+    ExecutivePackageNotFound,
+    build_executive_package,
+)
 from ..services.report_bundle_verifier import (
     ReportBundleVerificationNotFound,
     verify_report_export_bundle,
@@ -745,6 +750,31 @@ def get_report_delivery_package(report_id: str):
             "success": False,
             "error": str(e),
         }), 500
+
+
+@report_bp.route('/<report_id>/executive-package', methods=['POST'])
+def create_executive_package_route(report_id: str):
+    """Criar pacote executivo apenas para relatorio publicavel."""
+    try:
+        manifest = build_executive_package(report_id)
+        return jsonify({
+            "success": True,
+            "data": manifest,
+        }), 200
+    except ExecutivePackageNotFound as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 404
+    except ExecutivePackageConflict as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 400
+    except Exception as e:
+        logger.error(f"Falha ao criar pacote executivo: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @report_bp.route('/<report_id>/exports', methods=['POST'])
