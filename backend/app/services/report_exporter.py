@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .report_agent import ReportManager
+from .inteia_report_html import inteia_renderer_metadata, render_inteia_report_html
 from .report_method_checklist import evaluate_report_method_checklist
 from .safe_markdown_renderer import render_safe_markdown
 
@@ -104,21 +105,6 @@ def _public_export_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in manifest.items() if key != "internal_path"}
 
 
-def _html_document(title: str, body: str) -> str:
-    return "\n".join([
-        "<!doctype html>",
-        '<html lang="pt-BR">',
-        "<head>",
-        '  <meta charset="utf-8">',
-        f"  <title>{title}</title>",
-        "</head>",
-        "<body>",
-        body,
-        "</body>",
-        "</html>",
-    ])
-
-
 def _evidence_annex_markdown(report_id: str) -> str:
     evidence_audit = ReportManager.load_json_artifact(report_id, "evidence_audit.json")
     if not evidence_audit:
@@ -148,11 +134,29 @@ def create_report_export(report_id: str) -> dict[str, Any]:
     evidence_result = render_safe_markdown(_evidence_annex_markdown(report_id))
 
     _safe_child(export_dir, "full_report.html").write_text(
-        _html_document("MiroFish Report", full_result.html),
+        render_inteia_report_html(
+            title="Relatorio MiroFish",
+            subtitle=report.simulation_requirement,
+            body_html=full_result.html,
+            metadata={
+                "Report ID": report_id,
+                "Simulation ID": report.simulation_id,
+                "Export ID": export_id,
+            },
+        ),
         encoding="utf-8",
     )
     _safe_child(export_dir, "evidence_annex.html").write_text(
-        _html_document("MiroFish Evidence Annex", evidence_result.html),
+        render_inteia_report_html(
+            title="Anexo de Evidencias MiroFish",
+            subtitle="Artefatos auditaveis associados ao relatorio.",
+            body_html=evidence_result.html,
+            metadata={
+                "Report ID": report_id,
+                "Simulation ID": report.simulation_id,
+                "Export ID": export_id,
+            },
+        ),
         encoding="utf-8",
     )
 
@@ -173,8 +177,8 @@ def create_report_export(report_id: str) -> dict[str, Any]:
         "expected_files": sorted(EXPORT_FILENAMES),
         "files": files,
         "renderer_metadata": {
-            "full_report.html": full_result.metadata,
-            "evidence_annex.html": evidence_result.metadata,
+            "full_report.html": inteia_renderer_metadata(full_result.metadata),
+            "evidence_annex.html": inteia_renderer_metadata(evidence_result.metadata),
         },
     }
     _write_json(_safe_child(export_dir, "report_bundle_manifest.json"), bundle_manifest)

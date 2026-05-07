@@ -1,0 +1,758 @@
+{
+  "schema": "mirofish.helena_report_lab.v1",
+  "generated_at": "2026-05-07T05:51:50.570530+00:00",
+  "coordinator": "Helena Strategos",
+  "repair_role": "Efesto",
+  "validation_role": "Oracle",
+  "reports_count": 10,
+  "passes": true,
+  "reports": [
+    {
+      "slug": "mirofish-posicionamento-mercado",
+      "title": "Posicionamento Estratégico do Mirofish/INTEIA",
+      "decision_question": "Qual tese de mercado o Mirofish deve ocupar para vender com maior autoridade?",
+      "confidence": 0.84,
+      "recommendation": "posicionar como laboratório de decisão auditável, não como chatbot ou dashboard genérico.",
+      "evidence": [
+        "INTEIA já combina simulação, relatório, evidência e pacote executivo.",
+        "Compradores B2B compram redução de incerteza, não mais uma interface de IA."
+      ],
+      "filename": "reports/mirofish-posicionamento-mercado.html",
+      "sha256": "cc0bb41a4ec1ab2f4332a31515b4c114a6f3deb36646d2b7dea6d867f2bb42be",
+      "size": 7016,
+      "screenshots_expected": [
+        "screenshots/mirofish-posicionamento-mercado-desktop.png",
+        "screenshots/mirofish-posicionamento-mercado-mobile.png",
+        "screenshots/mirofish-posicionamento-mercado-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-go-to-market-90d",
+      "title": "Plano GTM de 90 Dias",
+      "decision_question": "Qual sequência comercial maximiza aprendizado e receita nos próximos 90 dias?",
+      "confidence": 0.81,
+      "recommendation": "rodar 3 ofertas piloto com escopo fechado e prova pública após cada entrega.",
+      "evidence": [
+        "Ciclo curto reduz risco de customização infinita.",
+        "O pacote executivo permite demonstrar valor sem expor bastidores."
+      ],
+      "filename": "reports/mirofish-go-to-market-90d.html",
+      "sha256": "1517274eb6c25382138e3057b39450f327eb86d38d2d8d2b2c8777fce80ece88",
+      "size": 6884,
+      "screenshots_expected": [
+        "screenshots/mirofish-go-to-market-90d-desktop.png",
+        "screenshots/mirofish-go-to-market-90d-mobile.png",
+        "screenshots/mirofish-go-to-market-90d-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-unit-economics",
+      "title": "Unit Economics e Viabilidade Comercial",
+      "decision_question": "O modelo atual fecha conta ou exige reposicionamento de preço/escopo?",
+      "confidence": 0.78,
+      "recommendation": "precificar por missão decisória e limitar horas humanas por pacote.",
+      "evidence": [
+        "Relatórios complexos têm custo variável de revisão.",
+        "Automação só melhora margem se o padrão HTML for repetível."
+      ],
+      "filename": "reports/mirofish-unit-economics.html",
+      "sha256": "2a3b2cc3a0ad62878385c1c0a77937b21463cb58837813675bb6c78eb43ad3d0",
+      "size": 6912,
+      "screenshots_expected": [
+        "screenshots/mirofish-unit-economics-desktop.png",
+        "screenshots/mirofish-unit-economics-mobile.png",
+        "screenshots/mirofish-unit-economics-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-concorrencia-ai",
+      "title": "Mapa Competitivo de IA e Automação",
+      "decision_question": "Contra quem o Mirofish realmente compete e onde pode vencer?",
+      "confidence": 0.82,
+      "recommendation": "competir contra consultoria lenta e pesquisa frágil, não contra LLM puro.",
+      "evidence": [
+        "OpenSwarm mostra demanda por entregáveis compostos.",
+        "Mirofish tem vantagem quando junta simulação, evidência e decisão."
+      ],
+      "filename": "reports/mirofish-concorrencia-ai.html",
+      "sha256": "eb70562e9ceade1e5aef8ce0e4f4fd41956bf805488a0ecd5d0eff7bc466b1d2",
+      "size": 6896,
+      "screenshots_expected": [
+        "screenshots/mirofish-concorrencia-ai-desktop.png",
+        "screenshots/mirofish-concorrencia-ai-mobile.png",
+        "screenshots/mirofish-concorrencia-ai-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-ofertas-produtizadas",
+      "title": "Arquitetura de Ofertas Produtizadas",
+      "decision_question": "Quais 3 ofertas devem ser empacotadas primeiro para reduzir fricção de compra?",
+      "confidence": 0.8,
+      "recommendation": "começar por diagnóstico estratégico, mapa de risco e pacote de decisão comercial.",
+      "evidence": [
+        "Produtos com nome claro vendem melhor que capacidade abstrata.",
+        "Relatório HTML auditável vira prova do serviço."
+      ],
+      "filename": "reports/mirofish-ofertas-produtizadas.html",
+      "sha256": "817a3ec71ef7e19ca925fb19d05c73013e1601644aeb7364e671fcaee913f9d4",
+      "size": 6938,
+      "screenshots_expected": [
+        "screenshots/mirofish-ofertas-produtizadas-desktop.png",
+        "screenshots/mirofish-ofertas-produtizadas-mobile.png",
+        "screenshots/mirofish-ofertas-produtizadas-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-riscos-operacionais",
+      "title": "Riscos Operacionais e Gargalos de Entrega",
+      "decision_question": "O que pode quebrar a operação se a demanda aumentar?",
+      "confidence": 0.86,
+      "recommendation": "automatizar validação visual e bloquear publicação sem evidência por relatório.",
+      "evidence": [
+        "Falhas visuais e links quebrados corroem confiança.",
+        "A suíte de 10 relatórios captura regressões antes do cliente."
+      ],
+      "filename": "reports/mirofish-riscos-operacionais.html",
+      "sha256": "b1d4dad5543cc80c271bef811047230adb4784ddc74725219454c91e78c7f42a",
+      "size": 6907,
+      "screenshots_expected": [
+        "screenshots/mirofish-riscos-operacionais-desktop.png",
+        "screenshots/mirofish-riscos-operacionais-mobile.png",
+        "screenshots/mirofish-riscos-operacionais-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-reputacao-autoridade",
+      "title": "Autoridade, Prova e Confiança Pública",
+      "decision_question": "Que provas precisam existir para Igor/INTEIA parecerem inevitáveis, não apenas competentes?",
+      "confidence": 0.83,
+      "recommendation": "publicar amostras HTML densas, prints de validação e critérios de aprovação.",
+      "evidence": [
+        "Autoridade nasce de artefato verificável.",
+        "Prints reduzem dependência de promessa verbal."
+      ],
+      "filename": "reports/mirofish-reputacao-autoridade.html",
+      "sha256": "52841c3ad8efe555608433593f6f07329c361c57f735bc7cac174474c6897201",
+      "size": 6949,
+      "screenshots_expected": [
+        "screenshots/mirofish-reputacao-autoridade-desktop.png",
+        "screenshots/mirofish-reputacao-autoridade-mobile.png",
+        "screenshots/mirofish-reputacao-autoridade-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-clientes-publicos-privados",
+      "title": "Estratégia Público vs Privado",
+      "decision_question": "O Mirofish deve priorizar governo, empresas privadas ou estratégia híbrida?",
+      "confidence": 0.77,
+      "recommendation": "usar estratégia híbrida com piloto privado rápido e tese pública controlada.",
+      "evidence": [
+        "Setor público tem valor alto e ciclo longo.",
+        "Privado valida preço e narrativa com menos fricção inicial."
+      ],
+      "filename": "reports/mirofish-clientes-publicos-privados.html",
+      "sha256": "b65d862e5b146ad8f885361b0fe94cd71c93137767a800bea7ca80eb7df6dd64",
+      "size": 6915,
+      "screenshots_expected": [
+        "screenshots/mirofish-clientes-publicos-privados-desktop.png",
+        "screenshots/mirofish-clientes-publicos-privados-mobile.png",
+        "screenshots/mirofish-clientes-publicos-privados-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-stack-produto",
+      "title": "Roadmap Produto-Tecnologia",
+      "decision_question": "Quais capacidades técnicas viram vantagem competitiva real, e quais são distração?",
+      "confidence": 0.85,
+      "recommendation": "priorizar export HTML auditável, QA visual, evidência e histórico de versões.",
+      "evidence": [
+        "O diferencial percebido está no entregável final.",
+        "Multiagente sem entrega verificável vira teatro técnico."
+      ],
+      "filename": "reports/mirofish-stack-produto.html",
+      "sha256": "fdc8362b350a02d3248237df4d64c29a1fdb889d80f9ce5a1d14ee20dd08ea71",
+      "size": 6909,
+      "screenshots_expected": [
+        "screenshots/mirofish-stack-produto-desktop.png",
+        "screenshots/mirofish-stack-produto-mobile.png",
+        "screenshots/mirofish-stack-produto-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    },
+    {
+      "slug": "mirofish-sistema-inteligencia",
+      "title": "Sistema de Inteligência INTEIA",
+      "decision_question": "Como transformar relatórios, agentes e dados em uma máquina recorrente de decisão?",
+      "confidence": 0.87,
+      "recommendation": "instituir ciclo Helena coordena, Efesto corrige, Oracle valida e Mirofish publica.",
+      "evidence": [
+        "A divisão de papéis evita cegueira do construtor.",
+        "A cada relatório, a evidência vira memória operacional."
+      ],
+      "filename": "reports/mirofish-sistema-inteligencia.html",
+      "sha256": "f4d24ecb2284c3562091a04af40aad5bafcb92f3db23c9e1dd6731bffc290f9d",
+      "size": 6930,
+      "screenshots_expected": [
+        "screenshots/mirofish-sistema-inteligencia-desktop.png",
+        "screenshots/mirofish-sistema-inteligencia-mobile.png",
+        "screenshots/mirofish-sistema-inteligencia-internal.png"
+      ],
+      "checks": [
+        {
+          "id": "status_real",
+          "passes": true
+        },
+        {
+          "id": "decision_question",
+          "passes": true
+        },
+        {
+          "id": "confidence",
+          "passes": true
+        },
+        {
+          "id": "red_team",
+          "passes": true
+        },
+        {
+          "id": "scenarios",
+          "passes": true
+        },
+        {
+          "id": "next_steps",
+          "passes": true
+        },
+        {
+          "id": "unsafe_markdown_patterns",
+          "passes": true,
+          "details": []
+        },
+        {
+          "id": "no_inline_script",
+          "passes": true
+        },
+        {
+          "id": "inteia_shell",
+          "passes": true
+        }
+      ],
+      "renderer_metadata": {
+        "html_shell": "mirofish_inteia_report_html",
+        "html_shell_version": "1.0",
+        "inline_script": false,
+        "standard": "inteia.report.html.v1",
+        "renderer": "mirofish_safe_markdown",
+        "version": "1.0",
+        "raw_html_escaped": true,
+        "allowed_url_schemes": [
+          "http",
+          "https",
+          "mailto",
+          "relative"
+        ],
+        "unsafe_patterns_detected": []
+      }
+    }
+  ],
+  "index": {
+    "filename": "index.html",
+    "sha256": "4d0866620fba1e745abecc3192fc52cc27a4bbe017890e505ca0f0efd427631c",
+    "size": 6115
+  },
+  "oracle_verdict": "approved",
+  "errors": []
+}

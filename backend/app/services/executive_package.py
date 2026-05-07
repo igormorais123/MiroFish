@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .inteia_report_html import inteia_renderer_metadata, render_inteia_report_html
 from .report_agent import ReportManager
 from .safe_markdown_renderer import render_safe_markdown
 
@@ -60,22 +61,6 @@ def _package_dir(report_id: str, output_dir: Path | None = None) -> Path:
     if output_dir is not None:
         return Path(output_dir).resolve()
     return (Path(ReportManager._get_report_folder(report_id)).resolve() / "executive_package").resolve()
-
-
-def _html_document(title: str, body: str) -> str:
-    return "\n".join([
-        "<!doctype html>",
-        '<html lang="pt-BR">',
-        "<head>",
-        '  <meta charset="utf-8">',
-        f"  <title>{title}</title>",
-        "</head>",
-        "<body>",
-        body,
-        "</body>",
-        "</html>",
-        "",
-    ])
 
 
 def _read_report_markdown(report_id: str, fallback: str) -> str:
@@ -172,8 +157,32 @@ def build_executive_package(report_id: str, *, output_dir: Path | None = None) -
 
     summary_path = package_dir / "executive_summary.html"
     annex_path = package_dir / "evidence_annex.html"
-    _write_text(summary_path, _html_document("MiroFish Executive Summary", summary_result.html))
-    _write_text(annex_path, _html_document("MiroFish Evidence Annex", annex_result.html))
+    _write_text(
+        summary_path,
+        render_inteia_report_html(
+            title="Resumo Executivo MiroFish",
+            subtitle=report.simulation_requirement,
+            body_html=summary_result.html,
+            metadata={
+                "Report ID": report_id,
+                "Simulation ID": report.simulation_id,
+                "Delivery": delivery_status,
+            },
+        ),
+    )
+    _write_text(
+        annex_path,
+        render_inteia_report_html(
+            title="Anexo de Evidencias MiroFish",
+            subtitle="Base auditavel do pacote executivo.",
+            body_html=annex_result.html,
+            metadata={
+                "Report ID": report_id,
+                "Simulation ID": report.simulation_id,
+                "Delivery": delivery_status,
+            },
+        ),
+    )
 
     files = []
     for filename in ["executive_summary.html", "evidence_annex.html"]:
@@ -194,8 +203,8 @@ def build_executive_package(report_id: str, *, output_dir: Path | None = None) -
         "files": files,
         "artifact_inputs": [name for name, payload in artifacts.items() if payload],
         "renderer_metadata": {
-            "executive_summary.html": summary_result.metadata,
-            "evidence_annex.html": annex_result.metadata,
+            "executive_summary.html": inteia_renderer_metadata(summary_result.metadata),
+            "evidence_annex.html": inteia_renderer_metadata(annex_result.metadata),
         },
     }
 
