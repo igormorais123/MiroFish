@@ -16,6 +16,7 @@ from ..config import Config
 from ..utils.logger import get_logger
 from .zep_entity_reader import ZepEntityReader, FilteredEntities, EntityNode
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
+from .sergipe_synthetic_voters import augment_entities_for_sergipe_context
 from .simulation_config_generator import SimulationConfigGenerator, SimulationParameters
 from .llm_entity_extractor import LLMEntityExtractor
 
@@ -311,6 +312,27 @@ class SimulationManager:
             # Se nem Graphiti nem LLM produziram resultado
             if filtered is None:
                 filtered = FilteredEntities(entities=[], entity_types=set(), total_count=0, filtered_count=0)
+
+            sergipe_augmentation = augment_entities_for_sergipe_context(
+                filtered,
+                simulation_requirement=simulation_requirement,
+                document_text=document_text,
+            )
+            filtered = sergipe_augmentation.filtered
+            if sergipe_augmentation.applied:
+                logger.info(
+                    "Eleitores sinteticos de Sergipe considerados na simulacao: added=%s, source=%s",
+                    sergipe_augmentation.added_count,
+                    sergipe_augmentation.source_path,
+                )
+                if progress_callback:
+                    progress_callback(
+                        "reading",
+                        90,
+                        f"Base sintetica de Sergipe aplicada: {sergipe_augmentation.added_count} eleitores",
+                        current=filtered.filtered_count,
+                        total=filtered.filtered_count,
+                    )
 
             state.entities_count = filtered.filtered_count
             state.entity_types = list(filtered.entity_types)

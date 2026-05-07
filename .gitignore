@@ -68,6 +68,9 @@ backend/run.log
 
 # Docker 数据
 data/
+!backend/app/data/
+!backend/app/data/synthetic_voters/
+!backend/app/data/synthetic_voters/**
 .gstack/
 
 # Playwright MCP snapshots (geradas a cada sessão, não versionar)
