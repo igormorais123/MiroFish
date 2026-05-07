@@ -1,0 +1,223 @@
+﻿{
+    "schema":  "mirofish.helena_report_lab.screenshot_audit.v1",
+    "generated_at":  "2026-05-07T05:52:12.9977884Z",
+    "reports_count":  10,
+    "expected_screenshots":  30,
+    "screenshots_count":  30,
+    "passes":  true,
+    "screenshots":  [
+                        {
+                            "report":  "mirofish-posicionamento-mercado",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-posicionamento-mercado-desktop.png",
+                            "size":  190291,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-posicionamento-mercado",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-posicionamento-mercado-mobile.png",
+                            "size":  79954,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-posicionamento-mercado",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-posicionamento-mercado-internal.png",
+                            "size":  192428,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-go-to-market-90d",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-go-to-market-90d-desktop.png",
+                            "size":  162381,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-go-to-market-90d",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-go-to-market-90d-mobile.png",
+                            "size":  76408,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-go-to-market-90d",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-go-to-market-90d-internal.png",
+                            "size":  180951,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-unit-economics",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-unit-economics-desktop.png",
+                            "size":  183300,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-unit-economics",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-unit-economics-mobile.png",
+                            "size":  80466,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-unit-economics",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-unit-economics-internal.png",
+                            "size":  184661,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-concorrencia-ai",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-concorrencia-ai-desktop.png",
+                            "size":  170060,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-concorrencia-ai",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-concorrencia-ai-mobile.png",
+                            "size":  79800,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-concorrencia-ai",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-concorrencia-ai-internal.png",
+                            "size":  186533,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-ofertas-produtizadas",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-ofertas-produtizadas-desktop.png",
+                            "size":  170253,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-ofertas-produtizadas",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-ofertas-produtizadas-mobile.png",
+                            "size":  78132,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-ofertas-produtizadas",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-ofertas-produtizadas-internal.png",
+                            "size":  187432,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-riscos-operacionais",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-riscos-operacionais-desktop.png",
+                            "size":  187542,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-riscos-operacionais",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-riscos-operacionais-mobile.png",
+                            "size":  78801,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-riscos-operacionais",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-riscos-operacionais-internal.png",
+                            "size":  187934,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-reputacao-autoridade",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-reputacao-autoridade-desktop.png",
+                            "size":  171499,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-reputacao-autoridade",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-reputacao-autoridade-mobile.png",
+                            "size":  80209,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-reputacao-autoridade",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-reputacao-autoridade-internal.png",
+                            "size":  187885,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-clientes-publicos-privados",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-clientes-publicos-privados-desktop.png",
+                            "size":  166196,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-clientes-publicos-privados",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-clientes-publicos-privados-mobile.png",
+                            "size":  79000,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-clientes-publicos-privados",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-clientes-publicos-privados-internal.png",
+                            "size":  183650,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-stack-produto",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-stack-produto-desktop.png",
+                            "size":  166610,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-stack-produto",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-stack-produto-mobile.png",
+                            "size":  79143,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-stack-produto",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-stack-produto-internal.png",
+                            "size":  184071,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-sistema-inteligencia",
+                            "viewport":  "desktop",
+                            "file":  "screenshots/mirofish-sistema-inteligencia-desktop.png",
+                            "size":  165720,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-sistema-inteligencia",
+                            "viewport":  "mobile",
+                            "file":  "screenshots/mirofish-sistema-inteligencia-mobile.png",
+                            "size":  78158,
+                            "passes":  true
+                        },
+                        {
+                            "report":  "mirofish-sistema-inteligencia",
+                            "viewport":  "internal",
+                            "file":  "screenshots/mirofish-sistema-inteligencia-internal.png",
+                            "size":  183652,
+                            "passes":  true
+                        }
+                    ],
+    "errors":  [
+
+               ]
+}
