@@ -53,6 +53,7 @@ def repair_report_finalization(report_id: str) -> dict[str, Any]:
         ReportManager.save_report(report)
     elif report.markdown_content:
         full_report = report.markdown_content
+        ReportManager.save_report(report)
 
     checklist = evaluate_report_method_checklist(report_id)
     ReportManager.save_json_artifact(report_id, "report_method_checklist.json", checklist)

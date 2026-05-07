@@ -54,6 +54,37 @@ def test_repair_reassembles_full_report_and_saves_checklist(monkeypatch):
     assert saved["finalization_repair.json"]["status"] == "repaired"
 
 
+def test_repair_persists_existing_markdown_before_checklist(monkeypatch):
+    saved = {}
+    saved_reports = []
+    report = _completed_report()
+    report.outline = None
+    report.markdown_content = "# Relatorio legado\n\n## Base\n\nTexto"
+
+    def evaluate_after_persist(report_id):
+        assert saved_reports
+        assert saved_reports[0].markdown_content == report.markdown_content
+        return {"report_id": report_id, "hard_checks_pass": True, "hard_blockers": [], "warnings": []}
+
+    monkeypatch.setattr("app.services.report_finalization.ReportManager.get_report", lambda report_id: report)
+    monkeypatch.setattr("app.services.report_finalization.evaluate_report_method_checklist", evaluate_after_persist)
+    monkeypatch.setattr(
+        "app.services.report_finalization.ReportManager.save_json_artifact",
+        lambda report_id, filename, payload: saved.__setitem__(filename, payload),
+    )
+    monkeypatch.setattr(
+        "app.services.report_finalization.ReportManager.save_report",
+        lambda saved_report: saved_reports.append(saved_report),
+    )
+
+    result = repair_report_finalization("report_1")
+
+    assert result["status"] == "repaired"
+    assert result["full_report_rebuilt"] is False
+    assert "Relatorio legado" in result["full_report_preview"]
+    assert saved["report_method_checklist.json"]["hard_checks_pass"] is True
+
+
 def test_repair_blocks_report_still_generating(monkeypatch):
     report = _completed_report()
     report.status = ReportStatus.GENERATING
