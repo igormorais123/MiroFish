@@ -141,6 +141,28 @@
             <div v-if="finalizationRepairError" class="delivery-package-message repair-error">
               {{ finalizationRepairError }}
             </div>
+            <div class="executive-package-strip">
+              <div class="export-bundle-summary">
+                <span class="export-bundle-label">Pacote executivo</span>
+                <span class="export-bundle-status">{{ executivePackageStatusText }}</span>
+              </div>
+              <div class="export-bundle-actions">
+                <button
+                  type="button"
+                  class="delivery-repair-btn export-action-btn"
+                  :disabled="isCreatingExecutivePackage || !canCreateExecutivePackage"
+                  @click="createExecutivePackageManifest"
+                >
+                  <span>{{ isCreatingExecutivePackage ? 'Gerando...' : 'Gerar pacote' }}</span>
+                </button>
+              </div>
+              <div v-if="executivePackageError" class="delivery-package-message repair-error">
+                {{ executivePackageError }}
+              </div>
+              <div v-else-if="executivePackageMessage" class="delivery-package-message">
+                {{ executivePackageMessage }}
+              </div>
+            </div>
             <div class="export-bundle-strip">
               <div class="export-bundle-summary">
                 <span class="export-bundle-label">Exportação</span>
@@ -639,6 +661,7 @@ import {
   getMissionBundle,
   getReportDeliveryPackage,
   repairReportFinalization,
+  createExecutivePackage,
   createReportExport,
   getReportExports,
   verifyReportExportBundle,
@@ -688,6 +711,10 @@ const missionBundleFetchedFor = ref(null)
 const deliveryPackage = ref(null)
 const isRepairingFinalization = ref(false)
 const finalizationRepairError = ref(null)
+const executivePackageManifest = ref(null)
+const isCreatingExecutivePackage = ref(false)
+const executivePackageMessage = ref('')
+const executivePackageError = ref('')
 const reportExports = ref([])
 const exportVerificationById = ref({})
 const isCreatingExport = ref(false)
@@ -2265,6 +2292,30 @@ const canRepairFinalization = computed(() => {
   return deliveryPackage.value.status === 'blocked' || deliveryPackage.value.method_checks_pass === false
 })
 
+const existingExecutivePackageManifest = computed(() => {
+  return executivePackageManifest.value ||
+    parseArtifactContent(artifactContentByName('executive_package_manifest.json')) ||
+    null
+})
+
+const canCreateExecutivePackage = computed(() => {
+  return !!props.reportId &&
+    !isCreatingExecutivePackage.value &&
+    reportRecord.value?.delivery_status === 'publishable' &&
+    evidenceAudit.value?.passes_gate !== false &&
+    !gateBlocked.value &&
+    !diagnosticOnly.value
+})
+
+const executivePackageStatusText = computed(() => {
+  if (isCreatingExecutivePackage.value) return 'Gerando'
+  if (existingExecutivePackageManifest.value?.status === 'created') return 'Criado'
+  if (canCreateExecutivePackage.value) return 'Disponível'
+  if (reportRecord.value?.delivery_status === 'diagnostic_only') return 'Indisponível em diagnóstico'
+  if (reportRecord.value?.delivery_status && reportRecord.value.delivery_status !== 'publishable') return 'Aguardando aprovação'
+  return 'Aguardando relatório publicável'
+})
+
 const getExportId = (item) => item?.export_id || item?.id || item?.bundle_id || item?.draft_id || ''
 
 const activeExport = computed(() => {
@@ -2491,6 +2542,27 @@ const loadReportExports = async () => {
     if (err?.status !== 404) {
       exportActionError.value = formatExportError(err, 'Falha ao carregar exportações')
     }
+  }
+}
+
+const createExecutivePackageManifest = async () => {
+  if (!props.reportId || isCreatingExecutivePackage.value || !canCreateExecutivePackage.value) return
+  isCreatingExecutivePackage.value = true
+  executivePackageError.value = ''
+  executivePackageMessage.value = ''
+  try {
+    const res = await createExecutivePackage(props.reportId)
+    if (res.success && res.data) {
+      executivePackageManifest.value = res.data
+      executivePackageMessage.value = 'Pacote executivo criado com manifesto auditável.'
+      await fetchReportAudit()
+      return
+    }
+    executivePackageError.value = res.error || 'Não foi possível gerar o pacote executivo.'
+  } catch (err) {
+    executivePackageError.value = err?.response?.data?.error || err?.message || 'Falha ao gerar pacote executivo'
+  } finally {
+    isCreatingExecutivePackage.value = false
   }
 }
 
@@ -3041,6 +3113,10 @@ watch(() => props.reportId, (newId) => {
     deliveryPackage.value = null
     isRepairingFinalization.value = false
     finalizationRepairError.value = null
+    executivePackageManifest.value = null
+    isCreatingExecutivePackage.value = false
+    executivePackageMessage.value = ''
+    executivePackageError.value = ''
     reportExports.value = []
     exportVerificationById.value = {}
     isCreatingExport.value = false
@@ -3775,6 +3851,7 @@ watch(() => props.reportId, (newId) => {
   color: #991B1B;
 }
 
+.executive-package-strip,
 .export-bundle-strip {
   margin-top: 9px;
   padding-top: 9px;

@@ -125,6 +125,10 @@ export const repairReportFinalization = (reportId) => {
   return service.post(`/api/report/${reportId}/finalization/repair`)
 }
 
+export const createExecutivePackage = (reportId) => {
+  return service.post(`/api/report/${reportId}/executive-package`)
+}
+
 export const createReportExport = (reportId) => {
   return requestReportExport(`/api/report/${encodeURIComponent(reportId)}/exports`, {
     method: 'POST'
