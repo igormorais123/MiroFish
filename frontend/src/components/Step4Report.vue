@@ -292,6 +292,52 @@
           </div>
         </div>
 
+        <div v-if="forecastCalibrationVisible" class="forecast-panel" :class="forecastCalibrationPanelClass">
+          <div class="forecast-header">
+            <div class="forecast-title-row">
+              <span class="forecast-dot"></span>
+              <span class="forecast-title">Previsões</span>
+            </div>
+            <span class="forecast-status">{{ forecastCalibrationStatusText }}</span>
+          </div>
+
+          <div class="forecast-metrics">
+            <div class="forecast-metric">
+              <span class="forecast-label">Total</span>
+              <span class="forecast-value mono">{{ formatInteger(forecastCalibration.total) }}</span>
+            </div>
+            <div class="forecast-metric">
+              <span class="forecast-label">Resolvidas</span>
+              <span class="forecast-value mono">{{ formatInteger(forecastCalibration.resolved) }}</span>
+            </div>
+            <div class="forecast-metric">
+              <span class="forecast-label">Com prob.</span>
+              <span class="forecast-value mono">{{ formatInteger(forecastCalibration.probabilistic) }}</span>
+            </div>
+            <div class="forecast-metric">
+              <span class="forecast-label">Brier médio</span>
+              <span class="forecast-value mono">{{ formatMetric(forecastCalibration.mean_brier_score, 3) }}</span>
+            </div>
+          </div>
+
+          <div v-if="forecastStatusPoints.length" class="forecast-status-bars">
+            <div
+              v-for="point in forecastStatusPoints"
+              :key="point.label"
+              class="forecast-status-row"
+            >
+              <span class="forecast-status-label">{{ point.label }}</span>
+              <span class="forecast-status-track">
+                <span
+                  class="forecast-status-fill"
+                  :style="{ width: forecastBarWidth(point.value) }"
+                ></span>
+              </span>
+              <span class="forecast-status-count mono">{{ formatInteger(point.value) }}</span>
+            </div>
+          </div>
+        </div>
+
         <div v-if="missionBundleVisible" class="mission-bundle-panel">
           <div class="mission-bundle-header">
             <div>
@@ -2047,6 +2093,53 @@ const costMeterStateClass = computed(() => {
   return 'pending'
 })
 
+const forecastLedger = computed(() => {
+  return parseArtifactContent(artifactContentByName('forecast_ledger.json')) || null
+})
+
+const forecastCalibration = computed(() => {
+  return forecastLedger.value?.calibracao || null
+})
+
+const forecastChartData = computed(() => {
+  return forecastLedger.value?.chart_data || null
+})
+
+const forecastStatusPoints = computed(() => {
+  const series = forecastChartData.value?.series
+  if (!Array.isArray(series)) return []
+  const statusSeries = series.find(item => item?.id === 'status_counts')
+  if (!Array.isArray(statusSeries?.points)) return []
+
+  return statusSeries.points
+    .map(point => ({
+      label: point?.label || 'Sem status',
+      value: Number(point?.value || 0)
+    }))
+    .filter(point => point.value > 0)
+})
+
+const forecastCalibrationVisible = computed(() => {
+  return reportRecord.value?.status === 'completed' && !!forecastCalibration.value && Number(forecastCalibration.value.total || 0) > 0
+})
+
+const forecastCalibrationPanelClass = computed(() => ({
+  resolved: Number(forecastCalibration.value?.resolved || 0) > 0,
+  waiting: Number(forecastCalibration.value?.resolved || 0) === 0
+}))
+
+const forecastCalibrationStatusText = computed(() => {
+  const resolved = Number(forecastCalibration.value?.resolved || 0)
+  const probabilistic = Number(forecastCalibration.value?.probabilistic || 0)
+  if (resolved > 0 && probabilistic > 0) return 'Calibração ativa'
+  if (resolved > 0) return 'Resolvidas'
+  return 'Aguardando resolução'
+})
+
+const forecastMaxStatusCount = computed(() => {
+  return Math.max(1, ...forecastStatusPoints.value.map(point => point.value))
+})
+
 const missionBundle = computed(() => {
   return parseArtifactContent(artifactContentByName('mission_bundle.json')) || null
 })
@@ -2511,6 +2604,12 @@ const formatCostMeterState = (state) => {
     falha: 'Falha'
   }
   return labels[state] || state || 'Pendente'
+}
+
+const forecastBarWidth = (value) => {
+  const numeric = Number(value || 0)
+  if (numeric <= 0) return '0%'
+  return `${Math.max(6, Math.round((numeric / forecastMaxStatusCount.value) * 100))}%`
 }
 
 const truncateText = (text, maxLen) => {
@@ -4096,6 +4195,163 @@ watch(() => props.reportId, (newId) => {
 
   .value-phase-state {
     grid-column: 1 / -1;
+  }
+}
+
+.forecast-panel {
+  margin: 12px 20px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+.forecast-panel.resolved {
+  border-color: #A7F3D0;
+}
+
+.forecast-panel.waiting {
+  border-color: #FDE68A;
+}
+
+.forecast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forecast-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.forecast-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #D97706;
+  flex: 0 0 auto;
+}
+
+.forecast-panel.resolved .forecast-dot {
+  background: #059669;
+}
+
+.forecast-title,
+.forecast-status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.forecast-title {
+  color: #111827;
+}
+
+.forecast-status {
+  color: #6B7280;
+  flex: 0 0 auto;
+}
+
+.forecast-panel.resolved .forecast-status {
+  color: #047857;
+}
+
+.forecast-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.forecast-metric {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(15, 39, 71, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.forecast-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.forecast-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.forecast-status-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.forecast-status-row {
+  display: grid;
+  grid-template-columns: minmax(86px, 0.8fr) minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.forecast-status-label,
+.forecast-status-count {
+  font-size: 11px;
+  color: #374151;
+}
+
+.forecast-status-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forecast-status-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #E5E7EB;
+}
+
+.forecast-status-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0F766E;
+}
+
+@media (max-width: 720px) {
+  .forecast-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .forecast-status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
   }
 }
 
