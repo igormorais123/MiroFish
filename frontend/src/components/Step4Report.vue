@@ -155,6 +155,15 @@
                 >
                   <span>{{ isCreatingExecutivePackage ? 'Gerando...' : 'Gerar pacote' }}</span>
                 </button>
+                <a
+                  v-for="file in executivePackageDownloadFiles"
+                  :key="file.filename"
+                  class="delivery-repair-btn export-action-btn export-download-link"
+                  :href="file.url"
+                  :download="file.filename"
+                >
+                  {{ file.label }}
+                </a>
               </div>
               <div v-if="executivePackageError" class="delivery-package-message repair-error">
                 {{ executivePackageError }}
@@ -665,7 +674,8 @@ import {
   createReportExport,
   getReportExports,
   verifyReportExportBundle,
-  getReportExportAttachmentUrl
+  getReportExportAttachmentUrl,
+  getExecutivePackageAttachmentUrl
 } from '../api/report'
 import { escapeHtml, textToSafeHtml } from '../utils/safeMarkdown'
 
@@ -2314,6 +2324,24 @@ const executivePackageStatusText = computed(() => {
   if (reportRecord.value?.delivery_status === 'diagnostic_only') return 'Indisponível em diagnóstico'
   if (reportRecord.value?.delivery_status && reportRecord.value.delivery_status !== 'publishable') return 'Aguardando aprovação'
   return 'Aguardando relatório publicável'
+})
+
+const executivePackageDownloadFiles = computed(() => {
+  if (!props.reportId || existingExecutivePackageManifest.value?.status !== 'created') return []
+  const labels = {
+    'executive_summary.html': 'Resumo',
+    'evidence_annex.html': 'Anexo',
+    'executive_package_manifest.json': 'Manifesto'
+  }
+  const filenames = (existingExecutivePackageManifest.value.files || [])
+    .map(item => item?.filename)
+    .filter(filename => labels[filename])
+
+  return [...new Set(filenames)].map(filename => ({
+    filename,
+    label: labels[filename],
+    url: getExecutivePackageAttachmentUrl(props.reportId, filename)
+  })).filter(file => file.url)
 })
 
 const getExportId = (item) => item?.export_id || item?.id || item?.bundle_id || item?.draft_id || ''

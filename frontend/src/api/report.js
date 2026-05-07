@@ -129,6 +129,16 @@ export const createExecutivePackage = (reportId) => {
   return service.post(`/api/report/${reportId}/executive-package`)
 }
 
+export const getExecutivePackageAttachmentUrl = (reportId, filename) => {
+  const safeFilename = [
+    'executive_summary.html',
+    'evidence_annex.html',
+    'executive_package_manifest.json'
+  ].includes(filename) ? filename : ''
+  if (!safeFilename) return ''
+  return `${getApiBasePath()}/api/report/${encodeURIComponent(reportId)}/executive-package/${encodeURIComponent(safeFilename)}`
+}
+
 export const createReportExport = (reportId) => {
   return requestReportExport(`/api/report/${encodeURIComponent(reportId)}/exports`, {
     method: 'POST'

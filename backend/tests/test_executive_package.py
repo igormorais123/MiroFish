@@ -4,7 +4,9 @@ import pytest
 
 from app.services.executive_package import (
     ExecutivePackageConflict,
+    ExecutivePackageInvalidPath,
     ExecutivePackageNotFound,
+    allowed_executive_package_file_path,
     build_executive_package,
 )
 from app.services.report_agent import Report, ReportManager, ReportStatus
@@ -73,6 +75,26 @@ def test_executive_package_creates_manifest_and_html(report_store):
     assert ReportManager.load_json_artifact(report.report_id, "executive_package_manifest.json")["status"] == "created"
 
 
+def test_executive_package_download_path_uses_manifest_allowlist(report_store):
+    report = _report()
+    ReportManager.save_report(report)
+    build_executive_package(report.report_id)
+
+    path = allowed_executive_package_file_path(report.report_id, "executive_summary.html")
+
+    assert path.name == "executive_summary.html"
+    assert path.is_file()
+
+
+def test_executive_package_download_path_blocks_unlisted_file(report_store):
+    report = _report()
+    ReportManager.save_report(report)
+    build_executive_package(report.report_id)
+
+    with pytest.raises(ExecutivePackageInvalidPath):
+        allowed_executive_package_file_path(report.report_id, "../meta.json")
+
+
 def test_executive_package_api_returns_manifest(monkeypatch):
     from app import create_app
     import app.api.report as report_api
@@ -124,4 +146,37 @@ def test_executive_package_api_maps_missing_report(monkeypatch):
     response = create_app().test_client().post("/api/report/missing/executive-package")
 
     assert response.status_code == 404
+    assert response.get_json()["success"] is False
+
+
+def test_executive_package_api_downloads_allowlisted_file(monkeypatch, tmp_path):
+    from app import create_app
+    import app.api.report as report_api
+
+    package_file = tmp_path / "executive_summary.html"
+    package_file.write_text("<html>ok</html>", encoding="utf-8")
+    monkeypatch.setattr(
+        report_api,
+        "allowed_executive_package_file_path",
+        lambda report_id, filename: package_file,
+    )
+
+    response = create_app().test_client().get("/api/report/report_1/executive-package/executive_summary.html")
+
+    assert response.status_code == 200
+    assert response.data == b"<html>ok</html>"
+
+
+def test_executive_package_api_blocks_invalid_download(monkeypatch):
+    from app import create_app
+    import app.api.report as report_api
+
+    def raise_invalid(report_id, filename):
+        raise ExecutivePackageInvalidPath("Arquivo nao permitido")
+
+    monkeypatch.setattr(report_api, "allowed_executive_package_file_path", raise_invalid)
+
+    response = create_app().test_client().get("/api/report/report_1/executive-package/meta.json")
+
+    assert response.status_code == 400
     assert response.get_json()["success"] is False

@@ -19,7 +19,9 @@ from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
 from ..services.executive_package import (
     ExecutivePackageConflict,
+    ExecutivePackageInvalidPath,
     ExecutivePackageNotFound,
+    allowed_executive_package_file_path,
     build_executive_package,
 )
 from ..services.report_bundle_verifier import (
@@ -773,6 +775,27 @@ def create_executive_package_route(report_id: str):
         }), 400
     except Exception as e:
         logger.error(f"Falha ao criar pacote executivo: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/executive-package/<filename>', methods=['GET'])
+def download_executive_package_file_route(report_id: str, filename: str):
+    """Baixar apenas arquivos allowlisted no manifesto do pacote executivo."""
+    try:
+        path = allowed_executive_package_file_path(report_id, filename)
+        return send_file(
+            path,
+            as_attachment=True,
+            download_name=path.name,
+            mimetype='application/json' if path.suffix == '.json' else 'text/html',
+        )
+    except ExecutivePackageNotFound as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ExecutivePackageInvalidPath as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Falha ao baixar arquivo do pacote executivo: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
 

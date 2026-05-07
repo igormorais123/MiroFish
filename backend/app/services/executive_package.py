@@ -12,6 +12,12 @@ from .report_agent import ReportManager
 from .safe_markdown_renderer import render_safe_markdown
 
 
+EXECUTIVE_PACKAGE_FILENAMES = {
+    "executive_summary.html",
+    "evidence_annex.html",
+    "executive_package_manifest.json",
+}
+
 ARTIFACT_INPUTS = [
     "system_gate.json",
     "evidence_manifest.json",
@@ -32,6 +38,10 @@ class ExecutivePackageNotFound(ExecutivePackageError):
 
 class ExecutivePackageConflict(ExecutivePackageError):
     """Report is not eligible for an executive package."""
+
+
+class ExecutivePackageInvalidPath(ExecutivePackageError):
+    """Requested package path is unsafe or not allowlisted."""
 
 
 def _now_iso() -> str:
@@ -100,6 +110,42 @@ def _write_text(path: Path, content: str) -> None:
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    return data if isinstance(data, dict) else {"items": data}
+
+
+def load_executive_package_manifest(report_id: str) -> dict[str, Any]:
+    """Load the package manifest from disk without creating a package."""
+
+    if not ReportManager.get_report(report_id):
+        raise ExecutivePackageNotFound(f"Relatorio nao encontrado: {report_id}")
+    manifest_path = _package_dir(report_id) / "executive_package_manifest.json"
+    if not manifest_path.is_file():
+        raise ExecutivePackageNotFound("Pacote executivo ainda nao foi criado")
+    return _read_json(manifest_path)
+
+
+def allowed_executive_package_file_path(report_id: str, filename: str) -> Path:
+    """Resolve a package file only when it is present in the manifest allowlist."""
+
+    if filename not in EXECUTIVE_PACKAGE_FILENAMES:
+        raise ExecutivePackageInvalidPath(f"Arquivo nao permitido: {filename}")
+    manifest = load_executive_package_manifest(report_id)
+    allowed = {item.get("filename") for item in manifest.get("files", []) if isinstance(item, dict)}
+    if filename not in allowed:
+        raise ExecutivePackageInvalidPath(f"Arquivo nao listado no manifesto: {filename}")
+
+    package_dir = _package_dir(report_id)
+    path = (package_dir / filename).resolve()
+    if path.parent != package_dir.resolve():
+        raise ExecutivePackageInvalidPath(f"Arquivo nao permitido: {filename}")
+    if not path.is_file():
+        raise ExecutivePackageNotFound(f"Arquivo nao encontrado: {filename}")
+    return path
 
 
 def build_executive_package(report_id: str, *, output_dir: Path | None = None) -> dict[str, Any]:
