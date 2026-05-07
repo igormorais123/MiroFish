@@ -16,6 +16,11 @@ from ..services.power_catalog import PowerCatalog
 from ..services.power_persona_catalog import PowerPersonaCatalog
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
+from ..services.report_finalization import (
+    ReportFinalizationConflict,
+    ReportFinalizationNotFound,
+    repair_report_finalization,
+)
 from ..services.simulation_manager import SimulationManager
 from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
@@ -687,6 +692,34 @@ def get_report_delivery_package(report_id: str):
         }), status_code
     except Exception as e:
         logger.error(f"Falha ao obter delivery package: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 500
+
+
+@report_bp.route('/<report_id>/finalization/repair', methods=['POST'])
+def repair_report_finalization_route(report_id: str):
+    """Reparar finalizacao do relatorio sem chamar LLM."""
+    try:
+        result = repair_report_finalization(report_id)
+        return jsonify({
+            "success": True,
+            "data": result,
+        }), 200
+    except ReportFinalizationNotFound as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 404
+    except ReportFinalizationConflict as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 409
+    except Exception as e:
+        logger.error(f"Falha ao reparar finalizacao do relatorio: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,

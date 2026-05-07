@@ -113,12 +113,33 @@
             <div class="delivery-package-meta">
               <span>{{ deliveryPackageAction }}</span>
               <span v-if="deliveryPackage.artifacts?.length">{{ deliveryPackage.artifacts.length }} artefatos</span>
+              <span v-if="deliveryPackage.method_checklist" class="delivery-checklist-pill" :class="{ passed: deliveryPackage.method_checks_pass }">
+                Método {{ deliveryPackage.method_checks_pass ? 'ok' : 'pendente' }}
+              </span>
             </div>
             <div v-if="deliveryPackage.blockers?.length" class="delivery-package-message">
               {{ deliveryPackage.blockers[0] }}
             </div>
             <div v-else-if="deliveryPackage.warnings?.length" class="delivery-package-message">
               {{ deliveryPackage.warnings[0] }}
+            </div>
+            <button
+              v-if="canRepairFinalization"
+              class="delivery-repair-btn"
+              type="button"
+              :disabled="isRepairingFinalization"
+              @click="repairFinalization"
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                <path d="M3 21v-5h5"></path>
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                <path d="M16 3h5v5"></path>
+              </svg>
+              <span>{{ isRepairingFinalization ? 'Reparando...' : 'Reparar finalização' }}</span>
+            </button>
+            <div v-if="finalizationRepairError" class="delivery-package-message repair-error">
+              {{ finalizationRepairError }}
             </div>
           </div>
 
@@ -524,7 +545,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle, getReportDeliveryPackage } from '../api/report'
+import { getAgentLog, getConsoleLog, getReport, getReportArtifacts, getReportSections, getMissionBundle, getReportDeliveryPackage, repairReportFinalization } from '../api/report'
 import { escapeHtml, textToSafeHtml } from '../utils/safeMarkdown'
 
 const router = useRouter()
@@ -567,6 +588,8 @@ const reportArtifacts = ref([])
 const auditLoadError = ref(null)
 const missionBundleFetchedFor = ref(null)
 const deliveryPackage = ref(null)
+const isRepairingFinalization = ref(false)
+const finalizationRepairError = ref(null)
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
@@ -2084,6 +2107,13 @@ const deliveryPackageAction = computed(() => {
   return labels[deliveryPackage.value?.next_action] || 'Revisar estado'
 })
 
+const canRepairFinalization = computed(() => {
+  if (!props.reportId || isRepairingFinalization.value) return false
+  if (!deliveryPackage.value) return false
+  if (deliveryPackage.value.status === 'report_in_progress') return false
+  return deliveryPackage.value.status === 'blocked' || deliveryPackage.value.method_checks_pass === false
+})
+
 const auditIssues = computed(() => {
   const issues = [
     ...(qualityGate.value?.issues || []),
@@ -2185,6 +2215,30 @@ const workflowSteps = computed(() => {
 // Methods
 const addLog = (msg) => {
   emit('add-log', msg)
+}
+
+const repairFinalization = async () => {
+  if (!props.reportId || isRepairingFinalization.value) return
+  isRepairingFinalization.value = true
+  finalizationRepairError.value = null
+  try {
+    const res = await repairReportFinalization(props.reportId)
+    if (res.success) {
+      addLog('Finalização do relatório reparada')
+      await fetchReportAudit()
+      return
+    }
+    finalizationRepairError.value = res.error || 'Reparo indisponível'
+  } catch (err) {
+    const status = err?.response?.status
+    if (status === 409) {
+      finalizationRepairError.value = 'Relatório ainda em geração; aguarde concluir.'
+    } else {
+      finalizationRepairError.value = err?.response?.data?.error || err.message || 'Falha ao reparar finalização'
+    }
+  } finally {
+    isRepairingFinalization.value = false
+  }
 }
 
 const isSectionCompleted = (sectionIndex) => {
@@ -2672,6 +2726,8 @@ watch(() => props.reportId, (newId) => {
     missionBundleFetchedFor.value = null
     auditLoadError.value = null
     deliveryPackage.value = null
+    isRepairingFinalization.value = false
+    finalizationRepairError.value = null
     
     startPolling()
   }
@@ -3355,6 +3411,49 @@ watch(() => props.reportId, (newId) => {
   margin-top: 5px;
   font-size: 11px;
   color: #4B5563;
+}
+
+.delivery-checklist-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid #FCD34D;
+  border-radius: 999px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-weight: 700;
+}
+
+.delivery-checklist-pill.passed {
+  border-color: #A7F3D0;
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.delivery-repair-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin-top: 9px;
+  padding: 5px 9px;
+  border: 1px solid #D1D5DB;
+  border-radius: 7px;
+  background: #FFFFFF;
+  color: #374151;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delivery-repair-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.repair-error {
+  color: #991B1B;
 }
 
 .workflow-steps {
