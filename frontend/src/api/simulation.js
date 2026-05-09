@@ -1,4 +1,4 @@
-import service, { requestWithRetry } from './index'
+import service, { API_TIMEOUTS, requestWithRetry } from './index'
 
 /**
  * Criar simulacao
@@ -211,7 +211,16 @@ export const interviewAgents = (data) => {
  * Usado para exibicao de projetos historicos na pagina inicial
  * @param {number} limit - Limite de quantidade de retorno
  */
-export const getSimulationHistory = (limit = 20) => {
-  return service.get('/api/simulation/history', { params: { limit } })
+export const getSimulationHistory = (limit = 20, options = {}) => {
+  const params = {
+    limit,
+    include_reports: options.includeReports ?? true,
+    include_runtime: options.includeRuntime ?? false
+  }
+
+  return service.get('/api/simulation/history', {
+    params,
+    timeout: options.timeout ?? API_TIMEOUTS.fast
+  })
 }
 

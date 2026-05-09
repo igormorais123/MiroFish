@@ -105,6 +105,13 @@
       <span class="loading-text">Carregando...</span>
     </div>
 
+    <div v-if="historyError && !loading" class="history-error" role="alert">
+      <span>{{ historyError }}</span>
+      <button type="button" class="history-retry" @click.stop="loadHistory">
+        Tentar novamente
+      </button>
+    </div>
+
     <!-- Modal de detalhes do histórico de replay -->
     <Teleport to="body">
       <Transition name="modal">
@@ -201,6 +208,7 @@ const route = useRoute()
 // Estado
 const projects = ref([])
 const loading = ref(true)
+const historyError = ref('')
 const isExpanded = ref(false)
 const hoveringCard = ref(null)
 const historyContainer = ref(null)
@@ -438,13 +446,15 @@ const goToReport = () => {
 const loadHistory = async () => {
   try {
     loading.value = true
-    const response = await getSimulationHistory(20)
+    historyError.value = ''
+    const response = await getSimulationHistory(20, { includeReports: true, includeRuntime: false })
     if (response.success) {
       projects.value = response.data || []
     }
   } catch (error) {
     console.error('Falha ao carregar o histórico de projetos:', error)
     projects.value = []
+    historyError.value = 'Histórico indisponível no momento.'
   } finally {
     loading.value = false
   }
@@ -975,6 +985,39 @@ onUnmounted(() => {
   gap: 14px;
   padding: 48px;
   color: #9CA3AF;
+}
+
+.history-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 520px;
+  margin: 24px auto 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 8px;
+  background: rgba(127, 29, 29, 0.12);
+  color: #FCA5A5;
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.history-retry {
+  border: 1px solid rgba(252, 165, 165, 0.45);
+  border-radius: 6px;
+  background: rgba(252, 165, 165, 0.08);
+  color: #FECACA;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.history-retry:hover {
+  background: rgba(252, 165, 165, 0.16);
 }
 
 .empty-icon {

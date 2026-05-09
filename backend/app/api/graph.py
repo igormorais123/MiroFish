@@ -14,6 +14,7 @@ from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
 from ..services.text_processor import TextProcessor
 from ..utils.file_parser import FileParser
+from ..utils.graphiti_client import GraphitiClient
 from ..utils.logger import get_logger
 from ..models.task import TaskManager, TaskStatus
 from ..models.project import ProjectManager, ProjectStatus
@@ -28,6 +29,21 @@ def allowed_file(filename: str) -> bool:
         return False
     ext = os.path.splitext(filename)[1].lower().lstrip('.')
     return ext in Config.ALLOWED_EXTENSIONS
+
+
+@graph_bp.route('/status', methods=['GET'])
+def get_graph_status():
+    """Retorna estado operacional do backend de grafo."""
+    graphiti_status = GraphitiClient(timeout=2).status()
+    return jsonify({
+        "success": True,
+        "data": {
+            "graphiti": graphiti_status,
+            "graphiti_required": Config.GRAPHITI_REQUIRED,
+            "fallback_enabled": not Config.GRAPHITI_REQUIRED,
+            "graph_backend": "graphiti" if graphiti_status.get("available") else "local_fallback",
+        }
+    })
 
 
 # ============== Interfaces de gerenciamento de projeto ==============

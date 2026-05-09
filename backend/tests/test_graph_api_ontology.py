@@ -79,3 +79,31 @@ def test_generate_ontology_json_sem_objetivo_retorna_400():
 
     assert status_code == 400
     assert response.get_json()["success"] is False
+
+
+def test_graph_status_retorna_fallback_quando_graphiti_indisponivel(monkeypatch):
+    app = Flask(__name__)
+
+    class FakeGraphitiClient:
+        def __init__(self, timeout=2):
+            self.timeout = timeout
+
+        def status(self):
+            return {
+                "available": False,
+                "base_url": "http://graphiti:8003",
+                "endpoint": None,
+                "error": "NameResolutionError",
+            }
+
+    monkeypatch.setattr(graph_api, "GraphitiClient", FakeGraphitiClient)
+    monkeypatch.setattr(graph_api.Config, "GRAPHITI_REQUIRED", False)
+
+    with app.test_request_context("/api/graph/status", method="GET"):
+        response = graph_api.get_graph_status()
+
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["data"]["graphiti"]["available"] is False
+    assert payload["data"]["fallback_enabled"] is True
+    assert payload["data"]["graph_backend"] == "local_fallback"

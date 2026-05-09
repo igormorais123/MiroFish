@@ -8,10 +8,16 @@ const detectBaseURL = () => {
   return ''
 }
 
+export const API_TIMEOUTS = {
+  fast: 15000,
+  normal: 60000,
+  slow: 300000
+}
+
 // Criar instancia axios
 const service = axios.create({
   baseURL: detectBaseURL(),
-  timeout: 300000, // Timeout de 5 minutos (geracao de ontologia pode demorar)
+  timeout: API_TIMEOUTS.normal,
   headers: {
     'Content-Type': 'application/json'
   }

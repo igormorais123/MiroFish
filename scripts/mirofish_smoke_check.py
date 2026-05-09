@@ -1,7 +1,7 @@
 """Smoke check operacional do MiroFish.
 
 Executa validacoes locais e, se MIROFISH_LIVE_URL estiver definido, checa o
-health publico e o historico contra um backend vivo.
+health publico, o status do grafo e o historico contra um backend vivo.
 """
 
 from __future__ import annotations
@@ -67,7 +67,9 @@ def main() -> int:
                 "pytest",
                 "tests/test_llm_client_json.py",
                 "tests/test_ontology_generator_v2.py",
+                "tests/test_graph_api_ontology.py",
                 "tests/test_graph_builder.py",
+                "tests/test_simulation_history_api.py",
                 "tests/test_simulation_manager.py",
                 "-q",
             ],
@@ -79,7 +81,12 @@ def main() -> int:
     if live_url:
         checks.extend([
             fetch_json("live public health", f"{live_url}/health/public", timeout=5),
-            fetch_json("live history", f"{live_url}/api/simulation/history?limit=1", timeout=15),
+            fetch_json("live graph status", f"{live_url}/api/graph/status", timeout=5),
+            fetch_json(
+                "live fast history",
+                f"{live_url}/api/simulation/history?limit=1&include_reports=false&include_runtime=false",
+                timeout=5,
+            ),
         ])
 
     return 0 if all(checks) else 1
