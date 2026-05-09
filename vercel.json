@@ -4,23 +4,23 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/mirofish/api/(.*)",
-      "destination": "https://mirofish.inteia.com.br/api/$1"
+      "source": "/mirofish/api/:path*",
+      "destination": "https://mirofish.inteia.com.br/api/:path*"
     },
     {
-      "source": "/mirofish/health/(.*)",
-      "destination": "https://mirofish.inteia.com.br/health/$1"
+      "source": "/mirofish/health/:path*",
+      "destination": "https://mirofish.inteia.com.br/health/:path*"
     },
     {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
     },
     {
-      "source": "/mirofish/assets/(.*)",
-      "destination": "/assets/$1"
+      "source": "/mirofish/assets/:path*",
+      "destination": "/assets/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
