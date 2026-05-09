@@ -57,9 +57,10 @@ services:
     restart: always
     depends_on:
       graphiti:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "4000:80"
+      - "5001:5001"
     environment:
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
@@ -74,6 +75,7 @@ services:
       - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY:-}
       - GRAPHITI_BASE_URL=http://graphiti:8000
       - GRAPHITI_TIMEOUT=${GRAPHITI_TIMEOUT:-120}
+      - GRAPHITI_REQUIRED=${GRAPHITI_REQUIRED:-false}
       - ZEP_BASE_URL=${ZEP_BASE_URL:-}
       - ZEP_API_KEY=${ZEP_API_KEY:-}
       - ZEP_MODE=${ZEP_MODE:-disabled}
@@ -82,7 +84,7 @@ services:
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=5001
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/simulation/history?limit=1"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health/public"]
       interval: 30s
       timeout: 10s
       retries: 3

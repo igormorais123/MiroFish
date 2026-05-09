@@ -990,10 +990,13 @@ def list_simulations():
         project_id: filtrar por ID do projeto (opcional)
     """
     try:
+        from ..utils.pagination import get_limit
+
         project_id = request.args.get('project_id')
+        limit = get_limit(default=100, max_limit=500)
 
         manager = SimulationManager()
-        simulations = manager.list_simulations(project_id=project_id)
+        simulations = manager.list_simulations(project_id=project_id, limit=limit)
 
         return jsonify({
             "success": True,
@@ -1032,9 +1035,8 @@ def _get_report_id_for_simulation(simulation_id: str) -> str:
     if not os.path.exists(reports_dir):
         return None
 
-    matching_reports = []
-
     try:
+        report_entries = []
         for report_folder in os.listdir(reports_dir):
             report_path = os.path.join(reports_dir, report_folder)
             if not os.path.isdir(report_path):
@@ -1043,26 +1045,22 @@ def _get_report_id_for_simulation(simulation_id: str) -> str:
             meta_file = os.path.join(report_path, "meta.json")
             if not os.path.exists(meta_file):
                 continue
+            report_entries.append((os.path.getmtime(meta_file), meta_file))
+
+        report_entries.sort(reverse=True)
+        max_scan = 500
+
+        for _, meta_file in report_entries[:max_scan]:
 
             try:
                 with open(meta_file, 'r', encoding='utf-8') as f:
                     meta = json.load(f)
 
                 if meta.get("simulation_id") == simulation_id:
-                    matching_reports.append({
-                        "report_id": meta.get("report_id"),
-                        "created_at": meta.get("created_at", ""),
-                        "status": meta.get("status", "")
-                    })
+                    return meta.get("report_id")
             except Exception:
                 continue
-
-        if not matching_reports:
-            return None
-
-        # Ordena por data decrescente, retorna mais recente
-        matching_reports.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return matching_reports[0].get("report_id")
+        return None
 
     except Exception as e:
         logger.warning(f"Buscar simulation {simulation_id}  - falha ao buscar report: {e}")
@@ -1105,10 +1103,12 @@ def get_simulation_history():
         }
     """
     try:
-        limit = request.args.get('limit', 20, type=int)
+        from ..utils.pagination import get_limit
+
+        limit = get_limit(default=20, max_limit=50)
 
         manager = SimulationManager()
-        simulations = manager.list_simulations()[:limit]
+        simulations = manager.list_simulations(limit=limit)
 
         # Enriquece dados da simulacao
         enriched_simulations = []

@@ -246,6 +246,8 @@ def require_internal_token(view_func):
 @require_internal_token
 def internal_health():
     """Healthcheck completo com dados de infra (exige token)."""
+    from ..utils.graphiti_client import GraphitiClient
+
     return jsonify({
         "success": True,
         "data": {
@@ -254,6 +256,7 @@ def internal_health():
             "llm_base_url": Config.LLM_BASE_URL,
             "llm_model": Config.LLM_MODEL_NAME,
             "graphiti_url": Config.GRAPHITI_BASE_URL,
+            "graphiti": GraphitiClient(timeout=2).status(),
         }
     })
 
@@ -482,6 +485,8 @@ def build_internal_graph(project_id: str):
             project.status = ProjectStatus.ONTOLOGY_GENERATED
             project.graph_id = None
             project.graph_build_task_id = None
+            project.graph_backend = None
+            project.graph_warning = None
             project.error = None
 
         text = ProjectManager.get_extracted_text(project_id)
@@ -509,6 +514,8 @@ def build_internal_graph(project_id: str):
 
         project.status = ProjectStatus.GRAPH_BUILDING
         project.graph_build_task_id = task_id
+        project.graph_backend = None
+        project.graph_warning = None
         project.chunk_size = chunk_size
         project.chunk_overlap = chunk_overlap
         ProjectManager.save_project(project)
@@ -530,14 +537,47 @@ def build_internal_graph(project_id: str):
                     message=f"Texto dividido em {len(chunks)} blocos",
                 )
 
+                graphiti_status = builder.client.status()
+                if not graphiti_status.get("available"):
+                    if Config.GRAPHITI_REQUIRED:
+                        raise RuntimeError(
+                            "Graphiti indisponivel ou endpoint de health incompatível."
+                        )
+                    graph_data = builder.build_schema_fallback_graph(
+                        text=text,
+                        ontology=project.ontology,
+                        graph_name=graph_name,
+                        unavailable_reason=graphiti_status.get("error") or "Graphiti indisponivel",
+                    )
+                    project.graph_id = graph_data["graph_id"]
+                    project.graph_backend = "local_fallback"
+                    project.graph_warning = graph_data["warning"]
+                    project.status = ProjectStatus.GRAPH_COMPLETED
+                    project.error = None
+                    ProjectManager.save_project(project)
+                    task_manager.update_task(
+                        task_id,
+                        status=TaskStatus.COMPLETED,
+                        progress=100,
+                        message=(
+                            "Graphiti indisponível; grafo local de esquema criado "
+                            "e fallback LLM será usado na simulação"
+                        ),
+                        result={
+                            "project_id": project_id,
+                            "graph_id": graph_data["graph_id"],
+                            "node_count": graph_data["node_count"],
+                            "edge_count": graph_data["edge_count"],
+                            "graph_backend": "local_fallback",
+                            "warning": graph_data["warning"],
+                            "graphiti": graphiti_status,
+                        },
+                    )
+                    return
+
                 graph_id = builder.create_graph(name=graph_name)
                 project.graph_id = graph_id
                 ProjectManager.save_project(project)
-
-                if not builder.client.healthcheck():
-                    raise RuntimeError(
-                        "Graphiti indisponivel ou endpoint de health incompatível."
-                    )
 
                 task_manager.update_task(
                     task_id,
@@ -582,6 +622,8 @@ def build_internal_graph(project_id: str):
                 )
 
                 project.status = ProjectStatus.GRAPH_COMPLETED
+                project.graph_backend = "graphiti"
+                project.graph_warning = None
                 project.error = None
                 ProjectManager.save_project(project)
 
@@ -595,6 +637,7 @@ def build_internal_graph(project_id: str):
                         "graph_id": graph_id,
                         "node_count": graph_data.get("node_count", 0),
                         "edge_count": graph_data.get("edge_count", 0),
+                        "graph_backend": "graphiti",
                     },
                 )
             except Exception as exc:
@@ -972,15 +1015,32 @@ def run_preset():
                 text = ProjectManager.get_extracted_text(project.project_id)
                 chunks = TextProcessor.split_text(text, chunk_size=project.chunk_size or Config.DEFAULT_CHUNK_SIZE,
                                                   overlap=project.chunk_overlap or Config.DEFAULT_CHUNK_OVERLAP)
-                graph_id = builder.create_graph(name=project.name or "Mirofish Graph")
+                graphiti_status = builder.client.status()
+                if not graphiti_status.get("available"):
+                    if Config.GRAPHITI_REQUIRED:
+                        raise RuntimeError("Graphiti indisponivel ou endpoint de health incompatível.")
+                    graph_data = builder.build_schema_fallback_graph(
+                        text=text,
+                        ontology=project.ontology,
+                        graph_name=project.name or "Mirofish Graph",
+                        unavailable_reason=graphiti_status.get("error") or "Graphiti indisponivel",
+                    )
+                    graph_id = graph_data["graph_id"]
+                    project.graph_backend = "local_fallback"
+                    project.graph_warning = graph_data["warning"]
+                else:
+                    graph_id = builder.create_graph(name=project.name or "Mirofish Graph")
+                    project.graph_backend = "graphiti"
+                    project.graph_warning = None
+                    project.graph_id = graph_id
+                    ProjectManager.save_project(project)
+                    builder.set_ontology(graph_id, project.ontology)
+                    builder.add_text_batches(graph_id, chunks, batch_size=3)
+                    try:
+                        builder.wait_for_graph_materialization(graph_id, expected_count=len(chunks), timeout=180, stall_timeout=45)
+                    except Exception as e:
+                        logger.warning(f"Grafo materializou parcialmente: {e}")
                 project.graph_id = graph_id
-                ProjectManager.save_project(project)
-                builder.set_ontology(graph_id, project.ontology)
-                builder.add_text_batches(graph_id, chunks, batch_size=3)
-                try:
-                    builder.wait_for_graph_materialization(graph_id, expected_count=len(chunks), timeout=180, stall_timeout=45)
-                except Exception as e:
-                    logger.warning(f"Grafo materializou parcialmente: {e}")
                 project.status = ProjectStatus.GRAPH_COMPLETED
                 ProjectManager.save_project(project)
                 task_manager.update_task(task_id, progress=45, message=f"Grafo pronto: {graph_id}")

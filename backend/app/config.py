@@ -124,6 +124,7 @@ class Config:
     # Graphiti Server (backend de grafo de memoria temporal)
     GRAPHITI_BASE_URL = os.environ.get('GRAPHITI_BASE_URL', 'http://localhost:8003')
     GRAPHITI_TIMEOUT = int(os.environ.get('GRAPHITI_TIMEOUT', '60'))
+    GRAPHITI_REQUIRED = os.environ.get('GRAPHITI_REQUIRED', 'false').lower() == 'true'
 
     # Auth entre servicos
     INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN', '')

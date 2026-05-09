@@ -561,21 +561,36 @@ class SimulationManager:
             return "paused"
         return previous or "not_started"
     
-    def list_simulations(self, project_id: Optional[str] = None) -> List[SimulationState]:
-        """Listar todas as simulacoes"""
+    def list_simulations(
+        self,
+        project_id: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> List[SimulationState]:
+        """Listar simulacoes mais recentes sem carregar todo o historico."""
         simulations = []
         
         if os.path.exists(self.SIMULATION_DATA_DIR):
+            sim_entries = []
             for sim_id in os.listdir(self.SIMULATION_DATA_DIR):
                 # Pula arquivos ocultos (.DS_Store) e nao-diretorios
                 sim_path = os.path.join(self.SIMULATION_DATA_DIR, sim_id)
                 if sim_id.startswith('.') or not os.path.isdir(sim_path):
                     continue
+                state_path = os.path.join(sim_path, "state.json")
+                sort_time = os.path.getmtime(state_path) if os.path.exists(state_path) else os.path.getmtime(sim_path)
+                sim_entries.append((sort_time, sim_id))
+
+            sim_entries.sort(reverse=True)
+            for _, sim_id in sim_entries:
                 
                 state = self._load_simulation_state(sim_id)
                 if state:
                     if project_id is None or state.project_id == project_id:
                         simulations.append(state)
+                        if limit is not None and len(simulations) >= limit:
+                            break
+
+        simulations.sort(key=lambda state: state.created_at or state.updated_at or "", reverse=True)
         
         return simulations
     
