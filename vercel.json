@@ -12,6 +12,42 @@
       "destination": "https://mirofish.inteia.com.br/health/:path*"
     },
     {
+      "source": "/mirofish/icon-mirror-32.png",
+      "destination": "/icon-mirror-32.png"
+    },
+    {
+      "source": "/mirofish/icon-mirror-192.png",
+      "destination": "/icon-mirror-192.png"
+    },
+    {
+      "source": "/mirofish/icon-mirror.png",
+      "destination": "/icon-mirror.png"
+    },
+    {
+      "source": "/mirofish/icon.png",
+      "destination": "/icon.png"
+    },
+    {
+      "source": "/mirofish/hero-mirror.mp4",
+      "destination": "/hero-mirror.mp4"
+    },
+    {
+      "source": "/mirofish/hero-mirror-poster.jpg",
+      "destination": "/hero-mirror-poster.jpg"
+    },
+    {
+      "source": "/mirofish/inteia_mirror.png",
+      "destination": "/inteia_mirror.png"
+    },
+    {
+      "source": "/mirofish/escudo-inteia-vetorial.svg",
+      "destination": "/escudo-inteia-vetorial.svg"
+    },
+    {
+      "source": "/mirofish/logo.svg",
+      "destination": "/logo.svg"
+    },
+    {
       "source": "/assets/(.*)",
       "destination": "/assets/$1"
     },
