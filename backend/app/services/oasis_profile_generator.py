@@ -931,10 +931,10 @@ Importante:
                 )
                 return idx, fallback_profile, str(e)
 
-        logger.info(f"Iniciando geracao paralela de {total}  perfis de Agent (paralelismo: {parallel_count}）...")
-        print(f"\n{'='*60}")
-        print(f"Iniciando geracao de perfis de Agent - total de {total}  entidades, paralelismo: {parallel_count}")
-        print(f"{'='*60}\n")
+        logger.info(
+            f"Iniciando geracao paralela de {total} perfis de Agent "
+            f"(paralelismo: {parallel_count})"
+        )
 
         # Executa em paralelo com pool de threads
         with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_count) as executor:
@@ -988,9 +988,10 @@ Importante:
                     # Escreve no arquivo em tempo real (mesmo se perfil de fallback)
                     save_profiles_realtime()
 
-        print(f"\n{'='*60}")
-        print(f"Geracao de perfis concluida! Total gerado: {len([p for p in profiles if p])}  Agents")
-        print(f"{'='*60}\n")
+        logger.info(
+            f"Geracao de perfis concluida. Total gerado: "
+            f"{len([p for p in profiles if p])} Agents"
+        )
 
         return profiles
 
@@ -1022,8 +1023,7 @@ Importante:
 
         output = "\n".join(output_lines)
 
-        # Imprime apenas no console (evita duplicacao, logger nao imprime conteudo completo)
-        print(output)
+        logger.debug(output)
 
     def save_profiles(
         self,

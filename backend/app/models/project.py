@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from ..config import Config
+from ..utils.safe_ids import safe_storage_child
 
 
 class ProjectStatus(str, Enum):
@@ -115,7 +116,7 @@ class ProjectManager:
     @classmethod
     def _get_project_dir(cls, project_id: str) -> str:
         """Obter caminho do diretorio do projeto"""
-        return os.path.join(cls.PROJECTS_DIR, project_id)
+        return safe_storage_child(cls.PROJECTS_DIR, project_id, "project_id")
 
     @classmethod
     def _get_project_meta_path(cls, project_id: str) -> str:

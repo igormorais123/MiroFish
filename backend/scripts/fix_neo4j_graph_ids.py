@@ -11,6 +11,7 @@ Este script conecta ao Neo4j e:
 3. Gera relatório das correções
 """
 
+import os
 import sys
 from typing import Dict, Any, List, Optional
 
@@ -134,7 +135,9 @@ def main():
     # Configuração
     NEO4J_URI = "bolt://neo4j:7687"
     NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "Z3pN3o4j2026!"
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+    if not NEO4J_PASSWORD:
+        raise RuntimeError("NEO4J_PASSWORD must be configured before running this maintenance script")
 
     OLD_TEST_ID = "mirofish_test_001"
     CORRECT_ID = "mirofish_fe7124a390d64e7b"

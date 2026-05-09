@@ -55,6 +55,11 @@ GitHub Secrets de repositório configurados:
 - `ZEP_MODE`
 - `ZEP_REQUIRED`
 
+Variaveis esperadas apos o hardening de 2026-05-08:
+
+- `SECRET_KEY` deve existir como segredo em producao antes de usar sessao/cookie Flask persistente.
+- `CORS_ORIGINS` deve existir como configuracao nao secreta se o backend precisar aceitar origens alem da lista segura padrao.
+
 GitHub Environment `vps-production` configurado com segredos necessários para deploy/operacao da VPS:
 
 - `GEMINI_API_KEY`
@@ -98,10 +103,11 @@ Valores reais de `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPAB
 | Grupo | Variáveis | GitHub Secrets | Vercel | VPS |
 |---|---|---:|---:|---:|
 | Identidade da app | `APP_NAME`, `APP_CODE` | Sim | Só se build precisar | Sim |
-| Flask/backend | `FLASK_DEBUG`, `FLASK_HOST`, `FLASK_PORT` | Sim | Não para frontend estático | Sim |
+| Flask/backend | `FLASK_DEBUG`, `FLASK_HOST`, `FLASK_PORT`, `SECRET_KEY`, `CORS_ORIGINS` | Sim (`SECRET_KEY` sempre como segredo; `CORS_ORIGINS` pode ser variável não secreta) | Não para frontend estático | Sim |
 | LLM/OpenAI-compatible | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL_NAME`, `LLM_MODEL_ALIASES`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES` | Sim | Só se runtime Vercel usar LLM | Sim |
 | Modelos Helena | `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` | Sim | Só se runtime Vercel usar LLM | Sim |
 | OmniRoute | `OMNIROUTE_URL`, `OMNIROUTE_API_KEY`, `OMNIROUTE_BASE_URL`, `OMNIROUTE_MODEL`, `OMNIROUTE_FAST_MODEL`, `OMNIROUTE_PREMIUM_MODEL`, `OMNIROUTE_TIMEOUT` | Pendente quando houver valor real | Pendente se usado no deploy | Sim |
+| Provedores LLM auxiliares | `CEREBRAS_API_KEY`, `CEREBRAS_URL`, `LLM_BOOST_API_KEY`, `LLM_BOOST_BASE_URL`, `LLM_BOOST_MODEL_NAME` | Pendente quando houver valor real | Não para frontend estático | Sim |
 | Graphiti | `GRAPHITI_BASE_URL`, `GRAPHITI_TIMEOUT`, `GRAPHITI_MODEL` | Sim | Não usar `localhost` em produção | Sim |
 | Zep legado | `ZEP_BASE_URL`, `ZEP_API_KEY`, `ZEP_MODE`, `ZEP_REQUIRED` | Sim, quando existir no ambiente vivo | Não para frontend estático | Sim |
 | Neo4j | `NEO4J_PASSWORD` | Sim | Não para frontend estático | Sim |

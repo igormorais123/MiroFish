@@ -17,6 +17,7 @@ from ..services.power_persona_catalog import PowerPersonaCatalog
 from ..services.forecast_ledger import ForecastLedger
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
 from ..services.report_delivery_packet import build_report_delivery_packet
+from ..services.report_evolution_readiness import build_report_evolution_readiness
 from ..services.executive_package import (
     ExecutivePackageConflict,
     ExecutivePackageInvalidPath,
@@ -40,6 +41,11 @@ from ..services.report_finalization import (
     ReportFinalizationConflict,
     ReportFinalizationNotFound,
     repair_report_finalization,
+)
+from ..services.report_content_repair import (
+    ReportContentRepairConflict,
+    ReportContentRepairNotFound,
+    repair_report_content,
 )
 from ..services.simulation_manager import SimulationManager
 from ..models.project import ProjectManager
@@ -764,6 +770,25 @@ def get_report_delivery_package(report_id: str):
         }), 500
 
 
+@report_bp.route('/<report_id>/evolution-readiness', methods=['GET'])
+def get_report_evolution_readiness(report_id: str):
+    """Obter estado read-only para evoluir a analise do relatorio."""
+    try:
+        readiness = build_report_evolution_readiness(report_id)
+        status_code = 404 if readiness.get("status") == "missing" else 200
+        return jsonify({
+            "success": status_code == 200,
+            "data": readiness,
+        }), status_code
+    except Exception as e:
+        logger.error(f"Falha ao obter evolution readiness: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 500
+
+
 @report_bp.route('/<report_id>/executive-package', methods=['POST'])
 def create_executive_package_route(report_id: str):
     """Criar pacote executivo apenas para relatorio publicavel."""
@@ -907,6 +932,34 @@ def repair_report_finalization_route(report_id: str):
         }), 409
     except Exception as e:
         logger.error(f"Falha ao reparar finalizacao do relatorio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 500
+
+
+@report_bp.route('/<report_id>/content/repair', methods=['POST'])
+def repair_report_content_route(report_id: str):
+    """Reparar inconsistencias deterministicas de conteudo do relatorio."""
+    try:
+        result = repair_report_content(report_id)
+        return jsonify({
+            "success": True,
+            "data": result,
+        }), 200
+    except ReportContentRepairNotFound as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 404
+    except ReportContentRepairConflict as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+        }), 409
+    except Exception as e:
+        logger.error(f"Falha ao reparar conteudo do relatorio: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,

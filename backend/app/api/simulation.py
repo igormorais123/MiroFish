@@ -16,6 +16,7 @@ from ..services.decision_readiness import evaluate_decision_readiness
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
 from ..utils.logger import get_logger
+from ..utils.safe_ids import safe_storage_child
 from ..models.project import ProjectManager
 
 logger = get_logger('mirofish.api.simulation')
@@ -24,6 +25,11 @@ logger = get_logger('mirofish.api.simulation')
 # Prefixo de otimizacao do prompt de Interview
 # Adicionar este prefixo evita que o Agent chame ferramentas, respondendo diretamente com texto
 INTERVIEW_PROMPT_PREFIX = "Com base no seu perfil, todas as memorias e acoes passadas, responda diretamente em texto sem chamar nenhuma ferramenta:"
+
+
+def _get_oasis_simulation_dir(simulation_id: str) -> str:
+    """Resolve diretorio de simulacao com validacao contra traversal."""
+    return safe_storage_child(Config.OASIS_SIMULATION_DATA_DIR, simulation_id, "simulation_id")
 
 
 def optimize_interview_prompt(prompt: str) -> str:
@@ -317,7 +323,7 @@ def _check_simulation_prepared(simulation_id: str) -> tuple:
     import os
     from ..config import Config
 
-    simulation_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
+    simulation_dir = _get_oasis_simulation_dir(simulation_id)
 
     # Verifica se o diretorio existe
     if not os.path.exists(simulation_dir):
@@ -1257,7 +1263,7 @@ def get_simulation_profiles_realtime(simulation_id: str):
         platform = request.args.get('platform', 'reddit')
 
         # Obtem diretorio da simulacao
-        sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
+        sim_dir = _get_oasis_simulation_dir(simulation_id)
 
         if not os.path.exists(sim_dir):
             return jsonify({
@@ -1360,7 +1366,7 @@ def get_simulation_config_realtime(simulation_id: str):
 
     try:
         # Obtem diretorio da simulacao
-        sim_dir = os.path.join(Config.OASIS_SIMULATION_DATA_DIR, simulation_id)
+        sim_dir = _get_oasis_simulation_dir(simulation_id)
 
         if not os.path.exists(sim_dir):
             return jsonify({
@@ -2101,7 +2107,7 @@ def get_run_status_detail(simulation_id: str):
         result["all_actions"] = [a.to_dict() for a in all_actions]
         result["twitter_actions"] = [a.to_dict() for a in twitter_actions]
         result["reddit_actions"] = [a.to_dict() for a in reddit_actions]
-        result["rounds_count"] = len(run_state.rounds)
+        result["rounds_count"] = max(len(run_state.rounds), int(run_state.current_round or 0))
         # recent_actions exibe apenas a rodada mais recente
         result["recent_actions"] = [a.to_dict() for a in recent_actions]
 

@@ -20,6 +20,7 @@ from queue import Queue
 
 from ..config import Config
 from ..utils.logger import get_logger
+from ..utils.safe_ids import safe_storage_child
 from .zep_graph_memory_updater import ZepGraphMemoryManager
 from .simulation_ipc import SimulationIPCClient, CommandType, IPCResponse
 
@@ -188,7 +189,7 @@ class SimulationRunState:
         """Informacoes detalhadas incluindo acoes recentes"""
         result = self.to_dict()
         result["recent_actions"] = [a.to_dict() for a in self.recent_actions]
-        result["rounds_count"] = len(self.rounds)
+        result["rounds_count"] = max(len(self.rounds), int(self.current_round or 0))
         return result
 
 
@@ -225,6 +226,11 @@ class SimulationRunner:
     
     # Configuracao de atualizacao de memoria do grafo
     _graph_memory_enabled: Dict[str, bool] = {}  # simulation_id -> enabled
+
+    @classmethod
+    def _get_run_dir(cls, simulation_id: str) -> str:
+        """Obtem diretorio de execucao validando o ID recebido da API."""
+        return safe_storage_child(cls.RUN_STATE_DIR, simulation_id, "runner simulation_id")
     
     @classmethod
     def get_run_state(cls, simulation_id: str) -> Optional[SimulationRunState]:
@@ -243,7 +249,7 @@ class SimulationRunner:
 
     @classmethod
     def _infer_timing_from_config(cls, simulation_id: str) -> dict[str, int]:
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         config_path = os.path.join(sim_dir, "simulation_config.json")
         total_hours = 0
         total_rounds = 0
@@ -262,7 +268,7 @@ class SimulationRunner:
     @classmethod
     def _build_run_state_from_artifacts(cls, simulation_id: str) -> Optional[SimulationRunState]:
         """Reconstroi um estado minimo quando run_state.json foi perdido."""
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.isdir(sim_dir):
             return None
 
@@ -327,12 +333,17 @@ class SimulationRunner:
                                 summary["event_total_rounds"],
                                 cls._safe_int(row.get("total_rounds")),
                             )
-                        elif event_type == "round_end":
+                        elif event_type in {"round_start", "round_end"}:
                             round_num = cls._safe_int(row.get("round"))
                             summary["max_round"] = max(summary["max_round"], round_num)
+                            simulated_hours_value = (
+                                row.get("simulated_hours")
+                                if "simulated_hours" in row
+                                else row.get("simulated_hour")
+                            )
                             summary["simulated_hours"] = max(
                                 summary["simulated_hours"],
-                                cls._safe_int(row.get("simulated_hours")),
+                                cls._safe_int(simulated_hours_value),
                             )
                         continue
 
@@ -371,7 +382,7 @@ class SimulationRunner:
         ):
             return state
 
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, state.simulation_id)
+        sim_dir = cls._get_run_dir(state.simulation_id)
         twitter = cls._scan_action_log_summary(os.path.join(sim_dir, "twitter", "actions.jsonl"))
         reddit = cls._scan_action_log_summary(os.path.join(sim_dir, "reddit", "actions.jsonl"))
 
@@ -445,7 +456,7 @@ class SimulationRunner:
     @classmethod
     def _load_run_state(cls, simulation_id: str) -> Optional[SimulationRunState]:
         """Carrega estado de execucao do arquivo"""
-        state_file = os.path.join(cls.RUN_STATE_DIR, simulation_id, "run_state.json")
+        state_file = os.path.join(cls._get_run_dir(simulation_id), "run_state.json")
         if not os.path.exists(state_file):
             return None
         
@@ -501,7 +512,7 @@ class SimulationRunner:
     @classmethod
     def _save_run_state(cls, state: SimulationRunState):
         """Salva estado de execucao em arquivo"""
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, state.simulation_id)
+        sim_dir = cls._get_run_dir(state.simulation_id)
         os.makedirs(sim_dir, exist_ok=True)
         state_file = os.path.join(sim_dir, "run_state.json")
         
@@ -555,7 +566,7 @@ class SimulationRunner:
             raise ValueError(f"Simulacao ja em execucao: {simulation_id}")
         
         # Carrega configuracao da simulacao
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         config_path = os.path.join(sim_dir, "simulation_config.json")
         
         if not os.path.exists(config_path):
@@ -641,14 +652,14 @@ class SimulationRunner:
             if max_rounds is not None and max_rounds > 0:
                 cmd.extend(["--max-rounds", str(max_rounds)])
             
-            # Garante permissao de escrita em .db existentes (fix "readonly database" em restart)
+            # Garante permissao de escrita pelo usuario atual sem abrir o arquivo para todos.
             # 2026-04-18, Phase 2 Task 6 (ver DIAGNOSTICO_TRAVAMENTO.md #6)
             try:
                 for _db_name in os.listdir(sim_dir):
                     if _db_name.endswith('.db') or _db_name.endswith('.sqlite'):
                         _db_path = os.path.join(sim_dir, _db_name)
                         try:
-                            os.chmod(_db_path, 0o666)
+                            os.chmod(_db_path, 0o600)
                         except OSError:
                             pass
             except OSError:
@@ -709,7 +720,7 @@ class SimulationRunner:
     @classmethod
     def _monitor_simulation(cls, simulation_id: str):
         """Monitora processo de simulacao, analisa log de acoes"""
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         
         # Nova estrutura de logs: log de acoes por plataforma
         twitter_actions_log = os.path.join(sim_dir, "twitter", "actions.jsonl")
@@ -871,19 +882,30 @@ class SimulationRunner:
                                         cls._auto_generate_report(state.simulation_id)
                                 
                                 # Atualiza informacoes de rodada (do evento round_end)
-                                elif event_type == "round_end":
-                                    round_num = action_data.get("round", 0)
-                                    simulated_hours = action_data.get("simulated_hours", 0)
+                                elif event_type in {"round_start", "round_end"}:
+                                    round_num = cls._safe_int(action_data.get("round", 0))
+                                    simulated_hours_value = (
+                                        action_data.get("simulated_hours")
+                                        if "simulated_hours" in action_data
+                                        else action_data.get("simulated_hour")
+                                    )
+                                    simulated_hours = cls._safe_int(simulated_hours_value)
                                     
                                     # Atualiza rodadas e tempo independentes por plataforma
                                     if platform == "twitter":
                                         if round_num > state.twitter_current_round:
                                             state.twitter_current_round = round_num
-                                        state.twitter_simulated_hours = simulated_hours
+                                        state.twitter_simulated_hours = max(
+                                            state.twitter_simulated_hours,
+                                            simulated_hours,
+                                        )
                                     elif platform == "reddit":
                                         if round_num > state.reddit_current_round:
                                             state.reddit_current_round = round_num
-                                        state.reddit_simulated_hours = simulated_hours
+                                        state.reddit_simulated_hours = max(
+                                            state.reddit_simulated_hours,
+                                            simulated_hours,
+                                        )
                                     
                                     # Rodada total e o maximo das duas plataformas
                                     if round_num > state.current_round:
@@ -931,7 +953,7 @@ class SimulationRunner:
         Returns:
             True se todas as plataformas habilitadas concluiram
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, state.simulation_id)
+        sim_dir = cls._get_run_dir(state.simulation_id)
         twitter_log = os.path.join(sim_dir, "twitter", "actions.jsonl")
         reddit_log = os.path.join(sim_dir, "reddit", "actions.jsonl")
         
@@ -1256,7 +1278,7 @@ class SimulationRunner:
         Returns:
             Lista completa de acoes (ordenada por timestamp, recentes primeiro)
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         actions = []
         
         # Le arquivo de acoes do Twitter (define platform automaticamente)
@@ -1470,7 +1492,7 @@ class SimulationRunner:
         """
         import shutil
         
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         
         if not os.path.exists(sim_dir):
             return {"success": True, "message": "Diretorio da simulacao nao existe, nao precisa limpar"}
@@ -1602,7 +1624,7 @@ class SimulationRunner:
                     
                     # Tambem atualiza state.json de forma coerente com o estado reconciliado.
                     try:
-                        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+                        sim_dir = cls._get_run_dir(simulation_id)
                         state_file = os.path.join(sim_dir, "state.json")
                         logger.info(f"Tentando atualizar state.json: {state_file}")
                         if os.path.exists(state_file):
@@ -1747,7 +1769,7 @@ class SimulationRunner:
         Returns:
             True indica ambiente ativo, False indica ambiente encerrado
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.exists(sim_dir):
             return False
 
@@ -1765,7 +1787,7 @@ class SimulationRunner:
         Returns:
             Dicionario de detalhes do estado，, contendo status, twitter_available, reddit_available, timestamp
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         status_file = os.path.join(sim_dir, "env_status.json")
         
         default_status = {
@@ -1819,7 +1841,7 @@ class SimulationRunner:
             ValueError: Simulacao nao existe ou ambiente nao esta em execucao
             TimeoutError: timeout ao aguardar resposta
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.exists(sim_dir):
             raise ValueError(f"Simulacao nao existe: {simulation_id}")
 
@@ -1881,7 +1903,7 @@ class SimulationRunner:
             ValueError: Simulacao nao existe ou ambiente nao esta em execucao
             TimeoutError: timeout ao aguardar resposta
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.exists(sim_dir):
             raise ValueError(f"Simulacao nao existe: {simulation_id}")
 
@@ -1938,7 +1960,7 @@ class SimulationRunner:
         Returns:
             Dicionario de resultado da entrevista global
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.exists(sim_dir):
             raise ValueError(f"Simulacao nao existe: {simulation_id}")
 
@@ -1991,7 +2013,7 @@ class SimulationRunner:
         Returns:
             Dicionario de resultado da operacao
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.exists(sim_dir):
             raise ValueError(f"Simulacao nao existe: {simulation_id}")
         
@@ -2102,7 +2124,7 @@ class SimulationRunner:
         Returns:
             Lista de registros de historico de Interview
         """
-        sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
+        sim_dir = cls._get_run_dir(simulation_id)
         
         results = []
         

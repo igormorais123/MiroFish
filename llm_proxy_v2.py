@@ -13,16 +13,17 @@ Solucao:
 6. Tentar validar contra o schema; se passar, devolver; se nao, fallback para response original
 """
 import json
+import os
 import re
 from flask import Flask, request, jsonify
 import requests
 
-UPSTREAM = "http://omniroute-inteia:20128/v1"
-API_KEY = "sk-a36cd1d8bbf8db4c-mb2a4a-68e91e26"
+UPSTREAM = os.environ.get("OMNIROUTE_URL", "http://omniroute-inteia:20128/v1").rstrip("/")
+API_KEY = os.environ.get("OMNIROUTE_API_KEY") or os.environ.get("LLM_API_KEY") or ""
 
 # Endpoint direto Cerebras (nao depende do OmniRoute)
-CEREBRAS_URL = "https://api.cerebras.ai/v1"
-CEREBRAS_KEY = "csk-wxnwv98t44k4r6c9xpr29vk2ktffp4fh39dynkv8v28ht24h"
+CEREBRAS_URL = os.environ.get("CEREBRAS_URL", "https://api.cerebras.ai/v1").rstrip("/")
+CEREBRAS_KEY = os.environ.get("CEREBRAS_API_KEY", "")
 
 # Fallback chain: tries in order when cooldown / error hits
 # Formato: (nome, streaming, provider_type)
@@ -67,9 +68,17 @@ def _set_cooldown(model, seconds=COOLDOWN_SECONDS):
 
 def _pick_model():
     for entry in MODEL_CHAIN:
+        provider_type = entry[2] if len(entry) > 2 else "omniroute"
+        if not _provider_has_credentials(provider_type):
+            continue
         if not _is_cooling(entry[0]):
             return entry
     return MODEL_CHAIN[0]
+
+def _provider_has_credentials(provider_type):
+    if provider_type == "cerebras_direct":
+        return bool(CEREBRAS_KEY)
+    return bool(API_KEY)
 
 def _log(msg):
     try:
@@ -351,15 +360,22 @@ def chat():
     msg_id = ""
     last_error = None
 
+    available_chain = [
+        entry for entry in MODEL_CHAIN
+        if _provider_has_credentials(entry[2] if len(entry) > 2 else "omniroute")
+    ]
+    if not available_chain:
+        return jsonify({"error": {"message": "Nenhum provedor LLM configurado. Defina OMNIROUTE_API_KEY/LLM_API_KEY ou CEREBRAS_API_KEY."}}), 503
+
     # Tenta cada modelo na chain ate sucesso
     # Se todos estao em cooldown, espera o primeiro disponivel
     _wait_start = _time.time()
-    while all(_is_cooling(entry[0]) for entry in MODEL_CHAIN):
+    while all(_is_cooling(entry[0]) for entry in available_chain):
         if _time.time() - _wait_start > MAX_WAIT_ALL_COOLING:
             break
         _time.sleep(2)
 
-    for entry in MODEL_CHAIN:
+    for entry in available_chain:
         try_model, streaming, provider_type = entry[0], entry[1], entry[2] if len(entry) > 2 else "omniroute"
         if _is_cooling(try_model):
             _log(f"SKIP {try_model} (cooldown)")
