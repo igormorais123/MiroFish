@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 project_root_env = os.path.join(os.path.dirname(__file__), '../../.env')
 
 if os.path.exists(project_root_env):
-    load_dotenv(project_root_env, override=True)
+    load_dotenv(project_root_env, override=False)
 else:
     # Fallback para ambientes onde as variaveis ja foram injetadas externamente.
-    load_dotenv(override=True)
+    load_dotenv(override=False)
 
 
 def _first_non_empty(*values):
