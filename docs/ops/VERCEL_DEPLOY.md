@@ -17,6 +17,28 @@
 
 > Esses IDs vêm de `.vercel/project.json`, gerado por `vercel link`. **`.vercel/` está no `.gitignore`** — cada máquina/instância faz seu próprio `vercel link` se precisar usar a CLI.
 
+## Roteamento do domínio público
+
+Em 2026-05-09, `https://inteia.com.br/mirofish` foi corrigido no projeto Vercel raiz `frontend` usando rotas de projeto, porque `inteia.com.br` não é alias direto do projeto `mirofish-inteia`.
+
+Rotas ativas no projeto Vercel `frontend`:
+
+| Ordem | Origem | Destino |
+|-------|--------|---------|
+| 1 | `^/mirofish/api(?:/(.*))?$` | `https://mirofish.inteia.com.br/api/$1` |
+| 2 | `^/mirofish/assets/(.*)$` | `https://mirofish-inteia.vercel.app/assets/$1` |
+| 3 | `^/mirofish(?:/(.*))?$` | `https://mirofish-inteia.vercel.app/mirofish/$1` |
+
+Motivo: a rota antiga servia uma cópia estática cacheada dentro do projeto `frontend`. A API não deve apontar direto para `72.62.108.24:5001`, porque essa porta fica bloqueada pelo firewall da VPS; use o Nginx público `https://mirofish.inteia.com.br/api/...`.
+
+Comandos úteis:
+
+```bash
+vercel routes list --cwd "C:\Users\IgorPC\.claude\projects\Agentes"
+vercel routes list --cwd "C:\Users\IgorPC\.claude\projects\Agentes" --diff
+vercel routes publish --cwd "C:\Users\IgorPC\.claude\projects\Agentes" --yes
+```
+
 ## Configuração de build (declarativa)
 
 Está em [`vercel.json`](../../vercel.json) na raiz:
@@ -123,3 +145,4 @@ git push origin main
 
 - **Cache de preview de link** (WhatsApp/Telegram/etc) NÃO se renova com novo deploy. Use Facebook Debugger https://developers.facebook.com/tools/debug/ depois de mudar `og:image`.
 - **`og:image`** apontando pra `https://inteia.com.br/mirofish/inteia_mirror.png` (definido em `frontend/index.html`). Se mudar, atualizar também o cache via Debugger.
+- Se `https://mirofish-inteia.vercel.app/mirofish` estiver atualizado mas `https://inteia.com.br/mirofish` mostrar bundle antigo, conferir as rotas do projeto Vercel `frontend` antes de mexer em DNS ou rebuild.
