@@ -45,6 +45,27 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 8. O `deploy/docker-compose.vps.yaml` no GitHub e o da VPS divergiam de forma relevante.
 9. Segredos vivos da VPS foram espelhados para GitHub Secrets e para o ambiente `vps-production`, sem versionar valores.
 
+## Estado operacional atualizado em 2026-05-09
+
+- `main` contém o código publicado; o frontend direto da Vercel fica em `https://mirofish-inteia.vercel.app/mirofish`.
+- `inteia.com.br/mirofish` é roteado pelo projeto Vercel raiz `frontend`, com rotas de projeto para app, assets e API. A configuração detalhada está em [`VERCEL_DEPLOY.md`](VERCEL_DEPLOY.md).
+- A API pública correta é `https://inteia.com.br/mirofish/api/...`, que reescreve para `https://mirofish.inteia.com.br/api/...`.
+- A porta pública `72.62.108.24:5001` fica bloqueada por firewall; não usar esse destino em Vercel.
+- O deploy da VPS deve partir de `/opt/mirofish-git` e carregar explicitamente o `.env` da raiz:
+
+  ```bash
+  cd /opt/mirofish-git
+  git fetch origin
+  git pull --ff-only origin main
+  docker compose --env-file .env -f deploy/docker-compose.vps.yaml up -d --build
+  ```
+
+- Antes de recriar container, recomenda-se marcar a imagem atual para rollback:
+
+  ```bash
+  docker tag "$(docker inspect mirofish-inteia --format '{{.Image}}')" "mirofish-inteia:rollback-$(date +%Y%m%d-%H%M%S)"
+  ```
+
 ## Política de merge entre instâncias
 
 Quando Igor estiver usando Claude Code no PC e Codex em outra instância:
