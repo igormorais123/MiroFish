@@ -101,14 +101,41 @@ def create_app(config_class=Config):
     app.register_blueprint(report_bp, url_prefix='/api/report')
     app.register_blueprint(internal_bp, url_prefix='/api/internal/v1')
     
-    # Healthcheck
-    @app.route('/health')
-    def health():
+    def _public_health_payload():
         return {
             'status': 'ok',
             'service': app.config.get('APP_NAME', Config.APP_NAME),
             'code': app.config.get('APP_CODE', Config.APP_CODE),
             'has_frontend': _has_frontend,
+        }
+
+    # Healthcheck publico: sem URL/modelo/chaves ou detalhes de infra.
+    @app.route('/health')
+    @app.route('/health/public')
+    def health():
+        return _public_health_payload()
+
+    @app.route('/health/internal')
+    def health_internal():
+        expected_token = app.config.get('INTERNAL_API_TOKEN', Config.INTERNAL_API_TOKEN).strip()
+        provided_token = request.headers.get('X-Internal-Token', '').strip()
+        if not expected_token or provided_token != expected_token:
+            return {'success': False, 'error': 'Nao autorizado para health interno'}, 401
+
+        from .utils.graphiti_client import GraphitiClient
+
+        graphiti = GraphitiClient(timeout=2).status()
+        return {
+            'success': True,
+            'data': {
+                'status': 'ok',
+                'service': app.config.get('APP_NAME', Config.APP_NAME),
+                'code': app.config.get('APP_CODE', Config.APP_CODE),
+                'has_frontend': _has_frontend,
+                'llm_base_url': app.config.get('LLM_BASE_URL', Config.LLM_BASE_URL),
+                'llm_model': app.config.get('LLM_MODEL_NAME', Config.LLM_MODEL_NAME),
+                'graphiti': graphiti,
+            },
         }
 
     # SPA fallback: serve index.html para rotas nao-API quando frontend/dist existe

@@ -114,19 +114,33 @@ class GraphitiClient:
 
     def healthcheck(self) -> bool:
         """Verifica se o Graphiti Server esta acessivel."""
+        return self.status().get("available", False)
+
+    def status(self) -> Dict[str, Any]:
+        """Retorna status detalhado do Graphiti sem levantar excecao."""
         endpoints = ("/healthcheck", "/health", "/healthz")
         last_error: Exception | None = None
 
         for endpoint in endpoints:
             try:
                 self._request("GET", endpoint, operation_name=f"healthcheck({endpoint})")
-                return True
+                return {
+                    "available": True,
+                    "base_url": self.base_url,
+                    "endpoint": endpoint,
+                    "error": None,
+                }
             except Exception as e:
                 last_error = e
 
         if last_error is not None:
             logger.warning(f"Graphiti healthcheck falhou: {last_error}")
-        return False
+        return {
+            "available": False,
+            "base_url": self.base_url,
+            "endpoint": None,
+            "error": str(last_error) if last_error is not None else "healthcheck falhou",
+        }
 
     # ------------------------------------------------------------------
     # Mensagens (POST /messages)

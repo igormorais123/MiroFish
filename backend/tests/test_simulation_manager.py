@@ -62,3 +62,21 @@ def test_apply_runner_status_preserva_erro_em_falha(tmp_path, monkeypatch):
     assert updated.twitter_status == "failed"
     assert updated.reddit_status == "failed"
     assert updated.error == "falha controlada"
+
+
+def test_list_simulations_respeita_limite_e_ordem_recente(tmp_path, monkeypatch):
+    monkeypatch.setattr(SimulationManager, "SIMULATION_DATA_DIR", str(tmp_path / "simulations"))
+
+    manager = SimulationManager()
+    for index in range(4):
+        manager._save_simulation_state(SimulationState(
+            simulation_id=f"sim_{index}",
+            project_id="proj_1",
+            graph_id="graph_1",
+            created_at=f"2026-05-0{index + 1}T00:00:00",
+            updated_at=f"2026-05-0{index + 1}T00:00:00",
+        ))
+
+    simulations = manager.list_simulations(limit=2)
+
+    assert [simulation.simulation_id for simulation in simulations] == ["sim_3", "sim_2"]

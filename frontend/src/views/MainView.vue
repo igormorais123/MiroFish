@@ -329,9 +329,29 @@ const fetchGraphData = async () => {
         const nodeCount = gRes.data.node_count || gRes.data.nodes?.length || 0
         const edgeCount = gRes.data.edge_count || gRes.data.edges?.length || 0
         addLog(`Dados do grafo atualizados. Nos: ${nodeCount}, Arestas: ${edgeCount}`)
+      } else {
+        graphData.value = {
+          unavailable: true,
+          warning: 'Grafo indisponível no backend.',
+          error: gRes.error,
+          nodes: [],
+          edges: [],
+          node_count: 0,
+          edge_count: 0,
+        }
+        addLog(`Grafo indisponível: ${gRes.error}`)
       }
     }
   } catch (err) {
+    graphData.value = {
+      unavailable: true,
+      warning: 'Grafo indisponível ou sem resposta.',
+      error: err.message,
+      nodes: [],
+      edges: [],
+      node_count: 0,
+      edge_count: 0,
+    }
     console.warn('Erro ao buscar grafo:', err)
   }
 }
@@ -386,9 +406,27 @@ const loadGraph = async (graphId) => {
       graphData.value = res.data
       addLog('Dados do grafo carregados com sucesso.')
     } else {
+      graphData.value = {
+        unavailable: true,
+        warning: 'Grafo indisponível no backend.',
+        error: res.error,
+        nodes: [],
+        edges: [],
+        node_count: 0,
+        edge_count: 0,
+      }
       addLog(`Falha ao carregar dados do grafo: ${res.error}`)
     }
   } catch (e) {
+    graphData.value = {
+      unavailable: true,
+      warning: 'Grafo indisponível ou sem resposta.',
+      error: e.message,
+      nodes: [],
+      edges: [],
+      node_count: 0,
+      edge_count: 0,
+    }
     addLog(`Excecao ao carregar grafo: ${e.message}`)
   } finally {
     graphLoading.value = false
@@ -595,5 +633,92 @@ onUnmounted(() => {
 
 .panel-wrapper.left {
   border-right: 1px solid rgba(11, 20, 38, 0.08);
+}
+
+@media (max-width: 820px) {
+  .main-view {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .app-header {
+    height: auto;
+    min-height: 72px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-center {
+    position: static;
+    transform: none;
+    order: 3;
+    width: 100%;
+  }
+
+  .brand-lockup {
+    gap: 8px;
+  }
+
+  .brand {
+    font-size: 14px;
+    letter-spacing: 0.12em;
+  }
+
+  .brand-sub {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+  }
+
+  .view-switcher {
+    width: 100%;
+  }
+
+  .switch-btn {
+    flex: 1;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .header-right {
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100% - 54px);
+  }
+
+  .workflow-step {
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .step-name {
+    overflow-wrap: anywhere;
+  }
+
+  .content-area {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .panel-wrapper {
+    width: 100% !important;
+    opacity: 1 !important;
+    transform: none !important;
+    overflow: visible;
+  }
+
+  .panel-wrapper.left {
+    height: 42vh;
+    min-height: 320px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(11, 20, 38, 0.08);
+  }
+
+  .panel-wrapper.right {
+    min-height: 620px;
+  }
 }
 </style>

@@ -44,6 +44,8 @@ class Project:
     # Informacoes do grafo (preenchido apos conclusao da Interface 2)
     graph_id: Optional[str] = None
     graph_build_task_id: Optional[str] = None
+    graph_backend: Optional[str] = None
+    graph_warning: Optional[str] = None
 
     # Configuracao
     simulation_requirement: Optional[str] = None
@@ -68,6 +70,8 @@ class Project:
             "analysis_summary": self.analysis_summary,
             "graph_id": self.graph_id,
             "graph_build_task_id": self.graph_build_task_id,
+            "graph_backend": self.graph_backend,
+            "graph_warning": self.graph_warning,
             "simulation_requirement": self.simulation_requirement,
             "structured_context": self.structured_context,
             "chunk_size": self.chunk_size,
@@ -94,6 +98,8 @@ class Project:
             analysis_summary=data.get('analysis_summary'),
             graph_id=data.get('graph_id'),
             graph_build_task_id=data.get('graph_build_task_id'),
+            graph_backend=data.get('graph_backend'),
+            graph_warning=data.get('graph_warning'),
             simulation_requirement=data.get('simulation_requirement'),
             structured_context=data.get('structured_context'),
             chunk_size=data.get('chunk_size', 500),

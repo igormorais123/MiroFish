@@ -14,6 +14,7 @@ from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
 from ..services.text_processor import TextProcessor
 from ..utils.file_parser import FileParser
+from ..utils.graphiti_client import GraphitiClient
 from ..utils.logger import get_logger
 from ..models.task import TaskManager, TaskStatus
 from ..models.project import ProjectManager, ProjectStatus
@@ -28,6 +29,21 @@ def allowed_file(filename: str) -> bool:
         return False
     ext = os.path.splitext(filename)[1].lower().lstrip('.')
     return ext in Config.ALLOWED_EXTENSIONS
+
+
+@graph_bp.route('/status', methods=['GET'])
+def get_graph_status():
+    """Retorna estado operacional do backend de grafo."""
+    graphiti_status = GraphitiClient(timeout=2).status()
+    return jsonify({
+        "success": True,
+        "data": {
+            "graphiti": graphiti_status,
+            "graphiti_required": Config.GRAPHITI_REQUIRED,
+            "fallback_enabled": not Config.GRAPHITI_REQUIRED,
+            "graph_backend": "graphiti" if graphiti_status.get("available") else "local_fallback",
+        }
+    })
 
 
 # ============== Interfaces de gerenciamento de projeto ==============
@@ -108,6 +124,8 @@ def reset_project(project_id: str):
 
     project.graph_id = None
     project.graph_build_task_id = None
+    project.graph_backend = None
+    project.graph_warning = None
     project.error = None
     ProjectManager.save_project(project)
 
@@ -277,6 +295,21 @@ def generate_ontology():
             }
         })
 
+    except ValueError as e:
+        message = str(e)
+        if "JSON" in message or "json" in message:
+            logger.warning(f"Resposta invalida do LLM na ontologia: {message[:500]}")
+            return jsonify({
+                "success": False,
+                "error": "A resposta do modelo não veio em JSON válido. Tente novamente ou reduza o contexto enviado.",
+                "detail": message[:1000],
+            }), 422
+        logger.error(f"Falha de validacao na geracao de ontologia: {message}")
+        return jsonify({
+            "success": False,
+            "error": message,
+        }), 400
+
     except Exception as e:
         logger.error(f"Falha na geracao de ontologia: {str(e)}")
         logger.error(traceback.format_exc())
@@ -363,6 +396,8 @@ def build_graph():
             project.status = ProjectStatus.ONTOLOGY_GENERATED
             project.graph_id = None
             project.graph_build_task_id = None
+            project.graph_backend = None
+            project.graph_warning = None
             project.error = None
 
         # Obter configuracao
@@ -421,6 +456,8 @@ def build_graph():
         # Atualizar estado do projeto
         project.status = ProjectStatus.GRAPH_BUILDING
         project.graph_build_task_id = task_id
+        project.graph_backend = None
+        project.graph_warning = None
         ProjectManager.save_project(project)
 
         # Iniciar tarefa em segundo plano
@@ -428,10 +465,47 @@ def build_graph():
             build_logger = get_logger('mirofish.build')
             try:
                 builder = GraphBuilderService()
-                if not builder.client.healthcheck():
-                    raise RuntimeError(
-                        "Graphiti indisponivel ou endpoint de health incompatível."
+                graphiti_status = builder.client.status()
+                if not graphiti_status.get("available"):
+                    message = (
+                        "Graphiti indisponível. Operando em fallback local; "
+                        "a extração de entidades reais ocorrerá por LLM na preparação da simulação."
                     )
+                    if Config.GRAPHITI_REQUIRED:
+                        raise RuntimeError(
+                            "Graphiti indisponivel ou endpoint de health incompatível."
+                        )
+
+                    graph_data = builder.build_schema_fallback_graph(
+                        text=text,
+                        ontology=ontology,
+                        graph_name=graph_name,
+                        unavailable_reason=graphiti_status.get("error") or "Graphiti indisponivel",
+                    )
+                    project.graph_id = graph_data["graph_id"]
+                    project.graph_backend = "local_fallback"
+                    project.graph_warning = graph_data["warning"]
+                    project.status = ProjectStatus.GRAPH_COMPLETED
+                    project.error = None
+                    ProjectManager.save_project(project)
+
+                    task_manager.update_task(
+                        task_id,
+                        status=TaskStatus.COMPLETED,
+                        message=message,
+                        progress=100,
+                        result={
+                            "project_id": project_id,
+                            "graph_id": graph_data["graph_id"],
+                            "node_count": graph_data["node_count"],
+                            "edge_count": graph_data["edge_count"],
+                            "chunk_count": 0,
+                            "graph_backend": "local_fallback",
+                            "warning": graph_data["warning"],
+                            "graphiti": graphiti_status,
+                        }
+                    )
+                    return
 
                 build_logger.info(f"[{task_id}] Iniciando construcao do grafo...")
                 task_manager.update_task(
@@ -527,6 +601,8 @@ def build_graph():
 
                 # Atualizar estado do projeto
                 project.status = ProjectStatus.GRAPH_COMPLETED
+                project.graph_backend = "graphiti"
+                project.graph_warning = None
                 ProjectManager.save_project(project)
 
                 node_count = graph_data.get("node_count", 0)
@@ -544,7 +620,8 @@ def build_graph():
                         "graph_id": graph_id,
                         "node_count": node_count,
                         "edge_count": edge_count,
-                        "chunk_count": total_chunks
+                        "chunk_count": total_chunks,
+                        "graph_backend": "graphiti"
                     }
                 )
 

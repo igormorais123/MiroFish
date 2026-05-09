@@ -1,14 +1,82 @@
+name: mirofish-inteia
+
 services:
-  mirofish:
-    image: ghcr.io/666ghj/mirofish:latest
-    # Espelho alternativo caso o pull da imagem esteja lento
-    # image: ghcr.nju.edu.cn/666ghj/mirofish:latest
-    container_name: mirofish
-    env_file:
-      - .env
-    ports:
-      - "3000:3000"
-      - "5001:5001"
+  neo4j:
+    image: neo4j:5-community
+    container_name: mirofish-neo4j
     restart: unless-stopped
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-mirofish2026}
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-mirofish2026}", "RETURN 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  graphiti:
+    image: zepai/graphiti:latest
+    container_name: mirofish-graphiti
+    restart: unless-stopped
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-mirofish2026}
+      - OPENAI_API_KEY=${LLM_API_KEY:-ollama}
+      - OPENAI_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - MODEL_NAME=${GRAPHITI_MODEL:-gpt-4o-mini}
+      - SMALL_MODEL_NAME=${GRAPHITI_MODEL:-gpt-4o-mini}
+      - EMBEDDER_MODEL_NAME=${GRAPHITI_EMBEDDER_MODEL:-text-embedding-3-small}
+      - PORT=8000
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./deploy/graphiti_patches/ingest.py:/app/graph_service/routers/ingest.py:ro
+      - ./deploy/graphiti_patches/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/healthcheck"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  mirofish:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/igormorais123/mirofish:latest
+    container_name: mirofish-inteia
+    restart: unless-stopped
+    depends_on:
+      graphiti:
+        condition: service_started
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - GRAPHITI_BASE_URL=http://graphiti:8000
+      - GRAPHITI_REQUIRED=${GRAPHITI_REQUIRED:-false}
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5001
+    ports:
+      - "4000:80"
+      - "5001:5001"
     volumes:
       - ./backend/uploads:/app/backend/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health/public"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

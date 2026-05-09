@@ -4,6 +4,7 @@ Step2: Leitura e filtragem de entidades Zep, preparacao e execucao OASIS (totalm
 """
 
 import os
+import json
 import traceback
 from flask import request, jsonify, send_file
 
@@ -996,10 +997,13 @@ def list_simulations():
         project_id: filtrar por ID do projeto (opcional)
     """
     try:
+        from ..utils.pagination import get_limit
+
         project_id = request.args.get('project_id')
+        limit = get_limit(default=100, max_limit=500)
 
         manager = SimulationManager()
-        simulations = manager.list_simulations(project_id=project_id)
+        simulations = manager.list_simulations(project_id=project_id, limit=limit)
 
         return jsonify({
             "success": True,
@@ -1016,63 +1020,59 @@ def list_simulations():
         }), 500
 
 
-def _get_report_id_for_simulation(simulation_id: str) -> str:
+def _query_bool(name: str, default: bool) -> bool:
+    raw_value = request.args.get(name)
+    if raw_value is None:
+        return default
+    return str(raw_value).strip().lower() in {"1", "true", "yes", "on", "sim"}
+
+
+def _reports_dir() -> str:
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../uploads/reports'))
+
+
+def _build_latest_report_index(max_scan: int = 500) -> dict[str, str]:
     """
-    Obtem report_id mais recente da simulacao
+    Monta indice simulation_id -> report_id lendo os reports recentes uma vez.
 
-    Percorre reports, encontra o correspondente,
-    se multiplos retorna o mais recente
-
-    Args:
-        simulation_id: ID da simulacao
-
-    Returns:
-        report_id ou None
+    A rota de historico antes varria ate 500 meta.json para cada simulacao listada.
+    Em VPS com muitos reports isso deixava /history?limit=1 pendurado atras de IO
+    desnecessario. O indice preserva o comportamento de "report mais recente", mas
+    faz uma unica varredura por requisicao.
     """
-    import json
-    from datetime import datetime
-
-    # Caminho: backend/uploads/reports
-    # __file__ e app/api/simulation.py, sobe dois niveis ate backend/
-    reports_dir = os.path.join(os.path.dirname(__file__), '../../uploads/reports')
+    reports_dir = _reports_dir()
     if not os.path.exists(reports_dir):
-        return None
-
-    matching_reports = []
+        return {}
 
     try:
+        report_entries = []
         for report_folder in os.listdir(reports_dir):
-            report_path = os.path.join(reports_dir, report_folder)
-            if not os.path.isdir(report_path):
-                continue
+            meta_file = os.path.join(reports_dir, report_folder, "meta.json")
+            if os.path.isfile(meta_file):
+                report_entries.append((os.path.getmtime(meta_file), meta_file))
 
-            meta_file = os.path.join(report_path, "meta.json")
-            if not os.path.exists(meta_file):
-                continue
+        report_entries.sort(reverse=True)
+        report_index: dict[str, str] = {}
 
+        for _, meta_file in report_entries[:max_scan]:
             try:
                 with open(meta_file, 'r', encoding='utf-8') as f:
                     meta = json.load(f)
-
-                if meta.get("simulation_id") == simulation_id:
-                    matching_reports.append({
-                        "report_id": meta.get("report_id"),
-                        "created_at": meta.get("created_at", ""),
-                        "status": meta.get("status", "")
-                    })
+                simulation_id = meta.get("simulation_id")
+                report_id = meta.get("report_id")
+                if simulation_id and report_id and simulation_id not in report_index:
+                    report_index[simulation_id] = report_id
             except Exception:
                 continue
 
-        if not matching_reports:
-            return None
-
-        # Ordena por data decrescente, retorna mais recente
-        matching_reports.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return matching_reports[0].get("report_id")
-
+        return report_index
     except Exception as e:
-        logger.warning(f"Buscar simulation {simulation_id}  - falha ao buscar report: {e}")
-        return None
+        logger.warning(f"Falha ao indexar reports recentes: {e}")
+        return {}
+
+
+def _get_report_id_for_simulation(simulation_id: str) -> str | None:
+    return _build_latest_report_index().get(simulation_id)
 
 
 @simulation_bp.route('/history', methods=['GET'])
@@ -1084,6 +1084,8 @@ def get_simulation_history():
 
     Parametros de Query:
         limit: limite (padrao 20)
+        include_reports: inclui report_id recente (padrao true para limit > 1)
+        include_runtime: reconcilia estado vivo do runner (padrao true para limit > 1)
 
     Retorno:
         {
@@ -1111,10 +1113,15 @@ def get_simulation_history():
         }
     """
     try:
-        limit = request.args.get('limit', 20, type=int)
+        from ..utils.pagination import get_limit
+
+        limit = get_limit(default=20, max_limit=50)
+        include_reports = _query_bool("include_reports", default=limit > 1)
+        include_runtime = _query_bool("include_runtime", default=limit > 1)
 
         manager = SimulationManager()
-        simulations = manager.list_simulations()[:limit]
+        simulations = manager.list_simulations(limit=limit)
+        report_index = _build_latest_report_index() if include_reports else {}
 
         # Enriquece dados da simulacao
         enriched_simulations = []
@@ -1137,16 +1144,17 @@ def get_simulation_history():
                 sim_dict["total_simulation_hours"] = 0
                 recommended_rounds = 0
 
-            # Obtem estado de execucao (rodadas do usuario)
-            run_state = SimulationRunner.get_run_state(sim.simulation_id)
+            # Obtem estado de execucao (rodadas do usuario) quando solicitado.
+            # Essa reconciliacao pode varrer logs grandes; chamadas leves usam o estado persistido.
+            run_state = SimulationRunner.get_run_state(sim.simulation_id) if include_runtime else None
             if run_state:
                 sim_dict["current_round"] = run_state.current_round
                 sim_dict["runner_status"] = run_state.runner_status.value
                 # Usa total_rounds do usuario, senao usa recomendado
                 sim_dict["total_rounds"] = run_state.total_rounds if run_state.total_rounds > 0 else recommended_rounds
             else:
-                sim_dict["current_round"] = 0
-                sim_dict["runner_status"] = "idle"
+                sim_dict["current_round"] = int(getattr(sim, "current_round", 0) or 0)
+                sim_dict["runner_status"] = getattr(getattr(sim, "status", None), "value", None) or sim_dict.get("status") or "idle"
                 sim_dict["total_rounds"] = recommended_rounds
 
             # Obtem arquivos do projeto (maximo 3)
@@ -1160,7 +1168,7 @@ def get_simulation_history():
                 sim_dict["files"] = []
 
             # Obtem report_id (busca report mais recente)
-            sim_dict["report_id"] = _get_report_id_for_simulation(sim.simulation_id)
+            sim_dict["report_id"] = report_index.get(sim.simulation_id) if include_reports else None
 
             # Adiciona versao
             sim_dict["version"] = "v1.0.2"
@@ -1177,7 +1185,12 @@ def get_simulation_history():
         return jsonify({
             "success": True,
             "data": enriched_simulations,
-            "count": len(enriched_simulations)
+            "count": len(enriched_simulations),
+            "meta": {
+                "include_reports": include_reports,
+                "include_runtime": include_runtime,
+                "limit": limit
+            }
         })
 
     except Exception as e:

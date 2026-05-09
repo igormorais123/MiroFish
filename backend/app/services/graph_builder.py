@@ -3,6 +3,8 @@ Servico de construcao de grafo
 Usa a API REST do Graphiti Server para construir grafos de conhecimento.
 """
 
+import json
+import os
 import uuid
 import time
 import threading
@@ -16,6 +18,8 @@ from ..utils.logger import get_logger
 from .text_processor import TextProcessor
 
 logger = get_logger('mirofish.graph_builder')
+
+LOCAL_GRAPH_DIR = os.path.join(Config.UPLOAD_FOLDER, 'graphs')
 
 
 # 2026-04-18, Phase 6: mapa de traducao para nomes de relacao em SCREAMING_SNAKE_CASE
@@ -158,9 +162,29 @@ class GraphBuilderService:
         """Thread de trabalho para construcao do grafo."""
         try:
             if not self.client.healthcheck():
-                raise RuntimeError(
-                    "Graphiti indisponivel ou endpoint de health incompatível."
+                message = "Graphiti indisponivel ou endpoint de health incompatível."
+                if Config.GRAPHITI_REQUIRED:
+                    raise RuntimeError(message)
+                graph_data = self.build_schema_fallback_graph(
+                    text=text,
+                    ontology=ontology,
+                    graph_name=graph_name,
+                    unavailable_reason=message,
                 )
+                self.task_manager.complete_task(task_id, {
+                    "graph_id": graph_data["graph_id"],
+                    "graph_info": {
+                        "graph_id": graph_data["graph_id"],
+                        "node_count": graph_data["node_count"],
+                        "edge_count": graph_data["edge_count"],
+                        "entity_types": [node["name"] for node in graph_data["nodes"]],
+                    },
+                    "graph_data": graph_data,
+                    "chunks_processed": 0,
+                    "graph_backend": "local_fallback",
+                    "warning": graph_data["warning"],
+                })
+                return
 
             self.task_manager.update_task(
                 task_id,
@@ -255,6 +279,105 @@ class GraphBuilderService:
         # mensagem. Nao ha endpoint explicito de criacao.
         logger.info(f"Group ID gerado: {graph_id} (nome: {name})")
         return graph_id
+
+    def create_local_graph(self, name: str) -> str:
+        """Cria um ID local para fallback sem Graphiti."""
+        graph_id = f"local_mirofish_{uuid.uuid4().hex[:16]}"
+        logger.warning(f"Graphiti indisponivel; usando grafo local de esquema {graph_id} (nome: {name})")
+        return graph_id
+
+    def _local_graph_path(self, graph_id: str) -> str:
+        return os.path.join(LOCAL_GRAPH_DIR, f"{graph_id}.json")
+
+    def _save_local_graph_data(self, graph_data: Dict[str, Any]) -> None:
+        os.makedirs(LOCAL_GRAPH_DIR, exist_ok=True)
+        with open(self._local_graph_path(graph_data["graph_id"]), "w", encoding="utf-8") as f:
+            json.dump(graph_data, f, ensure_ascii=False, indent=2)
+
+    def _load_local_graph_data(self, graph_id: str) -> Optional[Dict[str, Any]]:
+        path = self._local_graph_path(graph_id)
+        if not os.path.exists(path):
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def build_schema_fallback_graph(
+        self,
+        text: str,
+        ontology: Dict[str, Any],
+        graph_name: str,
+        unavailable_reason: str,
+    ) -> Dict[str, Any]:
+        """Cria um grafo local de esquema quando Graphiti nao esta acessivel.
+
+        O fallback nao finge que houve extração semântica: ele salva os tipos da
+        ontologia como nós de esquema e marca o backend como local_fallback.
+        """
+        graph_id = self.create_local_graph(graph_name)
+        entity_types = ontology.get("entity_types", []) or []
+        edge_types = ontology.get("edge_types", []) or []
+
+        nodes = []
+        for index, entity in enumerate(entity_types, start=1):
+            name = entity.get("name") or f"TipoEntidade{index}"
+            nodes.append({
+                "uuid": f"{graph_id}_entity_type_{index}",
+                "name": name,
+                "labels": ["TipoDeEntidade", "FallbackLocal"],
+                "summary": entity.get("description", ""),
+                "attributes": {
+                    "kind": "ontology_entity_type",
+                    "examples": entity.get("examples", []),
+                    "source": "ontology",
+                },
+                "created_at": None,
+            })
+
+        edges = []
+        edge_index = 1
+        for edge in edge_types:
+            relation_name = edge.get("name") or f"RELACAO_{edge_index}"
+            targets = edge.get("source_targets") or [{}]
+            for target in targets:
+                edges.append({
+                    "uuid": f"{graph_id}_edge_type_{edge_index}",
+                    "name": relation_name,
+                    "fact": edge.get("description", ""),
+                    "fact_type": relation_name,
+                    "source_node_uuid": "",
+                    "target_node_uuid": "",
+                    "source_node_name": target.get("source", ""),
+                    "target_node_name": target.get("target", ""),
+                    "attributes": {
+                        "kind": "ontology_edge_type",
+                        "source": "ontology",
+                    },
+                    "created_at": None,
+                    "valid_at": None,
+                    "invalid_at": None,
+                    "expired_at": None,
+                    "episodes": [],
+                })
+                edge_index += 1
+
+        graph_data = {
+            "graph_id": graph_id,
+            "graph_backend": "local_fallback",
+            "unavailable": True,
+            "warning": (
+                "Graphiti indisponível. O MiroFish criou um grafo local de esquema "
+                "para continuar a preparação; a extração de entidades reais será feita "
+                "por fallback LLM na etapa de simulação."
+            ),
+            "error": unavailable_reason,
+            "source_text_length": len(text or ""),
+            "nodes": nodes,
+            "edges": edges,
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+        }
+        self._save_local_graph_data(graph_data)
+        return graph_data
 
     def set_ontology(self, graph_id: str, ontology: Dict[str, Any]):
         """Envia o contexto da ontologia como mensagem de sistema.
@@ -570,12 +693,32 @@ class GraphBuilderService:
         No Graphiti, isso e feito via POST /search com query ampla
         e GET /episodes para listar episodios.
         """
+        local_graph = self._load_local_graph_data(graph_id)
+        if local_graph:
+            return local_graph
+
         # Busca todos os fatos
-        search_result = self.client.search(
-            group_ids=[graph_id],
-            query="*",
-            max_facts=500,
-        )
+        try:
+            search_result = self.client.search(
+                group_ids=[graph_id],
+                query="*",
+                max_facts=500,
+            )
+        except Exception as exc:
+            if Config.GRAPHITI_REQUIRED:
+                raise
+            logger.warning(f"Graphiti indisponivel ao obter grafo {graph_id}: {exc}")
+            return {
+                "graph_id": graph_id,
+                "graph_backend": "graphiti_unavailable",
+                "unavailable": True,
+                "warning": "Graphiti indisponível; dados do grafo não puderam ser carregados.",
+                "error": str(exc),
+                "nodes": [],
+                "edges": [],
+                "node_count": 0,
+                "edge_count": 0,
+            }
 
         raw_facts = search_result.get("facts", [])
 

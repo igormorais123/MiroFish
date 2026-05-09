@@ -1,4 +1,16 @@
-import service, { requestWithRetry } from './index'
+import service, { API_TIMEOUTS, requestWithRetry } from './index'
+
+/**
+ * Obter estado operacional do backend de grafo
+ * @returns {Promise}
+ */
+export function getGraphStatus() {
+  return service({
+    url: '/api/graph/status',
+    method: 'get',
+    timeout: API_TIMEOUTS.fast
+  })
+}
 
 /**
  * Gerar ontologia (upload de documentos e requisito de simulacao)
@@ -10,7 +22,8 @@ export function generateOntology(formData) {
     service({
       url: '/api/graph/ontology/generate',
       method: 'post',
-      data: formData
+      data: formData,
+      timeout: API_TIMEOUTS.slow
     })
   , 1)
 }
@@ -25,7 +38,8 @@ export function buildGraph(data) {
     service({
       url: '/api/graph/build',
       method: 'post',
-      data
+      data,
+      timeout: API_TIMEOUTS.normal
     })
   )
 }
@@ -38,7 +52,8 @@ export function buildGraph(data) {
 export function getTaskStatus(taskId) {
   return service({
     url: `/api/graph/task/${taskId}`,
-    method: 'get'
+    method: 'get',
+    timeout: API_TIMEOUTS.fast
   })
 }
 
@@ -50,7 +65,8 @@ export function getTaskStatus(taskId) {
 export function getGraphData(graphId) {
   return service({
     url: `/api/graph/data/${graphId}`,
-    method: 'get'
+    method: 'get',
+    timeout: API_TIMEOUTS.normal
   })
 }
 
@@ -62,6 +78,7 @@ export function getGraphData(graphId) {
 export function getProject(projectId) {
   return service({
     url: `/api/graph/project/${projectId}`,
-    method: 'get'
+    method: 'get',
+    timeout: API_TIMEOUTS.fast
   })
 }
