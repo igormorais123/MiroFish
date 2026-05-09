@@ -4,6 +4,14 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
+      "source": "/mirofish/api/(.*)",
+      "destination": "https://mirofish.inteia.com.br/api/$1"
+    },
+    {
+      "source": "/mirofish/health/(.*)",
+      "destination": "https://mirofish.inteia.com.br/health/$1"
+    },
+    {
       "source": "/assets/(.*)",
       "destination": "/assets/$1"
     },
