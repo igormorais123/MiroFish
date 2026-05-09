@@ -535,7 +535,7 @@ class PowerPersonaCatalog:
         return (self.TYPE_ORDER.get(tipo, 99), str(item.get("nome", "")).lower())
 
     def _make_id(self, tipo: str, nome: str, path: Path, index: int) -> str:
-        digest = hashlib.sha1(f"{path.resolve()}:{index}:{nome}".encode("utf-8")).hexdigest()[:10]
+        digest = hashlib.sha256(f"{path.resolve()}:{index}:{nome}".encode("utf-8")).hexdigest()[:10]
         slug = re.sub(r"[^a-z0-9]+", "-", self._normalize_for_match(nome)).strip("-")[:40]
         return f"{tipo}:{slug or 'item'}:{digest}"
 

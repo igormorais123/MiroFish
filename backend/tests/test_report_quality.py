@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.utils.report_quality import (
+    audit_report_content_consistency,
     audit_report_evidence,
     evaluate_section_grounding,
     extract_numeric_claims,
@@ -175,6 +176,189 @@ def test_audit_report_evidence_bloqueia_numero_sem_suporte():
     assert audit["passes_gate"] is False
     assert audit["numbers_unsupported"] == 1
     assert audit["unsupported_numbers"][0]["number"] == "68%"
+
+
+def test_audit_report_evidence_aceita_metricas_estruturadas_do_sistema():
+    audit = audit_report_evidence(
+        "[Fato] O grafo consolidado tem 5 nós, 5 relações, 5 fatos e 72 rodadas.",
+        ["Corpus textual sem esses numeros literais."],
+        fail_on_unsupported_numbers=True,
+        structured_metrics={
+            "graph_nodes_count": 5,
+            "graph_edges_count": 5,
+            "total_rounds": 72,
+        },
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_supported"] == 4
+    assert audit["numbers_supported_by_structured_metrics"] == 4
+
+
+def test_content_consistency_bloqueia_contradicoes_com_metricas_conhecidas():
+    report = (
+        "Resumo: nao ha agentes ativos na base.\n\n"
+        "[Fato] A base informada nao tem agentes, rodadas e plataformas conhecidos.\n"
+        "Ainda falta confirmar quantidade de agentes, numero de rodadas e plataformas."
+    )
+
+    audit = audit_report_content_consistency(
+        report,
+        {
+            "profiles_count": 5,
+            "current_round": 72,
+            "total_rounds": 72,
+            "diversity": {"platform_counts": {"twitter": 10, "reddit": 10}},
+        },
+    )
+
+    issue_ids = {issue["id"] for issue in audit["issues"]}
+    assert audit["passes_gate"] is False
+    assert "contradicts_known_agents" in issue_ids
+    assert "contradicts_known_rounds" in issue_ids
+    assert "contradicts_known_platforms" in issue_ids
+
+
+def test_content_consistency_bloqueia_lixo_interno_e_markdown_quebrado():
+    report = (
+        "## Analise Estrategica\n\n"
+        "**Analise Estrategica**\n\n"
+        "[Sugestao operacional] | **Base** | 45% | Consolidar evidencias |\n\n"
+        "## QC — Cobertura e Grounding\n\n"
+        "## Auditoria de Evidencias\n"
+    )
+
+    audit = audit_report_content_consistency(report, {"profiles_count": 5})
+
+    issue_ids = {issue["id"] for issue in audit["issues"]}
+    assert audit["passes_gate"] is False
+    assert "duplicate_section_heading" in issue_ids
+    assert "malformed_markdown_table" in issue_ids
+    assert "internal_audit_block_in_client_report" in issue_ids
+
+
+def test_content_consistency_aprova_relatorio_limpo_com_metricas_conhecidas():
+    report = (
+        "## Analise Estrategica\n\n"
+        "[Fato] A simulacao consolidou 5 agentes em 72 rodadas, com atividade em Twitter e Reddit."
+    )
+
+    audit = audit_report_content_consistency(
+        report,
+        {
+            "profiles_count": 5,
+            "total_rounds": 72,
+            "diversity": {"platform_counts": {"twitter": 10, "reddit": 10}},
+        },
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["issues"] == []
+
+
+def test_content_consistency_bloqueia_blockquote_repetido():
+    report = "\n\n".join(
+        [
+            "> \"[Inferencia da simulacao] Veiculos de midia amplificam o primeiro enquadramento narrativo.\"",
+            "> \"[Inferencia da simulacao] Veiculos de midia amplificam o primeiro enquadramento narrativo.\"",
+            "> \"[Inferencia da simulacao] Veiculos de midia amplificam o primeiro enquadramento narrativo.\"",
+        ]
+    )
+
+    audit = audit_report_content_consistency(report, {})
+
+    issue_ids = {issue["id"] for issue in audit["issues"]}
+    assert audit["passes_gate"] is False
+    assert "repeated_blockquote" in issue_ids
+
+
+def test_extract_numeric_claims_ignora_cabecalho_de_tabela_com_faixa_textual():
+    claims = extract_numeric_claims(
+        "| Cenario | Probabilidade | Narrativa-chave (1-2 linhas) | Gatilho de virada |\n"
+        "|---------|--------------|------------------------------|-------------------|\n"
+        "| **Otimista** | 25% | Validacao tecnica amplia confianca. | Revisao independente. |"
+    )
+
+    assert [claim["number"] for claim in claims] == ["25%"]
+    assert claims[0]["labeled_inference"] is True
+
+
+def test_report_system_gate_inclui_metricas_do_grafo_para_auditoria(monkeypatch, tmp_path):
+    import app.services.report_system_gate as report_system_gate
+
+    simulation_id = "sim_gate_graph_stats"
+    graph_id = "graph_gate_stats"
+    sim_dir = tmp_path / "simulations" / simulation_id
+    sim_dir.mkdir(parents=True)
+    (sim_dir / "simulation_config.json").write_text("{}", encoding="utf-8")
+    (sim_dir / "reddit_profiles.json").write_text("[]", encoding="utf-8")
+    (sim_dir / "twitter_profiles.csv").write_text("id,name\n1,A\n", encoding="utf-8")
+
+    class DummyState:
+        project_id = "proj_gate_stats"
+        graph_id = "graph_gate_stats"
+        profiles_count = 5
+
+        def to_dict(self):
+            return {
+                "status": "completed",
+                "entities_count": 5,
+                "profiles_count": 5,
+                "project_id": self.project_id,
+            }
+
+    class DummyProject:
+        status = "graph_completed"
+        simulation_requirement = "avaliar cenário"
+        graph_id = "graph_gate_stats"
+
+    class DummyRunState:
+        def to_detail_dict(self):
+            return {
+                "runner_status": "completed",
+                "total_rounds": 72,
+                "current_round": 72,
+                "total_actions_count": 10,
+            }
+
+    class DummyReader:
+        def __init__(self, _simulation_id):
+            pass
+
+        def get_agent_actions(self):
+            return [{"action_args": {"content": "texto"}} for _ in range(10)]
+
+        def get_diversity_metrics(self):
+            return {
+                "generated_texts_count": 10,
+                "distinct_2": 1.0,
+                "agent_activity_entropy_norm": 1.0,
+                "action_type_entropy_norm": 1.0,
+                "entity_type_coverage": 2,
+                "oasis_trace": {},
+            }
+
+    class DummyZepTools:
+        def get_graph_statistics(self, _graph_id):
+            return {"total_nodes": 5, "total_edges": 5}
+
+    monkeypatch.setattr(report_system_gate.Config, "UPLOAD_FOLDER", str(tmp_path))
+    monkeypatch.setattr(report_system_gate, "_simulation_dir", lambda _simulation_id: str(sim_dir))
+    monkeypatch.setattr(report_system_gate.SimulationManager, "get_simulation", lambda self, _simulation_id: DummyState())
+    monkeypatch.setattr(report_system_gate.ProjectManager, "get_project", lambda _project_id: DummyProject())
+    monkeypatch.setattr(report_system_gate.SimulationRunner, "get_run_state", lambda _simulation_id: DummyRunState())
+    monkeypatch.setattr(report_system_gate, "SimulationDataReader", DummyReader)
+    monkeypatch.setattr(report_system_gate, "ZepToolsService", lambda: DummyZepTools())
+
+    result = report_system_gate.evaluate_report_system_gate(
+        simulation_id,
+        graph_id,
+        source_text="texto-base",
+    )
+
+    assert result.metrics["graph_nodes_count"] == 5
+    assert result.metrics["graph_edges_count"] == 5
+    assert result.metrics["graph_facts_count"] == 5
 
 
 def test_audit_report_evidence_aceita_numero_rotulado_como_inferencia():
@@ -622,6 +806,55 @@ def test_report_agent_generate_report_success_salva_cost_meter(monkeypatch):
     assert saved_reports[-1].status == ReportStatus.COMPLETED
     assert any(status == "completed" for status, _progress, _message in progress_updates)
     assert agent._cost_session_kwargs() == {}
+    assert "## QC" not in report.markdown_content
+    assert "## Auditoria de Evidencias" not in report.markdown_content
+    assert ("report_success", "qc_report.json") in saved_artifacts
+    assert ("report_success", "content_consistency.json") in saved_artifacts
+
+
+def test_report_agent_helena_scale_context_usa_estado_runner_e_diversidade(monkeypatch):
+    import app.services.simulation_data_reader as data_reader_module
+    import app.services.simulation_manager as simulation_manager_module
+    import app.services.simulation_runner as simulation_runner_module
+
+    class DummyState:
+        profiles_count = 5
+        total_agents = 0
+
+        def to_dict(self):
+            return {"profiles_count": 5, "total_agents": 0, "platforms": []}
+
+    class DummyManager:
+        def get_simulation(self, simulation_id):
+            assert simulation_id == "sim_scale"
+            return DummyState()
+
+    class DummyRunner:
+        @staticmethod
+        def get_run_state(simulation_id):
+            assert simulation_id == "sim_scale"
+            return {
+                "current_round": 72,
+                "total_rounds": 72,
+                "diversity": {"platform_counts": {"twitter": 10, "reddit": 10}},
+            }
+
+    class DummyReader:
+        def __init__(self, simulation_id):
+            assert simulation_id == "sim_scale"
+
+        def get_diversity_metrics(self):
+            return {"platform_counts": {"twitter": 10, "reddit": 10}}
+
+    monkeypatch.setattr(simulation_manager_module, "SimulationManager", DummyManager)
+    monkeypatch.setattr(simulation_runner_module, "SimulationRunner", DummyRunner)
+    monkeypatch.setattr(data_reader_module, "SimulationDataReader", DummyReader)
+
+    context = ReportAgent._build_helena_scale_context("sim_scale")
+
+    assert context["total_agents"] == 5
+    assert context["total_rounds"] == 72
+    assert context["platforms"] == "Twitter, Reddit"
 
 
 def test_interview_agents_result_with_success_and_items_is_usable():

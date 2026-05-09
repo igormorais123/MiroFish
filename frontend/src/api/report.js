@@ -121,8 +121,16 @@ export const getReportDeliveryPackage = (reportId) => {
   return service.get(`/api/report/${reportId}/delivery-package`)
 }
 
+export const getReportEvolutionReadiness = (reportId) => {
+  return service.get(`/api/report/${reportId}/evolution-readiness`)
+}
+
 export const repairReportFinalization = (reportId) => {
   return service.post(`/api/report/${reportId}/finalization/repair`)
+}
+
+export const repairReportContent = (reportId) => {
+  return service.post(`/api/report/${reportId}/content/repair`)
 }
 
 export const createExecutivePackage = (reportId) => {

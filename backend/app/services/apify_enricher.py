@@ -79,7 +79,7 @@ def _cache_path(project_id: str) -> Path:
 
 def _cache_key(*lists: list[str]) -> str:
     raw = json.dumps([sorted(l) for l in lists], ensure_ascii=False)
-    return hashlib.md5(raw.encode()).hexdigest()
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 class ApifyEnricher:

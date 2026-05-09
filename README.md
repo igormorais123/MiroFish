@@ -4,7 +4,7 @@
 
 ### Motor de Simulação Social Multiagente para Cenários Complexos
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
@@ -74,7 +74,7 @@ Relatório analítico → Conversa com agentes → Insights
 
 ```
 mirofish-inteia/
-├── backend/                   # Python 3.12 + FastAPI
+├── backend/                   # Python 3.11 + Flask
 │   ├── app/
 │   │   ├── services/          # Gerenciador de simulação, ontologia, LLM, Apify
 │   │   └── utils/             # Cliente LLM, Graphiti, Zep
@@ -104,7 +104,7 @@ mirofish-inteia/
 | Ferramenta | Versão | Verificação |
 |------------|--------|-------------|
 | Node.js | 18+ | `node -v` |
-| Python | 3.11–3.12 | `python --version` |
+| Python | 3.11 | `python --version` |
 | uv | atual | `uv --version` |
 
 ### Instalação

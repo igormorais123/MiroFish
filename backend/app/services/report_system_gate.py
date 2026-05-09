@@ -20,6 +20,7 @@ from .simulation_data_reader import SimulationDataReader
 from .delivery_governance import resolve_delivery_governance
 from .simulation_manager import SimulationManager
 from .simulation_runner import SimulationRunner
+from .zep_tools import ZepToolsService
 
 logger = get_logger("mirofish.report_system_gate")
 
@@ -177,6 +178,7 @@ def evaluate_report_system_gate(
         issues.append(f"graph_id informado ({graph_id}) difere do graph_id da simulacao ({state.graph_id})")
     if not (graph_id or state.graph_id):
         issues.append("graph_id ausente")
+    effective_graph_id = graph_id or state.graph_id
 
     project = ProjectManager.get_project(state.project_id)
     if not project:
@@ -255,6 +257,31 @@ def evaluate_report_system_gate(
     })
     if profiles_total <= 0:
         issues.append("Nenhum perfil sintetico encontrado para sustentar agentes")
+
+    if effective_graph_id:
+        try:
+            graph_stats = ZepToolsService().get_graph_statistics(effective_graph_id)
+            graph_nodes = int(graph_stats.get("total_nodes") or 0)
+            graph_edges = int(graph_stats.get("total_edges") or 0)
+            metrics.update({
+                "graph_nodes_count": graph_nodes,
+                "graph_edges_count": graph_edges,
+                "graph_relationships_count": graph_edges,
+                "graph_facts_count": graph_edges,
+            })
+            artifacts["graph_statistics"] = {
+                "available": True,
+                "graph_id": effective_graph_id,
+                "total_nodes": graph_nodes,
+                "total_edges": graph_edges,
+            }
+        except Exception as exc:
+            warnings.append(f"Estatisticas do grafo indisponiveis para auditoria numerica: {exc}")
+            artifacts["graph_statistics"] = {
+                "available": False,
+                "graph_id": effective_graph_id,
+                "error": str(exc)[:240],
+            }
 
     run_state = SimulationRunner.get_run_state(simulation_id)
     if not run_state:

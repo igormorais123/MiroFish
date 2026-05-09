@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Iterable
+from typing import Any, Iterable, Mapping
 
 _WORD_RE = re.compile(r"[A-Za-zÀ-ÿ0-9]+", re.UNICODE)
 _NUMBER_RE = re.compile(r"(?<!\w)\d+(?:[.,]\d+)?\s*(?:%|R\$|reais|mil|milh[oõ]es|bilh[oõ]es|pp|p\.p\.|nós|n[oó]s|fatos|agentes|rodadas|dias|horas|minutos)?", re.IGNORECASE)
@@ -22,6 +22,23 @@ _INFERENCE_MARKER_RE = re.compile(
     r"|inferencia|simulacao|estimad[ao]s?|calibrad[ao]s?|sugest[aã]o operacional|nao estimavel|sem dados suficientes",
     re.IGNORECASE,
 )
+_TABLE_SEPARATOR_RE = re.compile(r"^\|?[\s:\-]+\|[\s:\-\|]*$")
+_TABLE_HEADER_RE = re.compile(
+    r"\|.*\b(?:cen[aá]rio|probabilidade|narrativa|gatilho|risco|confian[cç]a)\b.*\|",
+    re.IGNORECASE,
+)
+
+
+_METRIC_CATEGORY_TERMS = {
+    "nodes": ("node", "nodes", "no", "nos", "entidade", "entidades", "entity", "entities"),
+    "relationships": ("edge", "edges", "relation", "relations", "relacao", "relacoes", "relationship", "relationships", "aresta", "arestas"),
+    "facts": ("fact", "facts", "fato", "fatos", "edge", "edges", "relation", "relations", "relationship", "relationships"),
+    "rounds": ("round", "rounds", "rodada", "rodadas"),
+    "hours": ("hour", "hours", "hora", "horas"),
+    "minutes": ("minute", "minutes", "minuto", "minutos"),
+    "actions": ("action", "actions", "acao", "acoes"),
+    "agents": ("agent", "agents", "agente", "agentes", "profile", "profiles", "perfil", "perfis"),
+}
 
 
 def _normalize(text: str) -> list[str]:
@@ -31,6 +48,12 @@ def _normalize(text: str) -> list[str]:
     nfkd = unicodedata.normalize("NFKD", text)
     cleaned = "".join(c for c in nfkd if not unicodedata.combining(c))
     return [tok.lower() for tok in _WORD_RE.findall(cleaned) if len(tok) > 2]
+
+
+def _normalize_ascii_text(text: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", text or "")
+    cleaned = "".join(c for c in nfkd if not unicodedata.combining(c))
+    return cleaned.lower()
 
 
 def _normalize_text_for_match(text: str) -> str:
@@ -146,6 +169,227 @@ def evaluate_section_grounding(content: str, known_entities: Iterable[str] | Non
     }
 
 
+def _coerce_positive_int(value: Any) -> int:
+    if isinstance(value, bool) or value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value) if value > 0 else 0
+    if isinstance(value, str):
+        match = re.search(r"\d+", value)
+        if match:
+            parsed = int(match.group(0))
+            return parsed if parsed > 0 else 0
+    return 0
+
+
+def _nested_mapping(mapping: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = mapping.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _first_positive_metric(metrics: Mapping[str, Any], keys: Iterable[str]) -> int:
+    for key in keys:
+        value = _coerce_positive_int(metrics.get(key))
+        if value > 0:
+            return value
+    return 0
+
+
+def _known_platforms(metrics: Mapping[str, Any]) -> list[str]:
+    direct = metrics.get("platforms")
+    if isinstance(direct, list):
+        names = [str(item).strip() for item in direct if str(item).strip()]
+        if names:
+            return names
+
+    candidates = []
+    diversity = _nested_mapping(metrics, "diversity")
+    for platform_counts in (
+        metrics.get("platform_counts"),
+        diversity.get("platform_counts"),
+    ):
+        if isinstance(platform_counts, Mapping):
+            for name, count in platform_counts.items():
+                if _coerce_positive_int(count) > 0:
+                    candidates.append(str(name))
+
+    for key in ("twitter_actions_count", "reddit_actions_count"):
+        if _coerce_positive_int(metrics.get(key)) > 0:
+            candidates.append(key.replace("_actions_count", ""))
+
+    seen: set[str] = set()
+    result: list[str] = []
+    for name in candidates:
+        normalized = _normalize_ascii_text(name).strip()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            result.append(name)
+    return result
+
+
+def _line_issue(issue_id: str, message: str, line_no: int, line: str) -> dict:
+    return {
+        "id": issue_id,
+        "severity": "error",
+        "line": line_no,
+        "message": message,
+        "context": line.strip()[:240],
+    }
+
+
+def audit_report_content_consistency(report_md: str, structured_metrics: Mapping[str, Any] | None = None) -> dict:
+    """Audita problemas editoriais que deixam um relatorio final incoerente.
+
+    Esta auditoria complementa a checagem de evidencias. Ela bloqueia textos
+    que contradizem metricas estruturadas ja conhecidas pelo sistema e impede
+    que blocos tecnicos internos sejam publicados como parte do relatorio final.
+    """
+    metrics = structured_metrics or {}
+    issues: list[dict] = []
+
+    known_agents = _first_positive_metric(
+        metrics,
+        (
+            "profiles_count",
+            "state_profiles_count",
+            "active_agents_count",
+            "total_agents",
+            "agent_count",
+            "reddit_profiles_count",
+            "twitter_profiles_count",
+        ),
+    )
+    known_rounds = _first_positive_metric(
+        metrics,
+        (
+            "current_round",
+            "rounds_count",
+            "total_rounds",
+            "max_rounds",
+        ),
+    )
+    platforms = _known_platforms(metrics)
+
+    seen_issue_ids: set[str] = set()
+
+    def add_once(issue_id: str, message: str, line_no: int, line: str) -> None:
+        if issue_id in seen_issue_ids:
+            return
+        seen_issue_ids.add(issue_id)
+        issues.append(_line_issue(issue_id, message, line_no, line))
+
+    lines = (report_md or "").splitlines()
+    for line_no, line in enumerate(lines, 1):
+        stripped = line.strip()
+        normalized = _normalize_ascii_text(stripped)
+
+        if re.match(r"^##\s+(qc\b|auditoria de evidencias\b)", normalized):
+            add_once(
+                "internal_audit_block_in_client_report",
+                "Bloco interno de auditoria apareceu no relatorio final.",
+                line_no,
+                line,
+            )
+
+        if re.match(r"^\[[^\]]+\]\s*\|", stripped):
+            add_once(
+                "malformed_markdown_table",
+                "Linha de tabela Markdown nao comeca com '|'.",
+                line_no,
+                line,
+            )
+
+        if known_agents and re.search(
+            r"(nao\s+(ha|tem|haver|existem?)\s+agentes|sem\s+agentes\s+ativos|agentes?\s+desconhecid)",
+            normalized,
+        ):
+            add_once(
+                "contradicts_known_agents",
+                f"O texto declara agentes ausentes/desconhecidos, mas o sistema conhece {known_agents} perfil(is).",
+                line_no,
+                line,
+            )
+
+        if known_rounds and re.search(
+            r"(nao\s+tem.{0,80}rodadas|rodadas?.{0,80}(desconhecid|conhecid|confirmar)|"
+            r"numero\s+de\s+rodadas.{0,80}(desconhecid|confirmar)|falta\s+confirmar.{0,80}rodadas)",
+            normalized,
+        ):
+            add_once(
+                "contradicts_known_rounds",
+                f"O texto declara rodadas ausentes/desconhecidas, mas o sistema conhece {known_rounds} rodada(s).",
+                line_no,
+                line,
+            )
+
+        if platforms and re.search(
+            r"(nao\s+tem.{0,80}plataformas|plataformas?.{0,80}(desconhecid|conhecid|confirmar)|"
+            r"falta\s+confirmar.{0,80}plataformas)",
+            normalized,
+        ):
+            add_once(
+                "contradicts_known_platforms",
+                "O texto declara plataformas ausentes/desconhecidas, mas o sistema tem plataformas simuladas.",
+                line_no,
+                line,
+            )
+
+    for idx, line in enumerate(lines):
+        heading = re.match(r"^##\s+(.+?)\s*$", line.strip())
+        if not heading:
+            continue
+        title = re.sub(r"[*_`#]+", "", heading.group(1)).strip()
+        next_line_no = None
+        next_line = ""
+        for cursor in range(idx + 1, len(lines)):
+            if lines[cursor].strip():
+                next_line_no = cursor + 1
+                next_line = lines[cursor].strip()
+                break
+        if not next_line_no:
+            continue
+        bold = re.match(r"^\*\*(.+?)\*\*:?\s*$", next_line)
+        if bold and _normalize_text_for_match(title) == _normalize_text_for_match(bold.group(1)):
+            add_once(
+                "duplicate_section_heading",
+                "Titulo de secao repetido imediatamente dentro do corpo.",
+                next_line_no,
+                next_line,
+            )
+
+    blockquote_occurrences: dict[str, list[tuple[int, str]]] = {}
+    for line_no, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if not stripped.startswith(">"):
+            continue
+        normalized_quote = _normalize_text_for_match(stripped.lstrip("> ").strip("\"'“”"))
+        if len(normalized_quote.split()) < 6:
+            continue
+        blockquote_occurrences.setdefault(normalized_quote, []).append((line_no, line))
+
+    for occurrences in blockquote_occurrences.values():
+        if len(occurrences) >= 3:
+            line_no, line = occurrences[2]
+            add_once(
+                "repeated_blockquote",
+                "Bloco citado repetido varias vezes no relatorio final.",
+                line_no,
+                line,
+            )
+            break
+
+    return {
+        "passes_gate": not issues,
+        "issues": issues,
+        "issue_count": len(issues),
+        "known_metrics": {
+            "agents": known_agents,
+            "rounds": known_rounds,
+            "platforms": platforms,
+        },
+    }
+
+
 def extract_direct_quotes(text: str, min_chars: int = 8) -> list[str]:
     """Extrai citacoes diretas entre aspas duplas/curvas.
 
@@ -184,12 +428,32 @@ def extract_numeric_claims(text: str) -> list[dict]:
     """Extrai numeros em linhas de conteudo para auditoria conservadora."""
     cleaned = _strip_generated_audit_blocks(_strip_code_fences(text))
     claims: list[dict] = []
+    active_table_header = ""
     for line_no, line in enumerate(cleaned.splitlines(), 1):
         stripped = line.strip()
-        if not stripped or set(stripped.replace(" ", "")) <= {"|", "-", ":"}:
+        if not stripped:
+            active_table_header = ""
+            continue
+        if set(stripped.replace(" ", "")) <= {"|", "-", ":"} or _TABLE_SEPARATOR_RE.match(stripped):
             continue
         if stripped.startswith("#"):
             continue
+        if (
+            stripped.startswith("|")
+            and _TABLE_HEADER_RE.search(stripped)
+            and "**" not in stripped
+            and not re.search(r"\d+(?:[.,]\d+)?\s*%", stripped)
+        ):
+            active_table_header = stripped
+            continue
+        if not stripped.startswith("|"):
+            active_table_header = ""
+
+        table_marks_inference = bool(
+            active_table_header
+            and stripped.startswith("|")
+            and re.search(r"\b(?:probabilidade|cen[aá]rio|risco|confian[cç]a)\b", active_table_header, re.IGNORECASE)
+        )
         for match in _NUMBER_RE.finditer(stripped):
             raw = match.group(0).strip()
             if raw:
@@ -197,7 +461,7 @@ def extract_numeric_claims(text: str) -> list[dict]:
                     "number": raw,
                     "line": line_no,
                     "context": stripped[:240],
-                    "labeled_inference": bool(_INFERENCE_MARKER_RE.search(stripped)),
+                    "labeled_inference": bool(_INFERENCE_MARKER_RE.search(stripped)) or table_marks_inference,
                 })
     return claims
 
@@ -217,12 +481,82 @@ def number_supported_by_evidence(number: str, evidence_texts: Iterable[str]) -> 
     return False
 
 
+def _flatten_numeric_metrics(metrics: Mapping[str, Any] | None, prefix: str = "") -> list[tuple[str, float]]:
+    flattened: list[tuple[str, float]] = []
+    if not isinstance(metrics, Mapping):
+        return flattened
+
+    for key, value in metrics.items():
+        metric_key = f"{prefix}.{key}" if prefix else str(key)
+        if isinstance(value, Mapping):
+            flattened.extend(_flatten_numeric_metrics(value, metric_key))
+            continue
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, (int, float)):
+            flattened.append((metric_key, float(value)))
+    return flattened
+
+
+def _claim_number_value(number: str) -> float | None:
+    match = re.match(r"\s*(\d+(?:[.,]\d+)?)", number or "")
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(",", "."))
+    except ValueError:
+        return None
+
+
+def _metric_categories(metric_key: str) -> set[str]:
+    normalized_key = _normalize_ascii_text(metric_key)
+    categories: set[str] = set()
+    for category, terms in _METRIC_CATEGORY_TERMS.items():
+        if any(term in normalized_key for term in terms):
+            categories.add(category)
+    return categories
+
+
+def _claim_categories(claim: Mapping[str, Any]) -> set[str]:
+    normalized_context = _normalize_ascii_text(
+        f"{claim.get('number', '')} {claim.get('context', '')}"
+    )
+    tokens = set(_WORD_RE.findall(normalized_context))
+    categories: set[str] = set()
+    for category, terms in _METRIC_CATEGORY_TERMS.items():
+        if any(term in tokens for term in terms):
+            categories.add(category)
+    return categories
+
+
+def number_supported_by_structured_metrics(
+    claim: Mapping[str, Any],
+    structured_metrics: Mapping[str, Any] | None,
+) -> bool:
+    """Valida numeros derivados de métricas estruturadas do próprio sistema."""
+    claim_value = _claim_number_value(str(claim.get("number", "")))
+    if claim_value is None:
+        return False
+
+    claim_categories = _claim_categories(claim)
+    if not claim_categories:
+        return False
+
+    for metric_key, metric_value in _flatten_numeric_metrics(structured_metrics):
+        if abs(metric_value - claim_value) > 1e-9:
+            continue
+        if claim_categories & _metric_categories(metric_key):
+            return True
+    return False
+
+
 def audit_report_evidence(
     report_md: str,
     evidence_texts: Iterable[str],
     *,
     fail_on_unsupported_quotes: bool = True,
     fail_on_unsupported_numbers: bool = True,
+    structured_metrics: Mapping[str, Any] | None = None,
 ) -> dict:
     """Audita se o relatorio usa citacoes sustentadas pelo sistema.
 
@@ -245,16 +579,23 @@ def audit_report_evidence(
     ]
 
     numeric_claims = extract_numeric_claims(report_md)
+    structured_supported_numbers = [
+        claim
+        for claim in numeric_claims
+        if number_supported_by_structured_metrics(claim, structured_metrics)
+    ]
     unsupported_numbers = [
         claim
         for claim in numeric_claims
         if not claim.get("labeled_inference")
         and not number_supported_by_evidence(claim.get("number", ""), evidence_list)
+        and not number_supported_by_structured_metrics(claim, structured_metrics)
     ]
     supported_numbers = [
         claim
         for claim in numeric_claims
         if number_supported_by_evidence(claim.get("number", ""), evidence_list)
+        or number_supported_by_structured_metrics(claim, structured_metrics)
     ]
     labeled_numbers = [claim for claim in numeric_claims if claim.get("labeled_inference")]
 
@@ -272,6 +613,7 @@ def audit_report_evidence(
         "fail_on_unsupported_quotes": fail_on_unsupported_quotes,
         "numbers_total": len(numeric_claims),
         "numbers_supported": len(supported_numbers),
+        "numbers_supported_by_structured_metrics": len(structured_supported_numbers),
         "numbers_labeled_inference": len(labeled_numbers),
         "numbers_unsupported": len(unsupported_numbers),
         "unsupported_numbers": unsupported_numbers[:20],

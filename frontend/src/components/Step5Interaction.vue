@@ -154,6 +154,24 @@
             </svg>
             <span>Próximos passos</span>
           </button>
+          <button class="ops-btn ops-evolution" type="button" @click="runReportOperation('deep_research')" :disabled="!canRunDeepResearch">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3v18"></path>
+              <path d="M3 12h18"></path>
+              <path d="M7 7l10 10"></path>
+              <path d="M17 7L7 17"></path>
+            </svg>
+            <span>Evoluir análise</span>
+          </button>
+          <button v-if="canRepairReport" class="ops-btn ops-repair" type="button" @click="repairCurrentReport" :disabled="isRepairingReport">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 0 1 15.5-6.2"></path>
+              <path d="M21 4v6h-6"></path>
+              <path d="M21 12a9 9 0 0 1-15.5 6.2"></path>
+              <path d="M3 20v-6h6"></path>
+            </svg>
+            <span>{{ isRepairingReport ? 'Reparando...' : 'Reparar relatório' }}</span>
+          </button>
           <button class="ops-btn" type="button" @click="openFinalReport">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 3h7v7"></path>
@@ -185,6 +203,41 @@
             </svg>
             <span>Copiar link</span>
           </button>
+        </div>
+
+        <div class="evolution-panel" v-if="reportId">
+          <div class="evolution-header">
+            <div>
+              <div class="evolution-title">DeepResearch + Ralph Loop</div>
+              <div class="evolution-subtitle">Estado operacional para aprofundar e gerar próximo ciclo pequeno</div>
+            </div>
+            <span class="evolution-status" :class="{ ready: evolutionReadiness?.status === 'ready_for_evolution', blocked: evolutionReadiness?.status === 'blocked' }">
+              {{ evolutionStatusLabel }}
+            </span>
+          </div>
+          <div class="evolution-metrics">
+            <div class="evolution-metric" v-for="item in evolutionMetricItems" :key="item.label">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+          <div class="evolution-notes" v-if="evolutionReadiness?.gaps?.length || evolutionReadiness?.blockers?.length">
+            <div v-for="item in (evolutionReadiness.blockers?.length ? evolutionReadiness.blockers : evolutionReadiness.gaps).slice(0, 3)" :key="item" class="evolution-note">
+              {{ item }}
+            </div>
+          </div>
+          <div class="diagnostic-panel" v-if="contentIssueItems.length">
+            <div class="diagnostic-header">
+              <span>Diagnóstico do relatório</span>
+              <strong>{{ contentIssueItems.length }} ponto{{ contentIssueItems.length === 1 ? '' : 's' }}</strong>
+            </div>
+            <div class="diagnostic-list">
+              <div class="diagnostic-item" v-for="issue in contentIssueItems" :key="`${issue.id}-${issue.line || 0}`">
+                <span class="diagnostic-message">{{ issue.message }}</span>
+                <span v-if="issue.line" class="diagnostic-line">linha {{ issue.line }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Chat Mode -->
@@ -481,7 +534,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { chatWithReport, getReport, getAgentLog, getReportSections } from '../api/report'
+import { chatWithReport, getReport, getAgentLog, getReportSections, getReportEvolutionReadiness, repairReportContent } from '../api/report'
 import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
 import { escapeHtml } from '../utils/safeMarkdown'
 
@@ -522,6 +575,9 @@ const generatedSections = ref({})
 const collapsedSections = ref(new Set())
 const currentSectionIndex = ref(null)
 const profiles = ref([])
+const evolutionReadiness = ref(null)
+const isLoadingEvolutionReadiness = ref(false)
+const isRepairingReport = ref(false)
 
 // Helper Methods
 const isSectionCompleted = (sectionIndex) => {
@@ -533,6 +589,15 @@ const leftPanel = ref(null)
 const rightPanel = ref(null)
 
 const reportToolById = {
+  deep_research: {
+    name: 'DeepResearch',
+    actionLabel: 'Evoluir analise',
+    buildPrompt: () => {
+      const metrics = evolutionReadiness.value?.metrics || {}
+      const gaps = (evolutionReadiness.value?.gaps || []).join('; ') || 'sem lacunas estruturadas registradas'
+      return `Execute um DeepResearch operacional para evoluir o relatorio ${props.reportId}. Use o relatorio persistido, fatos da simulacao e ferramentas disponiveis para entregar: 1) achados novos, 2) lacunas que ainda mudam a decisao, 3) tese adversaria mais forte, 4) tarefa RalphLoop pequena para o proximo ciclo, 5) sinal AutoResearch recomendado. Contexto numerico: ${JSON.stringify(metrics)}. Lacunas atuais: ${gaps}.`
+    }
+  },
   insight_forge: {
     name: 'InsightForge',
     actionLabel: 'Executar analise profunda',
@@ -603,6 +668,45 @@ const displaySections = computed(() => {
     }))
 
   return [...outlineSections, ...extraSections]
+})
+
+const evolutionStatusLabel = computed(() => {
+  if (isLoadingEvolutionReadiness.value) return 'Carregando'
+  const status = evolutionReadiness.value?.status
+  if (status === 'ready_for_evolution') return 'Pronto para evoluir'
+  if (status === 'missing') return 'Relatório ausente'
+  if (status === 'blocked') return 'Bloqueado'
+  return 'Não verificado'
+})
+
+const evolutionMetricItems = computed(() => {
+  const metrics = evolutionReadiness.value?.metrics || {}
+  return [
+    { label: 'Nós', value: metrics.graph_nodes_count || 0 },
+    { label: 'Relações', value: metrics.graph_edges_count || 0 },
+    { label: 'Rodadas', value: `${metrics.current_round || 0}/${metrics.total_rounds || 0}` },
+    { label: 'Ações', value: metrics.total_actions_count || 0 },
+    { label: 'Runs', value: evolutionReadiness.value?.evolution_runs_count || 0 }
+  ]
+})
+
+const canRunDeepResearch = computed(() => {
+  return !!evolutionReadiness.value?.can_deep_research && !isSending.value
+})
+
+const contentConsistency = computed(() => {
+  return evolutionReadiness.value?.content_consistency || null
+})
+
+const contentIssueItems = computed(() => {
+  const issues = contentConsistency.value?.issues || []
+  return issues.slice(0, 8)
+})
+
+const canRepairReport = computed(() => {
+  return evolutionReadiness.value?.status === 'blocked'
+    && contentConsistency.value?.passes_gate === false
+    && !isRepairingReport.value
 })
 
 // Methods
@@ -738,6 +842,30 @@ const runReportTool = async (toolId) => {
 const runReportOperation = async (operation) => {
   if (operation === 'next_steps') {
     await runReportTool('next_steps')
+  }
+  if (operation === 'deep_research') {
+    await runReportTool('deep_research')
+  }
+}
+
+const repairCurrentReport = async () => {
+  if (!props.reportId || isRepairingReport.value) return
+
+  isRepairingReport.value = true
+  try {
+    addLog('Iniciando reparo deterministico do relatorio')
+    const res = await repairReportContent(props.reportId)
+    if (!res.success) {
+      throw new Error(res.error || 'Falha no reparo')
+    }
+    const status = res.data?.status === 'repaired' ? 'reparado' : 'ainda exige revisao'
+    addLog(`Reparo de conteudo concluido: ${status}`)
+    generatedSections.value = {}
+    await loadReportData()
+  } catch (err) {
+    addLog(`Falha ao reparar relatorio: ${err.message}`)
+  } finally {
+    isRepairingReport.value = false
   }
 }
 
@@ -1104,9 +1232,31 @@ const loadReportData = async () => {
       // Load agent logs and persisted sections, including final post-outline sections.
       await loadAgentLogs()
       await loadReportSections()
+      await loadEvolutionReadiness()
     }
   } catch (err) {
     addLog(`Falha ao carregar o relatório: ${err.message}`)
+  }
+}
+
+const loadEvolutionReadiness = async () => {
+  if (!props.reportId) return
+
+  isLoadingEvolutionReadiness.value = true
+  try {
+    const res = await getReportEvolutionReadiness(props.reportId)
+    if (res.success && res.data) {
+      evolutionReadiness.value = res.data
+      const loadedStatus = res.data.status === 'ready_for_evolution'
+        ? 'Pronto para evoluir'
+        : (res.data.status === 'blocked' ? 'Bloqueado' : res.data.status)
+      addLog(`Evolucao da analise: ${loadedStatus}`)
+    }
+  } catch (err) {
+    evolutionReadiness.value = null
+    addLog(`Falha ao verificar evolucao da analise: ${err.message}`)
+  } finally {
+    isLoadingEvolutionReadiness.value = false
   }
 }
 
@@ -1733,6 +1883,185 @@ watch(() => props.simulationId, (newId) => {
 .ops-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #173b69 0%, #204a80 100%);
   border-color: transparent;
+}
+
+.ops-evolution {
+  background: #fff8e6;
+  border-color: rgba(180, 122, 22, 0.36);
+  color: #6f4a00;
+}
+
+.ops-evolution:hover:not(:disabled) {
+  background: #f4e4b8;
+  border-color: rgba(180, 122, 22, 0.58);
+}
+
+.ops-repair {
+  background: #FDF2F2;
+  border-color: rgba(185, 28, 28, 0.28);
+  color: #8F1D1D;
+}
+
+.ops-repair:hover:not(:disabled) {
+  background: #FBE3E3;
+  border-color: rgba(185, 28, 28, 0.46);
+}
+
+.evolution-panel {
+  padding: 14px 20px;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FFFFFF;
+}
+
+.evolution-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.evolution-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f2747;
+}
+
+.evolution-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6B7280;
+}
+
+.evolution-status {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border: 1px solid #E5E7EB;
+  border-radius: 999px;
+  background: #F9FAFB;
+  color: #4B5563;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.evolution-status.ready {
+  border-color: rgba(22, 163, 74, 0.25);
+  background: rgba(22, 163, 74, 0.08);
+  color: #166534;
+}
+
+.evolution-status.blocked {
+  border-color: rgba(185, 28, 28, 0.25);
+  background: rgba(185, 28, 28, 0.08);
+  color: #991B1B;
+}
+
+.evolution-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.evolution-metric {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #EEF0F3;
+  border-radius: 8px;
+  background: #FAFBFC;
+}
+
+.evolution-metric span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8A93A3;
+  text-transform: uppercase;
+}
+
+.evolution-metric strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  color: #111827;
+}
+
+.evolution-notes {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.evolution-note {
+  padding: 7px 9px;
+  border-left: 3px solid #D4A017;
+  background: #FFF9E8;
+  color: #57410A;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.diagnostic-panel {
+  margin-top: 12px;
+  border: 1px solid rgba(185, 28, 28, 0.16);
+  border-radius: 8px;
+  background: #FFF7F7;
+  overflow: hidden;
+}
+
+.diagnostic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(185, 28, 28, 0.12);
+  color: #7F1D1D;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.diagnostic-header strong {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #991B1B;
+}
+
+.diagnostic-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.diagnostic-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid rgba(185, 28, 28, 0.08);
+}
+
+.diagnostic-item:first-child {
+  border-top: 0;
+}
+
+.diagnostic-message {
+  min-width: 0;
+  color: #5F1A1A;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.diagnostic-line {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(185, 28, 28, 0.1);
+  color: #8F1D1D;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 /* Interaction Header */

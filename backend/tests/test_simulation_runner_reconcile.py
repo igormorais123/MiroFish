@@ -74,6 +74,51 @@ def test_get_run_state_reconcilia_stopped_quando_logs_indicam_fim(tmp_path, monk
     assert state.error is None
 
 
+def test_get_run_state_reconcilia_horas_e_rodadas_com_logs_oasis_reais(tmp_path, monkeypatch):
+    simulation_id = "sim_reconcile_oasis_clock"
+    sim_dir = tmp_path / simulation_id
+    sim_dir.mkdir(parents=True)
+    monkeypatch.setattr(SimulationRunner, "RUN_STATE_DIR", str(tmp_path))
+    SimulationRunner._run_states.pop(simulation_id, None)
+
+    (sim_dir / "run_state.json").write_text(
+        json.dumps(
+            {
+                "simulation_id": simulation_id,
+                "runner_status": "completed",
+                "current_round": 72,
+                "total_rounds": 72,
+                "simulated_hours": 0,
+                "twitter_current_round": 72,
+                "reddit_current_round": 72,
+                "twitter_simulated_hours": 0,
+                "reddit_simulated_hours": 0,
+                "twitter_completed": True,
+                "reddit_completed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    for platform in ("twitter", "reddit"):
+        write_jsonl(
+            sim_dir / platform / "actions.jsonl",
+            [
+                {"event_type": "simulation_start", "platform": platform, "total_rounds": 72},
+                {"event_type": "round_start", "round": 72, "simulated_hour": 23},
+                {"event_type": "round_end", "round": 72, "actions_count": 0},
+                {"event_type": "simulation_end", "platform": platform, "total_rounds": 72, "total_actions": 10},
+            ],
+        )
+
+    state = SimulationRunner.get_run_state(simulation_id)
+
+    assert state is not None
+    assert state.simulated_hours == 23
+    assert state.twitter_simulated_hours == 23
+    assert state.reddit_simulated_hours == 23
+    assert state.to_detail_dict()["rounds_count"] == 72
+
+
 def test_get_run_state_nao_promove_stopped_sem_eventos_de_fim(tmp_path, monkeypatch):
     simulation_id = "sim_incomplete"
     sim_dir = tmp_path / simulation_id

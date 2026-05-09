@@ -13,6 +13,29 @@ from .config import Config
 from .utils.logger import setup_logger, get_logger
 
 
+_PRODUCTION_CORS_ORIGINS = (
+    'https://inteia.com.br',
+    'https://mirofish-inteia.vercel.app',
+)
+
+_DEVELOPMENT_CORS_ORIGINS = (
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+)
+
+
+def _resolve_cors_origins(debug_mode: bool):
+    """Resolve CORS sem wildcard implicito em ambientes publicos."""
+    configured = os.environ.get('CORS_ORIGINS')
+    if configured is not None:
+        origins = [origin.strip() for origin in configured.split(',') if origin.strip()]
+        return origins or _PRODUCTION_CORS_ORIGINS
+
+    if debug_mode:
+        return _PRODUCTION_CORS_ORIGINS + _DEVELOPMENT_CORS_ORIGINS
+    return _PRODUCTION_CORS_ORIGINS
+
+
 def create_app(config_class=Config):
     """Cria e configura a aplicacao Flask."""
     # Serve frontend/dist como static se existir (evita CORS em dev local)
@@ -42,8 +65,8 @@ def create_app(config_class=Config):
         logger.info(f"{Config.APP_NAME} backend iniciando...")
         logger.info("=" * 50)
     
-    # CORS — restringe origens em producao
-    allowed_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+    # CORS - restringe origens por padrao; use CORS_ORIGINS para sobrescrever.
+    allowed_origins = _resolve_cors_origins(debug_mode)
     CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
     
     # Garante limpeza dos processos de simulacao em desligamentos.
@@ -56,9 +79,12 @@ def create_app(config_class=Config):
     @app.before_request
     def log_request():
         logger = get_logger('mirofish.request')
-        logger.debug(f"Requisicao: {request.method} {request.path}")
-        if request.content_type and 'json' in request.content_type:
-            logger.debug(f"Corpo da requisicao: {request.get_json(silent=True)}")
+        logger.debug(
+            "Requisicao: "
+            f"{request.method} {request.path} "
+            f"content_type={request.content_type or '-'} "
+            f"content_length={request.content_length or 0}"
+        )
     
     @app.after_request
     def log_response(response):
@@ -78,8 +104,9 @@ def create_app(config_class=Config):
     def _public_health_payload():
         return {
             'status': 'ok',
-            'service': Config.APP_NAME,
-            'code': Config.APP_CODE,
+            'service': app.config.get('APP_NAME', Config.APP_NAME),
+            'code': app.config.get('APP_CODE', Config.APP_CODE),
+            'has_frontend': _has_frontend,
         }
 
     # Healthcheck publico: sem URL/modelo/chaves ou detalhes de infra.
@@ -90,7 +117,7 @@ def create_app(config_class=Config):
 
     @app.route('/health/internal')
     def health_internal():
-        expected_token = Config.INTERNAL_API_TOKEN.strip()
+        expected_token = app.config.get('INTERNAL_API_TOKEN', Config.INTERNAL_API_TOKEN).strip()
         provided_token = request.headers.get('X-Internal-Token', '').strip()
         if not expected_token or provided_token != expected_token:
             return {'success': False, 'error': 'Nao autorizado para health interno'}, 401
@@ -102,11 +129,11 @@ def create_app(config_class=Config):
             'success': True,
             'data': {
                 'status': 'ok',
-                'service': Config.APP_NAME,
-                'code': Config.APP_CODE,
+                'service': app.config.get('APP_NAME', Config.APP_NAME),
+                'code': app.config.get('APP_CODE', Config.APP_CODE),
                 'has_frontend': _has_frontend,
-                'llm_base_url': Config.LLM_BASE_URL,
-                'llm_model': Config.LLM_MODEL_NAME,
+                'llm_base_url': app.config.get('LLM_BASE_URL', Config.LLM_BASE_URL),
+                'llm_model': app.config.get('LLM_MODEL_NAME', Config.LLM_MODEL_NAME),
                 'graphiti': graphiti,
             },
         }

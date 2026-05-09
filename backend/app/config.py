@@ -7,6 +7,7 @@ defaults compativeis com a integracao da INTEIA.
 
 import json
 import os
+import secrets
 
 from dotenv import load_dotenv
 
@@ -26,6 +27,14 @@ def _first_non_empty(*values):
         if value and str(value).strip():
             return str(value).strip()
     return None
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    """Le booleanos de ambiente com default seguro."""
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
 def _default_llm_base_url() -> str:
@@ -96,8 +105,11 @@ class Config:
     APP_CODE = os.environ.get('APP_CODE', 'mirofish-inteia')
 
     # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
-    DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
+    SECRET_KEY = (
+        _first_non_empty(os.environ.get('SECRET_KEY'), os.environ.get('FLASK_SECRET_KEY'))
+        or secrets.token_hex(32)
+    )
+    DEBUG = _env_flag('FLASK_DEBUG', False)
 
     # JSON
     JSON_AS_ASCII = False

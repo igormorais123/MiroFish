@@ -13,7 +13,7 @@ import os
 import json
 import time
 import re
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -21,6 +21,7 @@ from enum import Enum
 from ..config import Config
 from ..utils.llm_client import LLMClient
 from ..utils.logger import get_logger
+from ..utils.safe_ids import safe_storage_child
 from ..utils.token_tracker import TokenTracker
 from .zep_tools import (
     ZepToolsService, 
@@ -962,8 +963,12 @@ secao final intitulada "Analise Estrategica" que contenha:
 - Cada risco com probabilidade numerica
 - Cada recomendacao com prazo e responsavel quando aplicavel
 - Rotule claims como [Fato], [Simulacao], [Inferencia] ou [Campo necessario]
+- Probabilidades de cenario, risco e confianca sao [Inferencia calibrada], nunca [Fato], salvo se o numero aparecer literalmente no corpus
 - Nao use aspas diretas se a frase nao aparece literalmente no relatorio ou nos dados simulados
 - Se a evidencia for fraca, reduza a confianca e declare o limite; nao compense com retorica
+- Nao repita o titulo "Analise Estrategica"; o sistema ja adiciona esse titulo antes da sua resposta
+- Se Agentes/Rodadas/Plataformas tiverem valores numericos ou nomes conhecidos em [Escala], e proibido escrever que sao desconhecidos, ausentes ou nao confirmados
+- Em tabelas Markdown, toda linha deve comecar com "|"; rotulos como [Inferencia calibrada] devem ficar dentro da celula, nunca antes da barra vertical
 - Termine com uma frase de assinatura pessoal — acida, inteligente, memoravel
 
 [Formato]
@@ -2484,7 +2489,15 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 # Mede overlap se tiver source_text
                 overlap = measure_overlap(assembled_content, source_text or "", threshold=0.30)
                 qc_block = render_qc_block(overlap, sections_eval)
-                assembled_content += qc_block
+                ReportManager.save_json_artifact(
+                    report_id,
+                    "qc_report.json",
+                    {
+                        "overlap": overlap,
+                        "sections": sections_eval,
+                        "markdown": qc_block,
+                    },
+                )
 
                 if overlap.get("alert"):
                     logger.warning(
@@ -2499,8 +2512,8 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
 
             # Auditoria hard-gate de evidencias: citacoes diretas precisam existir no corpus.
             from app.utils.report_quality import (
+                audit_report_content_consistency,
                 audit_report_evidence,
-                render_evidence_audit_block,
             )
 
             evidence_audit = audit_report_evidence(
@@ -2508,10 +2521,10 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 evidence_bundle.get("evidence_texts", []),
                 fail_on_unsupported_quotes=Config.REPORT_FAIL_ON_UNSUPPORTED_QUOTES,
                 fail_on_unsupported_numbers=Config.REPORT_FAIL_ON_UNSUPPORTED_NUMBERS,
+                structured_metrics=(report.quality_gate or {}).get("metrics", {}),
             )
             report.evidence_audit = evidence_audit
             ReportManager.save_json_artifact(report_id, "evidence_audit.json", evidence_audit)
-            assembled_content += render_evidence_audit_block(evidence_audit)
 
             if not evidence_audit.get("passes_gate"):
                 report.markdown_content = assembled_content
@@ -2520,6 +2533,34 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                     "Relatorio bloqueado pela auditoria de evidencias: "
                     f"{evidence_audit.get('quotes_unsupported', 0)} citacoes e "
                     f"{evidence_audit.get('numbers_unsupported', 0)} numeros sem suporte"
+                )
+                ReportManager.save_report(report)
+                raise ValueError(report.error)
+
+            content_consistency = audit_report_content_consistency(
+                assembled_content,
+                (report.quality_gate or {}).get("metrics", {}),
+            )
+            if report.quality_gate is None:
+                report.quality_gate = {}
+            report.quality_gate["content_consistency"] = content_consistency
+            ReportManager.save_json_artifact(
+                report_id,
+                "content_consistency.json",
+                content_consistency,
+            )
+
+            if not content_consistency.get("passes_gate"):
+                report.markdown_content = assembled_content
+                report.status = ReportStatus.FAILED
+                report.error = (
+                    "Relatorio bloqueado pela auditoria de consistencia de conteudo: "
+                    f"{content_consistency.get('issue_count', 0)} problema(s) editorial(is)"
+                )
+                report.quality_gate["passes_gate"] = False
+                report.quality_gate.setdefault("issues", [])
+                report.quality_gate["issues"].extend(
+                    issue.get("message", "") for issue in content_consistency.get("issues", [])
                 )
                 ReportManager.save_report(report)
                 raise ValueError(report.error)
@@ -2649,6 +2690,159 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         finally:
             self._clear_cost_session()
 
+    @staticmethod
+    def _dict_from_runtime_state(value: Any) -> Dict[str, Any]:
+        if isinstance(value, Mapping):
+            return dict(value)
+        for method_name in ("to_detail_dict", "to_dict"):
+            method = getattr(value, method_name, None)
+            if callable(method):
+                try:
+                    data = method()
+                    if isinstance(data, Mapping):
+                        return dict(data)
+                except Exception:
+                    pass
+        data: Dict[str, Any] = {}
+        for attr in (
+            "profiles_count",
+            "total_agents",
+            "agent_count",
+            "current_round",
+            "total_rounds",
+            "max_rounds",
+            "rounds_count",
+            "platforms",
+            "twitter_actions_count",
+            "reddit_actions_count",
+            "diversity",
+        ):
+            if hasattr(value, attr):
+                data[attr] = getattr(value, attr)
+        return data
+
+    @staticmethod
+    def _positive_int(value: Any) -> int:
+        if isinstance(value, bool) or value is None:
+            return 0
+        if isinstance(value, (int, float)):
+            return int(value) if value > 0 else 0
+        if isinstance(value, str):
+            match = re.search(r"\d+", value)
+            if match:
+                parsed = int(match.group(0))
+                return parsed if parsed > 0 else 0
+        return 0
+
+    @staticmethod
+    def _first_positive_from_dicts(dicts: List[Dict[str, Any]], keys: List[str]) -> int:
+        for data in dicts:
+            for key in keys:
+                parsed = ReportAgent._positive_int(data.get(key))
+                if parsed > 0:
+                    return parsed
+        return 0
+
+    @staticmethod
+    def _display_platform_name(name: str) -> str:
+        normalized = (name or "").strip().lower()
+        display = {
+            "twitter": "Twitter",
+            "x": "Twitter",
+            "reddit": "Reddit",
+        }.get(normalized)
+        return display or str(name).strip().title()
+
+    @staticmethod
+    def _extract_known_platforms(*dicts: Dict[str, Any]) -> List[str]:
+        candidates: List[str] = []
+        for data in dicts:
+            platforms = data.get("platforms")
+            if isinstance(platforms, list):
+                candidates.extend(str(item) for item in platforms if str(item).strip())
+
+            diversity = data.get("diversity") if isinstance(data.get("diversity"), Mapping) else {}
+            for platform_counts in (data.get("platform_counts"), diversity.get("platform_counts")):
+                if isinstance(platform_counts, Mapping):
+                    for name, count in platform_counts.items():
+                        if ReportAgent._positive_int(count) > 0:
+                            candidates.append(str(name))
+
+            for key in ("twitter_actions_count", "reddit_actions_count"):
+                if ReportAgent._positive_int(data.get(key)) > 0:
+                    candidates.append(key.replace("_actions_count", ""))
+
+        seen: set[str] = set()
+        platforms_out: List[str] = []
+        for name in candidates:
+            normalized = str(name).strip().lower()
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                platforms_out.append(ReportAgent._display_platform_name(name))
+        return platforms_out
+
+    @staticmethod
+    def _build_helena_scale_context(simulation_id: str) -> Dict[str, Any]:
+        sim_dict: Dict[str, Any] = {}
+        run_state_dict: Dict[str, Any] = {}
+        diversity_dict: Dict[str, Any] = {}
+
+        try:
+            from .simulation_manager import SimulationManager
+
+            manager = SimulationManager()
+            sim_dict = ReportAgent._dict_from_runtime_state(
+                manager.get_simulation(simulation_id)
+            )
+        except Exception as exc:
+            logger.debug(f"Nao foi possivel carregar estado da simulacao para Helena: {exc}")
+
+        try:
+            from .simulation_runner import SimulationRunner
+
+            run_state_dict = ReportAgent._dict_from_runtime_state(
+                SimulationRunner.get_run_state(simulation_id)
+            )
+        except Exception as exc:
+            logger.debug(f"Nao foi possivel carregar run_state para Helena: {exc}")
+
+        try:
+            from .simulation_data_reader import SimulationDataReader
+
+            diversity_dict = ReportAgent._dict_from_runtime_state(
+                SimulationDataReader(simulation_id).get_diversity_metrics()
+            )
+        except Exception as exc:
+            logger.debug(f"Nao foi possivel carregar diversidade para Helena: {exc}")
+
+        total_agents = ReportAgent._first_positive_from_dicts(
+            [sim_dict, run_state_dict, diversity_dict],
+            [
+                "profiles_count",
+                "state_profiles_count",
+                "total_agents",
+                "agent_count",
+                "active_agents_count",
+                "reddit_profiles_count",
+                "twitter_profiles_count",
+            ],
+        )
+        total_rounds = ReportAgent._first_positive_from_dicts(
+            [run_state_dict, sim_dict],
+            ["current_round", "rounds_count", "total_rounds", "max_rounds"],
+        )
+        platforms = ReportAgent._extract_known_platforms(
+            diversity_dict,
+            run_state_dict,
+            sim_dict,
+        )
+
+        return {
+            "total_agents": total_agents or "desconhecido",
+            "total_rounds": total_rounds or "desconhecido",
+            "platforms": ", ".join(platforms) or "desconhecido",
+        }
+
     def _generate_helena_analysis(
         self,
         report_content: str,
@@ -2668,26 +2862,13 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             Config.LLM_PREMIUM_MODEL,  # sonnet-tasks (fallback seguro)
         ]
 
-        # Obter metadados da simulacao
-        total_agents = 0
-        total_rounds = 0
-        platforms = ""
-        try:
-            from .simulation_manager import SimulationManager
-            sim_data = SimulationManager.get_simulation(self.simulation_id)
-            if sim_data:
-                sim_dict = sim_data if isinstance(sim_data, dict) else sim_data.to_dict()
-                total_agents = sim_dict.get("total_agents", 0) or sim_dict.get("agent_count", 0) or 0
-                total_rounds = sim_dict.get("total_rounds", 0) or sim_dict.get("max_rounds", 0) or 0
-                platforms = ", ".join(sim_dict.get("platforms", [])) or "Twitter/Reddit"
-        except Exception:
-            pass
+        scale_context = self._build_helena_scale_context(self.simulation_id)
 
         user_prompt = HELENA_USER_PROMPT_TEMPLATE.format(
             simulation_requirement=self.simulation_requirement,
-            total_agents=total_agents or "desconhecido",
-            total_rounds=total_rounds or "desconhecido",
-            platforms=platforms or "desconhecido",
+            total_agents=scale_context["total_agents"],
+            total_rounds=scale_context["total_rounds"],
+            platforms=scale_context["platforms"],
             report_content=report_content[:12000],  # Truncar para caber no contexto
         )
 
@@ -2905,7 +3086,7 @@ class ReportManager:
     @classmethod
     def _get_report_folder(cls, report_id: str) -> str:
         """Obtem o caminho da pasta do relatorio"""
-        return os.path.join(cls.REPORTS_DIR, report_id)
+        return safe_storage_child(cls.REPORTS_DIR, report_id, "report_id")
     
     @classmethod
     def _ensure_report_folder(cls, report_id: str) -> str:

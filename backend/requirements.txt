@@ -1,20 +1,20 @@
 # ===========================================
 # MiroFish Backend Dependencies
 # ===========================================
-# Python 3.11+ required
+# Python 3.11 required for the pinned backend runtime
 # Install: pip install -r requirements.txt
 # ===========================================
 
 # ============= Framework principal =============
 flask>=3.0.0
 flask-cors>=6.0.0
+waitress>=3.0.0
 
 # ============= Integracao LLM =============
 openai>=1.0.0
 
-# ============= Simulacao social OASIS =============
-camel-oasis==0.2.5
-camel-ai==0.2.78
+# ============= Simulacao social OASIS/CAMEL =============
+camel-ai==0.2.90
 
 # ============= Processamento de arquivos =============
 PyMuPDF>=1.24.0
@@ -24,3 +24,6 @@ chardet>=5.0.0
 # ============= Utilitarios =============
 python-dotenv>=1.0.0
 pydantic>=2.0.0
+
+# Observacao: o backend usa scripts OASIS locais e CAMEL-AI diretamente.
+# Evite reinstalar camel-oasis==0.2.5: ele fixa dependencias transitivas antigas.

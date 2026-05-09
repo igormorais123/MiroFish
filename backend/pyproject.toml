@@ -2,7 +2,7 @@
 name = "mirofish-backend"
 version = "0.1.0"
 description = "MiroFish - motor versatil de inteligencia coletiva para simulacao e previsao"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 license = { text = "AGPL-3.0" }
 authors = [
     { name = "MiroFish Team" }
@@ -17,9 +17,8 @@ dependencies = [
     # Integracao com LLM
     "openai>=1.0.0",
     
-    # Simulacao social com OASIS
-    "camel-oasis==0.2.5",
-    "camel-ai==0.2.78",
+    # Simulacao social via scripts OASIS locais + CAMEL-AI
+    "camel-ai==0.2.90",
     
     # Processamento de arquivos
     "PyMuPDF>=1.24.0",
@@ -35,7 +34,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=9.0.3",
-    "pytest-asyncio>=0.23.0",
+    "pytest-asyncio>=1.3.0",
+    "pip-audit>=2.10.0",
     "pipreqs>=0.5.0",
 ]
 
@@ -46,7 +46,8 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
-    "pytest-asyncio>=0.23.0",
+    "pytest-asyncio>=1.3.0",
+    "pip-audit>=2.10.0",
 ]
 
 [tool.uv]
