@@ -12,15 +12,15 @@
       "destination": "https://mirofish.inteia.com.br/health/:path*"
     },
     {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "source": "/mirofish/assets/:path*",
-      "destination": "/assets/:path*"
+      "source": "/mirofish/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
