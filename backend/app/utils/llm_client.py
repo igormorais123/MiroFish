@@ -23,6 +23,76 @@ from .token_tracker import TokenTracker
 _tracker = TokenTracker()
 
 
+def _strip_markdown_json_fence(text: str) -> str:
+    cleaned = text.strip()
+    cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    return cleaned.strip()
+
+
+def _extract_balanced_json(text: str) -> Optional[str]:
+    """Extrai o primeiro objeto/array JSON balanceado de uma resposta textual."""
+    for start, opening in ((idx, char) for idx, char in enumerate(text) if char in "{["):
+        closing_for = {"{": "}", "[": "]"}
+        stack = [closing_for[opening]]
+        in_string = False
+        escaped = False
+
+        for idx in range(start + 1, len(text)):
+            char = text[idx]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char in "{[":
+                stack.append(closing_for[char])
+            elif char in "}]":
+                if not stack or char != stack[-1]:
+                    break
+                stack.pop()
+                if not stack:
+                    return text[start:idx + 1]
+    return None
+
+
+def parse_llm_json_response(response: str) -> Dict[str, Any]:
+    """Parseia JSON de LLM tolerando markdown, texto antes/depois e fences."""
+    candidates = []
+    cleaned = _strip_markdown_json_fence(response)
+    candidates.append(cleaned)
+
+    fenced_blocks = re.findall(
+        r'```(?:json)?\s*([\s\S]*?)```',
+        response,
+        flags=re.IGNORECASE,
+    )
+    candidates.extend(block.strip() for block in fenced_blocks if block.strip())
+
+    balanced = _extract_balanced_json(response)
+    if balanced:
+        candidates.append(balanced)
+
+    last_error: Optional[Exception] = None
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+            if not isinstance(parsed, dict):
+                raise ValueError("JSON raiz precisa ser um objeto")
+            return parsed
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_error = exc
+
+    preview = cleaned[:1000]
+    raise ValueError(f"LLM retornou JSON invalido: {preview}") from last_error
+
+
 @dataclass
 class _ChatMessage:
     content: str = ""
@@ -279,12 +349,37 @@ class LLMClient:
             session_id=session_id,
             phase_id=phase_id,
         )
-        cleaned = response.strip()
-        cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r'\n?```\s*$', '', cleaned)
-        cleaned = cleaned.strip()
 
         try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError:
-            raise ValueError(f"LLM retornou JSON invalido: {cleaned}")
+            return parse_llm_json_response(response)
+        except ValueError as first_error:
+            repaired = self.chat(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Converta a resposta do modelo para um unico objeto JSON valido. "
+                            "Preserve os dados existentes. Nao adicione markdown, comentarios ou texto fora do JSON."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "A resposta abaixo deveria ser JSON valido, mas veio em outro formato. "
+                            "Retorne apenas o objeto JSON corrigido:\n\n"
+                            f"{response[:12000]}"
+                        ),
+                    },
+                ],
+                temperature=0.0,
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"},
+                session_id=session_id,
+                phase_id=phase_id,
+            )
+            try:
+                return parse_llm_json_response(repaired)
+            except ValueError as repair_error:
+                raise ValueError(
+                    f"{first_error}. Reparo JSON tambem falhou: {str(repair_error)[:1000]}"
+                ) from repair_error

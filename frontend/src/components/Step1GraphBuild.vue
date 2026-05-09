@@ -28,13 +28,22 @@
           </div>
 
           <!-- Detail Overlay -->
-          <div v-if="selectedOntologyItem" class="ontology-detail-overlay">
+          <div
+            v-if="selectedOntologyItem"
+            class="ontology-detail-overlay"
+            :class="{ expanded: isDetailExpanded }"
+          >
             <div class="detail-header">
                <div class="detail-title-group">
                   <span class="detail-type-badge">{{ selectedOntologyItem.itemType === 'entity' ? 'ENTIDADE' : 'RELAÇÃO' }}</span>
                   <span class="detail-name">{{ selectedOntologyItem.name }}</span>
                </div>
-               <button class="close-btn" @click="selectedOntologyItem = null">×</button>
+               <div class="detail-actions">
+                 <button class="detail-action-btn" type="button" @click="isDetailExpanded = !isDetailExpanded">
+                   {{ isDetailExpanded ? 'Reduzir' : 'Tela cheia' }}
+                 </button>
+                 <button class="close-btn" type="button" @click="closeOntologyDetail">×</button>
+               </div>
             </div>
             <div class="detail-body">
                <div class="detail-desc">{{ selectedOntologyItem.description }}</div>
@@ -124,6 +133,11 @@
           <p class="description">
             Com base na ontologia gerada, os documentos são divididos e enviados ao Zep para construir o grafo, extrair entidades e relações e consolidar memória temporal.
           </p>
+
+          <div v-if="graphAvailability" class="graph-alert" :class="graphAvailability.kind">
+            <strong>{{ graphAvailability.title }}</strong>
+            <span>{{ graphAvailability.text }}</span>
+          </div>
           
           <!-- Stats Cards -->
           <div class="stats-grid">
@@ -175,8 +189,11 @@
       <div class="log-header">
         <span class="log-title">PAINEL DO SISTEMA</span>
         <span class="log-id">{{ projectData?.project_id || 'SEM_PROJETO' }}</span>
+        <button class="log-toggle" type="button" @click="logsExpanded = !logsExpanded">
+          {{ logsExpanded ? 'Recolher' : 'Expandir' }}
+        </button>
       </div>
-      <div class="log-content" ref="logContent">
+      <div class="log-content" :class="{ expanded: logsExpanded }" ref="logContent">
         <div class="log-line" v-for="(log, idx) in systemLogs" :key="idx">
           <span class="log-time">{{ log.time }}</span>
           <span class="log-msg">{{ log.msg }}</span>
@@ -207,6 +224,8 @@ defineEmits(['next-step'])
 const selectedOntologyItem = ref(null)
 const logContent = ref(null)
 const creatingSimulation = ref(false)
+const isDetailExpanded = ref(false)
+const logsExpanded = ref(false)
 
 // Entrar na configuração do ambiente - criar simulation e navegar
 const handleEnterEnvSetup = async () => {
@@ -245,6 +264,12 @@ const handleEnterEnvSetup = async () => {
 
 const selectOntologyItem = (item, type) => {
   selectedOntologyItem.value = { ...item, itemType: type }
+  isDetailExpanded.value = false
+}
+
+const closeOntologyDetail = () => {
+  selectedOntologyItem.value = null
+  isDetailExpanded.value = false
 }
 
 const graphStats = computed(() => {
@@ -252,6 +277,39 @@ const graphStats = computed(() => {
   const edges = props.graphData?.edge_count || props.graphData?.edges?.length || 0
   const types = props.projectData?.ontology?.entity_types?.length || 0
   return { nodes, edges, types }
+})
+
+const graphAvailability = computed(() => {
+  const data = props.graphData || {}
+  const projectWarning = props.projectData?.graph_warning
+  const backend = data.graph_backend || props.projectData?.graph_backend
+
+  if (backend === 'local_fallback' || data.unavailable) {
+    return {
+      kind: 'warning',
+      title: 'Grafo em fallback local',
+      text: data.warning || projectWarning || 'Graphiti indisponível. A simulação continuará com extração LLM de entidades.',
+    }
+  }
+
+  const message = props.buildProgress?.message || ''
+  if (/Graphiti indispon/i.test(message)) {
+    return {
+      kind: 'warning',
+      title: 'Graphiti indisponível',
+      text: message,
+    }
+  }
+
+  if (props.currentPhase >= 2 && graphStats.value.nodes === 0 && graphStats.value.edges === 0) {
+    return {
+      kind: 'caution',
+      title: 'Grafo sem dados materializados',
+      text: 'A construção terminou sem nós ou arestas detectáveis. Verifique o Graphiti antes de confiar no resultado.',
+    }
+  }
+
+  return null
 })
 
 const formatDate = (dateStr) => {
@@ -273,9 +331,7 @@ watch(() => props.systemLogs.length, () => {
 <style scoped>
 .workbench-panel {
   height: 100%;
-  background:
-    radial-gradient(circle at top right, rgba(212, 160, 23, 0.12), transparent 22%),
-    linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
+  background: linear-gradient(180deg, #fffaf0 0%, #f7f2e8 100%);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -293,7 +349,7 @@ watch(() => props.systemLogs.length, () => {
 
 .step-card {
   background: rgba(255, 255, 255, 0.88);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 20px;
   box-shadow: 0 18px 34px rgba(15, 39, 71, 0.08);
   border: 1px solid rgba(15, 39, 71, 0.1);
@@ -333,12 +389,12 @@ watch(() => props.systemLogs.length, () => {
 
 .step-title {
   font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.5px;
+  font-size: 15px;
+  letter-spacing: 0;
 }
 
 .badge {
-  font-size: 10px;
+  font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -352,15 +408,15 @@ watch(() => props.systemLogs.length, () => {
 
 .api-note {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   color: #7b8190;
   margin-bottom: 8px;
 }
 
 .description {
-  font-size: 12px;
+  font-size: 14px;
   color: #4b5563;
-  line-height: 1.5;
+  line-height: 1.6;
   margin-bottom: 16px;
 }
 
@@ -377,7 +433,7 @@ watch(() => props.systemLogs.length, () => {
 
 .tag-label {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: #7b8190;
   margin-bottom: 8px;
   font-weight: 600;
@@ -392,12 +448,13 @@ watch(() => props.systemLogs.length, () => {
 .entity-tag {
   background: rgba(212, 160, 23, 0.08);
   border: 1px solid rgba(212, 160, 23, 0.18);
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 11px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 13px;
   color: #0f2747;
   font-family: 'JetBrains Mono', monospace;
   transition: all 0.2s;
+  overflow-wrap: anywhere;
 }
 
 .entity-tag.clickable {
@@ -411,21 +468,27 @@ watch(() => props.systemLogs.length, () => {
 
 /* Ontology Detail Overlay */
 .ontology-detail-overlay {
-    position: absolute;
-    top: 60px; /* Below header roughly */
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
+    position: relative;
+    margin: 16px 0;
+    min-height: 220px;
+    max-height: min(62vh, 620px);
     background: rgba(255, 250, 240, 0.98);
     backdrop-filter: blur(4px);
     z-index: 10;
     border: 1px solid rgba(15, 39, 71, 0.1);
     box-shadow: 0 22px 40px rgba(15, 39, 71, 0.12);
-    border-radius: 12px;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     animation: fadeIn 0.2s ease-out;
+}
+
+.ontology-detail-overlay.expanded {
+    position: fixed;
+    inset: 72px 32px 32px;
+    max-height: none;
+    z-index: 1000;
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -434,7 +497,7 @@ watch(() => props.systemLogs.length, () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 14px 16px;
     border-bottom: 1px solid rgba(15, 39, 71, 0.08);
     background: linear-gradient(180deg, rgba(15, 39, 71, 0.05), rgba(255, 255, 255, 0.88));
 }
@@ -443,10 +506,11 @@ watch(() => props.systemLogs.length, () => {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 
 .detail-type-badge {
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     color: #FFF;
     background: #0f2747;
@@ -456,16 +520,38 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .detail-name {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
+    overflow-wrap: anywhere;
+}
+
+.detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.detail-action-btn {
+    border: 1px solid rgba(15, 39, 71, 0.18);
+    background: #fff;
+    color: #0f2747;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 .close-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
-    color: #999;
+    width: 32px;
+    height: 32px;
+    background: #fff;
+    border: 1px solid rgba(15, 39, 71, 0.14);
+    border-radius: 6px;
+    font-size: 20px;
+    color: #4b5563;
     cursor: pointer;
     line-height: 1;
 }
@@ -481,9 +567,9 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .detail-desc {
-    font-size: 12px;
+    font-size: 14px;
     color: #374151;
-    line-height: 1.5;
+    line-height: 1.6;
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px dashed rgba(15, 39, 71, 0.14);
@@ -495,7 +581,7 @@ watch(() => props.systemLogs.length, () => {
 
 .section-label {
     display: block;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     color: #7b8190;
     margin-bottom: 8px;
@@ -508,14 +594,14 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .attr-item {
-    font-size: 11px;
+    font-size: 14px;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     align-items: baseline;
     padding: 4px;
     background: rgba(15, 39, 71, 0.04);
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
 .attr-name {
@@ -526,7 +612,7 @@ watch(() => props.systemLogs.length, () => {
 
 .attr-type {
     color: #999;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .attr-desc {
@@ -542,11 +628,11 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .example-tag {
-    font-size: 11px;
+    font-size: 13px;
     background: rgba(255, 255, 255, 0.84);
     border: 1px solid rgba(15, 39, 71, 0.12);
     padding: 3px 8px;
-    border-radius: 12px;
+    border-radius: 8px;
     color: #4b5563;
 }
 
@@ -554,10 +640,10 @@ watch(() => props.systemLogs.length, () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11px;
+    font-size: 13px;
     padding: 6px;
     background: rgba(15, 39, 71, 0.05);
-    border-radius: 4px;
+    border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
 }
 
@@ -577,7 +663,7 @@ watch(() => props.systemLogs.length, () => {
   gap: 12px;
   background: rgba(15, 39, 71, 0.05);
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .stat-card {
@@ -593,7 +679,7 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .stat-label {
-  font-size: 9px;
+  font-size: 11px;
   color: #7b8190;
   text-transform: uppercase;
   margin-top: 4px;
@@ -607,8 +693,8 @@ watch(() => props.systemLogs.length, () => {
   color: #FFF;
   border: none;
   padding: 14px;
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -628,7 +714,7 @@ watch(() => props.systemLogs.length, () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: #b8860b;
   margin-bottom: 12px;
 }
@@ -657,20 +743,43 @@ watch(() => props.systemLogs.length, () => {
 .log-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
   margin-bottom: 8px;
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.55);
+}
+
+.log-id {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.log-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4ead3;
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .log-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  height: 80px; /* Approx 4 lines visible */
+  min-height: 96px;
+  max-height: 128px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.log-content.expanded {
+  max-height: 260px;
 }
 
 .log-content::-webkit-scrollbar {
@@ -683,7 +792,7 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .log-line {
-  font-size: 11px;
+  font-size: 13px;
   display: flex;
   gap: 12px;
   line-height: 1.5;
@@ -696,6 +805,107 @@ watch(() => props.systemLogs.length, () => {
 
 .log-msg {
   color: #f4ead3;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.graph-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.graph-alert.warning {
+  background: #fff4d6;
+  border: 1px solid rgba(184, 134, 11, 0.32);
+  color: #684b00;
+}
+
+.graph-alert.caution {
+  background: #eef4ff;
+  border: 1px solid rgba(15, 39, 71, 0.18);
+  color: #0f2747;
+}
+
+@media (max-width: 820px) {
+  .workbench-panel {
+    min-height: 620px;
+    overflow: visible;
+  }
+
+  .scroll-container {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .step-card {
+    padding: 16px;
+  }
+
+  .card-header {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .step-info {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .step-title,
+  .detail-name {
+    overflow-wrap: anywhere;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ontology-detail-overlay.expanded {
+    inset: 16px;
+  }
+
+  .detail-header,
+  .detail-title-group,
+  .detail-actions,
+  .log-header {
+    flex-wrap: wrap;
+  }
+
+  .detail-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .system-logs {
+    padding: 14px;
+  }
+
+  .log-header {
+    justify-content: flex-start;
+  }
+
+  .log-id {
+    order: 3;
+    width: 100%;
+  }
+
+  .log-toggle {
+    margin-left: auto;
+  }
+
+  .log-line {
+    align-items: flex-start;
+  }
+
+  .log-time {
+    min-width: 84px;
+  }
 }
 </style>
