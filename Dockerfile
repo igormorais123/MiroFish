@@ -5,16 +5,16 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-FROM python:3.12-slim
+FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends nginx curl && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
 
 ENV UV_PYTHON_PREFERENCE=only-system
-ENV UV_PYTHON=/usr/local/bin/python3.12
+ENV UV_PYTHON=/usr/local/bin/python3.11
 
 WORKDIR /app
 COPY backend/pyproject.toml ./backend/
-RUN cd backend && echo "3.12" > .python-version && uv sync --no-dev --python /usr/local/bin/python3.12
+RUN cd backend && echo "3.11" > .python-version && uv sync --no-dev --python /usr/local/bin/python3.11
 
 COPY backend/ ./backend/
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -56,7 +56,7 @@ server {
 }
 NGINX
 
-RUN printf '#!/bin/bash\ncd /app/backend && uv run --python python3.12 python3.12 run.py &\nsleep 2\nnginx -g "daemon off;"\n' > /app/start.sh && chmod +x /app/start.sh
+RUN printf '#!/bin/bash\ncd /app/backend && uv run --python python3.11 python3.11 run.py &\nsleep 2\nnginx -g "daemon off;"\n' > /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 80
 CMD ["/app/start.sh"]
