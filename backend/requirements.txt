@@ -8,6 +8,7 @@
 # ============= Framework principal =============
 flask>=3.0.0
 flask-cors>=6.0.0
+gunicorn>=23.0.0; platform_system != "Windows"
 waitress>=3.0.0
 
 # ============= Integracao LLM =============
