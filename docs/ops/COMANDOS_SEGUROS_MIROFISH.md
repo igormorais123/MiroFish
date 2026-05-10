@@ -52,7 +52,7 @@ git push -u origin HEAD
 
 ## Links oficiais
 
-- Site correto: https://inteia.com.br/mirofish
+- Site correto: https://inteia.com.br/mirofish/
 - API correta: https://inteia.com.br/mirofish/api/simulation/history?limit=1
 - GitHub: https://github.com/igormorais123/MiroFish
 - Pull requests: https://github.com/igormorais123/MiroFish/pulls
@@ -63,4 +63,6 @@ git push -u origin HEAD
 Não use `https://inteia.com.br/api/...` para MiroFish.
 Use sempre `/mirofish/api/...` no ambiente público.
 
-Não use `mirofish.inteia.com.br` como referência enquanto o subdomínio estiver legado.
+Não use `https://mirofish.inteia.com.br/` como link do produto. A raiz desse subdomínio redireciona para `https://inteia.com.br/mirofish/`.
+
+`https://mirofish.inteia.com.br/api/...` existe apenas como ponte técnica para a Vercel. Não use IP direto nem portas `4000`, `5001` ou `8003`.

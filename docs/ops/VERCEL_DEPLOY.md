@@ -12,7 +12,7 @@
 | CLI context observado | `igormorais123s-projects` |
 | CLI user observado | `inteia` |
 | URL direta Vercel | https://mirofish-inteia.vercel.app |
-| Site público | https://inteia.com.br/mirofish |
+| Site público | https://inteia.com.br/mirofish/ |
 | Plataforma | Vercel (Hobby/Pro — verificar com Igor) |
 
 > Esses IDs vêm de `.vercel/project.json`, gerado por `vercel link`. **`.vercel/` está no `.gitignore`** — cada máquina/instância faz seu próprio `vercel link` se precisar usar a CLI.
@@ -29,7 +29,9 @@ Rotas ativas no projeto Vercel `frontend`:
 | 2 | `^/mirofish/assets/(.*)$` | `https://mirofish-inteia.vercel.app/assets/$1` |
 | 3 | `^/mirofish(?:/(.*))?$` | `https://mirofish-inteia.vercel.app/mirofish/$1` |
 
-Motivo: a rota antiga servia uma cópia estática cacheada dentro do projeto `frontend`. A API não deve apontar direto para `72.62.108.24:5001`, porque essa porta fica bloqueada pelo firewall da VPS; use o Nginx público `https://mirofish.inteia.com.br/api/...`.
+Motivo: a rota antiga servia uma cópia estática cacheada dentro do projeto `frontend`. A API não deve apontar direto para IP ou porta da VPS; use o Nginx público `https://mirofish.inteia.com.br/api/...`.
+
+`https://mirofish.inteia.com.br/` não é URL de uso do produto. A raiz do subdomínio redireciona para `https://inteia.com.br/mirofish/`, mas `/api/...` e `/health/...` permanecem como ponte controlada para o backend.
 
 Comandos úteis:
 
