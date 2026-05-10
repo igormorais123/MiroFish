@@ -56,7 +56,33 @@ server {
 }
 NGINX
 
-RUN printf '#!/bin/bash\ncd /app/backend && uv run --python python3.11 python3.11 run.py &\nsleep 2\nnginx -g "daemon off;"\n' > /app/start.sh && chmod +x /app/start.sh
+RUN cat > /app/start.sh << 'SH'
+#!/bin/bash
+set -e
+
+cd /app/backend
+uv run --python python3.11 gunicorn \
+  --bind "0.0.0.0:${FLASK_PORT:-5001}" \
+  --workers "${GUNICORN_WORKERS:-2}" \
+  --threads "${GUNICORN_THREADS:-4}" \
+  --timeout "${GUNICORN_TIMEOUT:-300}" \
+  --access-logfile - \
+  --error-logfile - \
+  wsgi:app &
+backend_pid=$!
+
+sleep 2
+nginx -g "daemon off;" &
+nginx_pid=$!
+
+trap 'kill -TERM "$backend_pid" "$nginx_pid" 2>/dev/null || true' TERM INT
+wait -n "$backend_pid" "$nginx_pid"
+exit_code=$?
+kill -TERM "$backend_pid" "$nginx_pid" 2>/dev/null || true
+wait "$backend_pid" "$nginx_pid" 2>/dev/null || true
+exit "$exit_code"
+SH
+RUN chmod +x /app/start.sh
 
 EXPOSE 80
 CMD ["/app/start.sh"]
