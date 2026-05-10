@@ -18,20 +18,22 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 - Actions: https://github.com/igormorais123/MiroFish/actions
 
 ### Site público correto
-- Frontend público: https://inteia.com.br/mirofish
+- Frontend público: https://inteia.com.br/mirofish/
 - API pública correta: https://inteia.com.br/mirofish/api/simulation/history?limit=1
 
 ### Rotas erradas ou legadas
 - `https://inteia.com.br/api/...` não é API do MiroFish.
-- `https://mirofish.inteia.com.br` está legado/quebrado enquanto apontar para `127.0.0.1:4000` sem serviço real.
+- `https://mirofish.inteia.com.br/` não é link de produto. A raiz redireciona para `https://inteia.com.br/mirofish/`.
+- `https://mirofish.inteia.com.br/api/...` é apenas ponte tecnica usada pelo roteamento da Vercel.
+- Não abrir o produto por IP direto, porta `4000`, porta `5001` ou porta `8003`.
 
 ### VPS atual observada
-- Diretório vivo: `/opt/mirofish`
-- Clone Git limpo preparado: `/opt/mirofish-git`
-- Backend vivo: `http://127.0.0.1:5001`
-- Frontend/container dev: `http://127.0.0.1:3001`
-- Containers observados: `mirofish-inteia` e `mirofish`
-- Imagem legada observada: `ghcr.io/666ghj/mirofish:latest`
+- Deploy oficial: `/opt/mirofish-git`
+- Backend local na VPS: `http://127.0.0.1:5001`
+- Frontend local do container na VPS: `http://127.0.0.1:4000/mirofish/`
+- Graphiti local na VPS: `http://127.0.0.1:8003`
+- Containers oficiais: `mirofish-inteia`, `mirofish-graphiti`, `mirofish-neo4j`
+- Diretorios legados preservados apenas como historico/snapshot: `/opt/mirofish`, `/opt/mirofish-inteia`, `/opt/mirofish-reconcile`
 
 ## Estado observado em 2026-05-06
 
@@ -65,6 +67,14 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
   ```bash
   docker tag "$(docker inspect mirofish-inteia --format '{{.Image}}')" "mirofish-inteia:rollback-$(date +%Y%m%d-%H%M%S)"
   ```
+
+## Estado operacional atualizado em 2026-05-10
+
+- PR #56 reconciliou o estado vivo da VPS com o GitHub e apontou o deploy para `/opt/mirofish-git`.
+- Diretórios antigos receberam `README_DEPLOY_OBSOLETO_NAO_USAR.txt` e tiveram compose legados desativados.
+- A raiz de `https://mirofish.inteia.com.br/` redireciona para `https://inteia.com.br/mirofish/`.
+- A ponte `https://mirofish.inteia.com.br/api/...` continua ativa porque `vercel.json` usa esse destino para a API pública sob `/mirofish/api/...`.
+- As portas Docker do MiroFish devem ficar presas ao localhost da VPS: `127.0.0.1:4000`, `127.0.0.1:5001` e `127.0.0.1:8003`.
 
 ## Política de merge entre instâncias
 
@@ -126,7 +136,8 @@ A casa só está arrumada quando:
 - GitHub contém o código final.
 - Vercel faz deploy do GitHub.
 - VPS roda código derivado do GitHub.
-- `/opt/mirofish` ou equivalente é repositório Git limpo.
+- `/opt/mirofish-git` é repositório Git limpo e fonte do deploy.
+- Diretórios legados estão marcados como obsoletos e sem compose executável.
 - API pública correta responde 200 em `/mirofish/api/...`.
 - Build frontend passa.
 - Testes backend passam ou falhas ficam documentadas.

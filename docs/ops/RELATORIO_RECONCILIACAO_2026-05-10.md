@@ -88,3 +88,14 @@ git pull --ff-only origin main
 - O deploy passa a ter fonte unica: GitHub `main` no clone limpo.
 - Mudancas futuras devem ser feitas por branch, PR e merge, nunca por patch
   manual direto em container.
+
+## Limpeza operacional posterior
+
+- URL canonica de uso: `https://inteia.com.br/mirofish/`.
+- `https://mirofish.inteia.com.br/` deve redirecionar para a URL canonica.
+- `https://mirofish.inteia.com.br/api/...` permanece apenas como ponte tecnica
+  para a Vercel.
+- Diretórios antigos da VPS devem conter `README_DEPLOY_OBSOLETO_NAO_USAR.txt`.
+- Compose legados fora de `/opt/mirofish-git` devem permanecer desativados.
+- Portas do container MiroFish devem ficar vinculadas a `127.0.0.1`, evitando
+  abertura direta por IP publico.
