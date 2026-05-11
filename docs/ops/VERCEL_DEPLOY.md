@@ -36,9 +36,11 @@ Motivo: a rota antiga servia uma cópia estática cacheada dentro do projeto `fr
 Comandos úteis:
 
 ```bash
-vercel routes list --cwd "C:\Users\IgorPC\.claude\projects\Agentes"
-vercel routes list --cwd "C:\Users\IgorPC\.claude\projects\Agentes" --diff
-vercel routes publish --cwd "C:\Users\IgorPC\.claude\projects\Agentes" --yes
+# Rode os comandos a partir da raiz do projeto Mirofish INTEIA
+# (onde fica o vercel.json). Sem --cwd quando voce ja esta no diretorio.
+vercel routes list
+vercel routes list --diff
+vercel routes publish --yes
 ```
 
 ## Configuração de build (declarativa)

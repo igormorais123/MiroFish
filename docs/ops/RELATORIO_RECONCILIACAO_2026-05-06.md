@@ -1,3 +1,5 @@
+> SUPERSEDIDO em 2026-05-10 — leia [`RELATORIO_RECONCILIACAO_2026-05-10.md`](RELATORIO_RECONCILIACAO_2026-05-10.md). Este documento fica preservado apenas como registro histórico do ciclo 2026-05-06.
+
 # Relatório de reconciliação — MiroFish — 2026-05-06
 
 ## Resumo
