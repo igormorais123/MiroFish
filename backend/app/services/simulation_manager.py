@@ -266,6 +266,7 @@ class SimulationManager:
         
         try:
             state.status = SimulationStatus.PREPARING
+            state.error = None
             self._save_simulation_state(state)
             
             sim_dir = self._get_simulation_dir(simulation_id)
@@ -469,6 +470,7 @@ class SimulationManager:
             
             # Atualiza estado
             state.status = SimulationStatus.READY
+            state.error = None
             self._save_simulation_state(state)
             
             logger.info(f"Preparacao da simulacao concluida: {simulation_id}, "

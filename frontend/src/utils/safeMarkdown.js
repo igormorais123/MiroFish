@@ -20,7 +20,13 @@ export const renderSafeMarkdown = (content, { stripLeadingH2 = true } = {}) => {
   }
 
   let html = escapeHtml(processedContent)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang = '', code = '') => {
+    const language = String(lang).toLowerCase()
+    if (language === 'mermaid' || language === 'mmd') {
+      return `<div class="mermaid-diagram"><div class="mermaid">${code.replace(/\n/g, '&#10;')}</div></div>`
+    }
+    return `<pre class="code-block"><code>${code}</code></pre>`
+  })
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
   html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>')
   html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>')
@@ -46,11 +52,11 @@ export const renderSafeMarkdown = (content, { stripLeadingH2 = true } = {}) => {
   html = html.replace(/<p class="md-p"><\/p>/g, '')
   html = html.replace(/<p class="md-p">(<h[2-5])/g, '$1')
   html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
-  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
-  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
-  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
+  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr|<div)/g, '$1')
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>|<\/div>)<\/p>/g, '$1')
+  html = html.replace(/<br>\s*(<ul|<ol|<blockquote|<div)/g, '$1')
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/div>)\s*<br>/g, '$1')
+  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr|<div)/g, '$2')
   html = html.replace(/(<br>\s*){2,}/g, '<br>')
   html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, '$1$2')
   return html

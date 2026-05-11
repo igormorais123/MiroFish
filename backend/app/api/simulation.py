@@ -392,6 +392,7 @@ def _check_simulation_prepared(simulation_id: str) -> tuple:
             if status == "preparing":
                 try:
                     state_data["status"] = "ready"
+                    state_data["error"] = None
                     from datetime import datetime
                     state_data["updated_at"] = datetime.now().isoformat()
                     with open(state_file, 'w', encoding='utf-8') as f:
@@ -644,6 +645,7 @@ def prepare_simulation():
 
         # Atualiza estado (contendo quantidade pre-obtida)
         state.status = SimulationStatus.PREPARING
+        state.error = None
         manager._save_simulation_state(state)
 
         # Define tarefa em segundo plano
@@ -1075,6 +1077,56 @@ def _get_report_id_for_simulation(simulation_id: str) -> str | None:
     return _build_latest_report_index().get(simulation_id)
 
 
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _assess_simulation_health(sim_dict: dict) -> dict:
+    """Deriva saude operacional sem alterar o contrato historico existente."""
+    status = str(sim_dict.get("status") or "")
+    issues = []
+
+    error = sim_dict.get("error")
+    if error:
+        issues.append(str(error))
+
+    if status == SimulationStatus.FAILED.value and not issues:
+        issues.append("Simulação falhou sem erro detalhado")
+
+    prepared_statuses = {
+        SimulationStatus.READY.value,
+        SimulationStatus.RUNNING.value,
+        SimulationStatus.COMPLETED.value,
+    }
+    if status in prepared_statuses:
+        entities_count = _safe_int(sim_dict.get("entities_count"))
+        profiles_count = _safe_int(sim_dict.get("profiles_count"))
+        config_generated = bool(sim_dict.get("config_generated"))
+
+        if entities_count <= 0:
+            issues.append("Simulação marcada como pronta sem entidades")
+        if config_generated and profiles_count <= 0:
+            issues.append("Simulação preparada sem perfis de Agent")
+
+    if not issues:
+        health_status = "healthy"
+    elif status == SimulationStatus.FAILED.value:
+        health_status = "failed"
+    elif status in {SimulationStatus.CREATED.value, SimulationStatus.PREPARING.value}:
+        health_status = "pending"
+    else:
+        health_status = "blocked"
+
+    return {
+        "is_healthy": not issues,
+        "health_status": health_status,
+        "health_issues": issues,
+    }
+
+
 @simulation_bp.route('/history', methods=['GET'])
 def get_simulation_history():
     """
@@ -1105,7 +1157,10 @@ def get_simulation_history():
                     "total_rounds": 120,
                     "current_round": 120,
                     "report_id": "report_xxxx",
-                    "version": "v1.0.2"
+                    "version": "v1.0.2",
+                    "is_healthy": true,
+                    "health_status": "healthy",
+                    "health_issues": []
                 },
                 ...
             ],
@@ -1172,6 +1227,7 @@ def get_simulation_history():
 
             # Adiciona versao
             sim_dict["version"] = "v1.0.2"
+            sim_dict.update(_assess_simulation_health(sim_dict))
 
             # Formata data
             try:

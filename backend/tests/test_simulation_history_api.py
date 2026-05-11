@@ -24,6 +24,7 @@ def _state(simulation_id: str = "sim_fast") -> SimulationState:
     state.entities_count = 12
     state.profiles_count = 12
     state.entity_types = ["Pessoa", "OrgaoRegulador"]
+    state.config_generated = True
     return state
 
 
@@ -73,8 +74,43 @@ def test_history_limit_1_usa_modo_leve_por_padrao(monkeypatch):
     assert item["report_id"] is None
     assert item["current_round"] == 3
     assert item["runner_status"] == "ready"
+    assert item["health_status"] == "healthy"
+    assert item["is_healthy"] is True
+    assert item["health_issues"] == []
     assert runtime_called is False
     assert reports_called is False
+
+
+def test_history_sinaliza_simulacao_ready_com_erro_como_bloqueada(monkeypatch):
+    app = Flask(__name__)
+    state = _state("sim_stale_error")
+    state.error = "Nenhuma entidade encontrada, verifique se o grafo foi construido corretamente"
+
+    class FakeManager:
+        def list_simulations(self, limit=20):
+            return [state]
+
+        def get_simulation_config(self, simulation_id):
+            return {
+                "simulation_requirement": "Avaliar consistencia operacional.",
+                "time_config": {"total_simulation_hours": 2, "minutes_per_round": 1},
+            }
+
+    monkeypatch.setattr(simulation_api, "SimulationManager", FakeManager)
+    monkeypatch.setattr(simulation_api.ProjectManager, "get_project", lambda project_id: _Project())
+
+    with app.test_request_context("/api/simulation/history?limit=1", method="GET"):
+        response = simulation_api.get_simulation_history()
+
+    item = response.get_json()["data"][0]
+
+    assert item["status"] == "ready"
+    assert item["runner_status"] == "ready"
+    assert item["health_status"] == "blocked"
+    assert item["is_healthy"] is False
+    assert item["health_issues"] == [
+        "Nenhuma entidade encontrada, verifique se o grafo foi construido corretamente"
+    ]
 
 
 def test_build_latest_report_index_preserva_report_mais_recente(monkeypatch, tmp_path):

@@ -661,6 +661,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import mermaid from 'mermaid'
 import {
   getAgentLog,
   getConsoleLog,
@@ -713,6 +714,34 @@ const startTime = ref(null)
 const leftPanel = ref(null)
 const rightPanel = ref(null)
 const logContent = ref(null)
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'strict',
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#f8fafc',
+    primaryTextColor: '#0f172a',
+    primaryBorderColor: '#c9952a',
+    lineColor: '#64748b',
+    secondaryColor: '#eef2ff',
+    tertiaryColor: '#f5f2ea',
+    fontFamily: 'Inter, Segoe UI, Arial, sans-serif'
+  }
+})
+
+const renderMermaidDiagrams = async () => {
+  await nextTick()
+  const root = leftPanel.value
+  if (!root) return
+  const nodes = Array.from(root.querySelectorAll('.mermaid:not([data-processed="true"])'))
+  if (!nodes.length) return
+  try {
+    await mermaid.run({ nodes, suppressErrors: true })
+  } catch (err) {
+    console.warn('Falha ao renderizar diagrama Mermaid:', err)
+  }
+}
 const showRawResult = reactive({})
 const reportRecord = ref(null)
 const reportArtifacts = ref([])
@@ -2736,7 +2765,13 @@ const renderMarkdown = (content) => {
   processedContent = escapeHtml(processedContent)
   
   // Processar blocos de código
-  let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
+  let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang = '', code = '') => {
+    const language = String(lang).toLowerCase()
+    if (language === 'mermaid' || language === 'mmd') {
+      return `<div class="mermaid-diagram"><div class="mermaid">${code.replace(/\n/g, '&#10;')}</div></div>`
+    }
+    return `<pre class="code-block"><code>${code}</code></pre>`
+  })
   
   // Processar código inline
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
@@ -2793,13 +2828,13 @@ const renderMarkdown = (content) => {
   html = html.replace(/<p class="md-p"><\/p>/g, '')
   html = html.replace(/<p class="md-p">(<h[2-5])/g, '$1')
   html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
-  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
+  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr|<div)/g, '$1')
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>|<\/div>)<\/p>/g, '$1')
   // Limpar tags <br> antes e depois de elementos de bloco
-  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
+  html = html.replace(/<br>\s*(<ul|<ol|<blockquote|<div)/g, '$1')
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/div>)\s*<br>/g, '$1')
   // Limpar caso <p><br> após elemento de bloco (causado por linhas em branco extras)
-  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
+  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr|<div)/g, '$2')
   // Limpar tags <br> consecutivas
   html = html.replace(/(<br>\s*){2,}/g, '<br>')
   // Limpar <br> antes de tag de abertura de parágrafo após elemento de bloco
@@ -2936,6 +2971,7 @@ const fetchAgentLog = async () => {
               rightPanel.value.scrollTop = rightPanel.value.scrollHeight
             }
           }
+          renderMermaidDiagrams()
         })
       }
     }
@@ -3085,6 +3121,7 @@ const fetchReportAudit = async () => {
     }
 
     auditLoadError.value = null
+    renderMermaidDiagrams()
   } catch (err) {
     auditLoadError.value = err.message || 'Falha ao carregar auditoria'
   }
@@ -3530,6 +3567,21 @@ watch(() => props.reportId, (newId) => {
   overflow-x: auto;
   margin: 1em 0;
   border: 1px solid rgba(15, 39, 71, 0.1);
+}
+
+.generated-content :deep(.mermaid-diagram) {
+  margin: 18px 0 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 39, 71, 0.12);
+  border-left: 4px solid #c9952a;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.generated-content :deep(.mermaid-diagram svg) {
+  max-width: 100%;
+  height: auto;
 }
 
 .generated-content :deep(strong) {

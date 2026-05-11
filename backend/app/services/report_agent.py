@@ -609,6 +609,8 @@ Redigir um "Relatorio de Consultoria por Simulacao" que responda:
 - Nao sao necessarias subsecoes, cada secao deve ter conteudo completo
 - O conteudo deve ser conciso, focado nas descobertas centrais da previsao
 - A estrutura das secoes deve ser projetada por voce com base nos resultados da previsao
+- Inclua uma secao de leitura visual quando o caso tiver fluxo, tese, linha do tempo,
+  matriz de risco ou cadeia causal; relatorios finais devem privilegiar diagramas.
 
 Por favor, produza o sumario do relatorio em formato JSON, conforme abaixo:
 {
@@ -820,7 +822,14 @@ Estritamente proibido:
    ```
 5. Manter coerencia logica com as outras secoes
 6. [Evitar repeticao] Leia atentamente o conteudo das secoes ja concluidas abaixo, nao repita as mesmas informacoes
-7. [Reforco] Nao adicione nenhum titulo! Use **negrito** no lugar de subtitulos de subsecao"""
+7. [Reforco] Nao adicione nenhum titulo! Use **negrito** no lugar de subtitulos de subsecao
+8. [PaperBanana - Diagramas editaveis]
+   - Sempre que houver fluxo, conflito, cadeia causal, comparacao, linha do tempo, plano de acao ou matriz de risco,
+     inclua um diagrama Mermaid curto no corpo da secao.
+   - Use o formato: **Figura X - titulo curto**, bloco ```mermaid, depois "Leitura:" e "Ponto reforcado:".
+   - Diagramas devem ser fieis as evidencias recuperadas; nao invente fatos, datas, numeros ou citacoes para preencher no.
+   - Prefira flowchart LR/TD, poucos nos, rotulos curtos e setas sem cruzamento.
+   - Se o diagrama tiver inferencia, marque no texto de leitura como [Inferencia] ou [Simulacao]."""
 
 SECTION_USER_PROMPT_TEMPLATE = """\
 Conteudo das secoes ja concluidas (leia atentamente para evitar repeticao):
@@ -2602,6 +2611,17 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             except Exception as ledger_err:
                 logger.warning(f"Nao foi possivel gerar livro de previsoes: {ledger_err}")
 
+            try:
+                from .report_diagrams import paperbanana_diagram_metadata
+
+                ReportManager.save_json_artifact(
+                    report_id,
+                    "paperbanana_diagrams.json",
+                    paperbanana_diagram_metadata(assembled_content),
+                )
+            except Exception as diagram_err:
+                logger.warning(f"Nao foi possivel registrar metadados PaperBanana: {diagram_err}")
+
             report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.now().isoformat()
@@ -3510,6 +3530,28 @@ class ReportManager:
         
         # Pos-processamento: limpa problemas de titulos no relatorio inteiro
         md_content = cls._post_process_report(md_content, outline)
+
+        from .report_diagrams import (
+            DIAGRAM_SECTION_TITLE,
+            MIN_REPORT_DIAGRAMS,
+            count_report_diagrams,
+            render_paperbanana_diagram_section,
+        )
+
+        if count_report_diagrams(md_content) < MIN_REPORT_DIAGRAMS:
+            diagram_section = render_paperbanana_diagram_section(outline).strip() + "\n\n"
+            has_persisted_diagram_section = any(
+                DIAGRAM_SECTION_TITLE in (section_info.get("content") or "")
+                for section_info in sections
+            )
+            if not has_persisted_diagram_section:
+                next_section_index = max(
+                    [section_info.get("section_index", 0) for section_info in sections] or [0]
+                ) + 1
+                section_path = cls._get_section_path(report_id, next_section_index)
+                with open(section_path, "w", encoding="utf-8") as f:
+                    f.write(diagram_section)
+            md_content = f"{md_content.rstrip()}\n\n---\n\n{diagram_section}"
         
         # Salva o relatorio completo
         full_path = cls._get_report_markdown_path(report_id)
@@ -3545,6 +3587,12 @@ class ReportManager:
         section_titles = set()
         for section in outline.sections:
             section_titles.add(section.title)
+        try:
+            from .report_diagrams import DIAGRAM_SECTION_TITLE
+
+            section_titles.add(DIAGRAM_SECTION_TITLE)
+        except Exception:
+            pass
         
         i = 0
         while i < len(lines):
