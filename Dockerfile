@@ -19,9 +19,11 @@ RUN cd backend && echo "3.11" > .python-version && uv sync --no-dev --python /us
 COPY backend/ ./backend/
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
+# Nginx escuta em 8080 (porta nao-privilegiada) para permitir USER nao-root.
+# O host mapeia 4000:8080 no docker-compose.
 RUN cat > /etc/nginx/sites-available/default << 'NGINX'
 server {
-    listen 80;
+    listen 8080;
     root /app/frontend/dist;
     index index.html;
 
@@ -56,6 +58,11 @@ server {
 }
 NGINX
 
+# Aponta o nginx para escrever em /tmp (gravavel pelo usuario nao-root).
+RUN sed -i 's|^pid .*|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
+    && sed -i 's|^\(\s*\)access_log .*|\1access_log /dev/stdout;|' /etc/nginx/nginx.conf \
+    && sed -i 's|^\(\s*\)error_log .*|\1error_log /dev/stderr;|' /etc/nginx/nginx.conf
+
 RUN cat > /app/start.sh << 'SH'
 #!/bin/bash
 set -e
@@ -84,5 +91,15 @@ exit "$exit_code"
 SH
 RUN chmod +x /app/start.sh
 
-EXPOSE 80
+# Cria usuario nao-root e ajusta permissoes dos diretorios que nginx + gunicorn
+# precisam escrever em runtime.
+RUN groupadd --system --gid 10001 mirofish \
+    && useradd --system --uid 10001 --gid 10001 --home-dir /app --shell /usr/sbin/nologin mirofish \
+    && mkdir -p /var/lib/nginx/body /var/lib/nginx/proxy /var/lib/nginx/fastcgi /var/lib/nginx/uwsgi /var/lib/nginx/scgi \
+    && chown -R mirofish:mirofish /app /var/lib/nginx /etc/nginx /tmp \
+    && chmod -R u+rwX,g+rwX /var/lib/nginx /etc/nginx
+
+USER mirofish
+
+EXPOSE 8080 5001
 CMD ["/app/start.sh"]
