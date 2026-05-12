@@ -105,10 +105,13 @@ class Config:
     APP_CODE = os.environ.get('APP_CODE', 'mirofish-inteia')
 
     # Flask
-    SECRET_KEY = (
-        _first_non_empty(os.environ.get('SECRET_KEY'), os.environ.get('FLASK_SECRET_KEY'))
-        or secrets.token_hex(32)
+    _SECRET_KEY_FROM_ENV = _first_non_empty(
+        os.environ.get('SECRET_KEY'), os.environ.get('FLASK_SECRET_KEY')
     )
+    SECRET_KEY = _SECRET_KEY_FROM_ENV or secrets.token_hex(32)
+    # True quando a chave foi gerada em runtime — sessoes/CSRF nao sobrevivem a
+    # reinicializacao nem sincronizam entre multiplos workers gunicorn.
+    SECRET_KEY_FROM_FALLBACK = _SECRET_KEY_FROM_ENV is None
     DEBUG = _env_flag('FLASK_DEBUG', False)
 
     # JSON

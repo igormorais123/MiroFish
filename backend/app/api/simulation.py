@@ -17,6 +17,7 @@ from ..services.decision_readiness import evaluate_decision_readiness
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
 from ..utils.logger import get_logger
+from ..utils.rate_limit import rate_limit
 from ..utils.safe_ids import safe_storage_child
 from ..models.project import ProjectManager
 
@@ -176,6 +177,7 @@ def get_entities_by_type(graph_id: str, entity_type: str):
 # ============== Interface de gerenciamento de simulacao ==============
 
 @simulation_bp.route('/create', methods=['POST'])
+@rate_limit(limit=10, window_seconds=60.0, scope='simulation.create')
 def create_simulation():
     """
     Criar nova simulacao
@@ -426,6 +428,7 @@ def _check_simulation_prepared(simulation_id: str) -> tuple:
 
 
 @simulation_bp.route('/prepare', methods=['POST'])
+@rate_limit(limit=5, window_seconds=60.0, scope='simulation.prepare')
 def prepare_simulation():
     """
     Preparar ambiente (tarefa assincrona, LLM gera parametros)

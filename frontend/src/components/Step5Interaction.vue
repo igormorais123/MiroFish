@@ -534,7 +534,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import mermaid from 'mermaid'
 import { chatWithReport, getReport, getAgentLog, getReportSections, getReportEvolutionReadiness, repairReportContent } from '../api/report'
 import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
 import { escapeHtml } from '../utils/safeMarkdown'
@@ -589,20 +588,33 @@ const isSectionCompleted = (sectionIndex) => {
 const leftPanel = ref(null)
 const rightPanel = ref(null)
 
-mermaid.initialize({
-  startOnLoad: false,
-  securityLevel: 'strict',
-  theme: 'base',
-  themeVariables: {
-    primaryColor: '#f8fafc',
-    primaryTextColor: '#0f172a',
-    primaryBorderColor: '#c9952a',
-    lineColor: '#64748b',
-    secondaryColor: '#eef2ff',
-    tertiaryColor: '#f5f2ea',
-    fontFamily: 'Inter, Segoe UI, Arial, sans-serif'
-  }
-})
+// Mermaid e pesado (~756KB) e so e usado nesta tela. Carregar sob demanda.
+let _mermaidInstance = null
+let _mermaidLoading = null
+
+const loadMermaid = () => {
+  if (_mermaidInstance) return Promise.resolve(_mermaidInstance)
+  if (_mermaidLoading) return _mermaidLoading
+  _mermaidLoading = import('mermaid').then(({ default: mermaid }) => {
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#f8fafc',
+        primaryTextColor: '#0f172a',
+        primaryBorderColor: '#c9952a',
+        lineColor: '#64748b',
+        secondaryColor: '#eef2ff',
+        tertiaryColor: '#f5f2ea',
+        fontFamily: 'Inter, Segoe UI, Arial, sans-serif'
+      }
+    })
+    _mermaidInstance = mermaid
+    return mermaid
+  })
+  return _mermaidLoading
+}
 
 const renderMermaidDiagrams = async () => {
   await nextTick()
@@ -611,6 +623,7 @@ const renderMermaidDiagrams = async () => {
   const nodes = Array.from(root.querySelectorAll('.mermaid:not([data-processed="true"])'))
   if (!nodes.length) return
   try {
+    const mermaid = await loadMermaid()
     await mermaid.run({ nodes, suppressErrors: true })
   } catch (err) {
     console.warn('Falha ao renderizar diagrama Mermaid:', err)
@@ -1309,7 +1322,7 @@ const loadReportSections = async () => {
       })
       generatedSections.value = loadedSections
       addLog('Secoes finais persistidas carregadas')
-      renderMermaidDiagrams()
+      await renderMermaidDiagrams()
     }
   } catch (err) {
     addLog(`Falha ao carregar secoes persistidas: ${err.message}`)
@@ -1340,7 +1353,7 @@ const loadAgentLogs = async () => {
       })
       
       addLog('Dados do relatório carregados')
-      renderMermaidDiagrams()
+      await renderMermaidDiagrams()
     }
   } catch (err) {
     addLog(`Falha ao carregar os logs do relatório: ${err.message}`)
