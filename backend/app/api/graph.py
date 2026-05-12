@@ -14,6 +14,7 @@ from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
 from ..services.text_processor import TextProcessor
 from ..utils.file_parser import FileParser
+from ..utils.file_validation import validate_uploaded_file, InvalidFileContent
 from ..utils.graphiti_client import GraphitiClient
 from ..utils.logger import get_logger
 from ..utils.rate_limit import rate_limit
@@ -221,6 +222,22 @@ def generate_ontology():
                     file,
                     file.filename
                 )
+
+                # Validacao por magic bytes: extensao por si nao basta.
+                try:
+                    validate_uploaded_file(file_info["path"], file_info["original_filename"])
+                except InvalidFileContent as exc:
+                    logger.warning("Upload rejeitado por conteudo invalido: %s", exc)
+                    try:
+                        os.remove(file_info["path"])
+                    except OSError:
+                        pass
+                    ProjectManager.delete_project(project.project_id)
+                    return jsonify({
+                        "success": False,
+                        "error": str(exc),
+                    }), 400
+
                 project.files.append({
                     "filename": file_info["original_filename"],
                     "size": file_info["size"]
