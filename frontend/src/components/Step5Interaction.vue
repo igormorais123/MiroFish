@@ -1322,7 +1322,7 @@ const loadReportSections = async () => {
       })
       generatedSections.value = loadedSections
       addLog('Secoes finais persistidas carregadas')
-      renderMermaidDiagrams()
+      await renderMermaidDiagrams()
     }
   } catch (err) {
     addLog(`Falha ao carregar secoes persistidas: ${err.message}`)
@@ -1353,7 +1353,7 @@ const loadAgentLogs = async () => {
       })
       
       addLog('Dados do relatório carregados')
-      renderMermaidDiagrams()
+      await renderMermaidDiagrams()
     }
   } catch (err) {
     addLog(`Falha ao carregar os logs do relatório: ${err.message}`)
