@@ -30,6 +30,10 @@ dependencies = [
     # Utilitarios
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+    # Transitiva via requests/openai. Pin minimo para fechar
+    # 2 alertas Dependabot (high): cross-origin header forward em
+    # redirect proxied e bypass de decompression-bomb safeguard.
+    "urllib3>=2.7.0",
 ]
 
 [project.optional-dependencies]
