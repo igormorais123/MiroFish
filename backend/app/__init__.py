@@ -64,7 +64,15 @@ def create_app(config_class=Config):
         logger.info("=" * 50)
         logger.info(f"{Config.APP_NAME} backend iniciando...")
         logger.info("=" * 50)
-    
+
+    # Aviso quando SECRET_KEY foi gerada em runtime (fallback) com debug desligado.
+    # Em producao isso quebra sessoes apos reinicio e dessincroniza multiplos workers.
+    if not debug_mode and getattr(Config, 'SECRET_KEY_FROM_FALLBACK', False):
+        logger.warning(
+            "SECRET_KEY nao definida em ambiente — usando fallback aleatorio. "
+            "Defina SECRET_KEY ou FLASK_SECRET_KEY como segredo persistente em producao."
+        )
+
     # CORS - restringe origens por padrao; use CORS_ORIGINS para sobrescrever.
     allowed_origins = _resolve_cors_origins(debug_mode)
     CORS(app, resources={r"/api/*": {"origins": allowed_origins}})

@@ -14,8 +14,10 @@ from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import GraphBuilderService
 from ..services.text_processor import TextProcessor
 from ..utils.file_parser import FileParser
+from ..utils.file_validation import validate_uploaded_file, InvalidFileContent
 from ..utils.graphiti_client import GraphitiClient
 from ..utils.logger import get_logger
+from ..utils.rate_limit import rate_limit
 from ..models.task import TaskManager, TaskStatus
 from ..models.project import ProjectManager, ProjectStatus
 
@@ -139,6 +141,7 @@ def reset_project(project_id: str):
 # ============== Interface 1: Upload de arquivos e geracao de ontologia ==============
 
 @graph_bp.route('/ontology/generate', methods=['POST'])
+@rate_limit(limit=5, window_seconds=60.0, scope='graph.ontology_generate')
 def generate_ontology():
     """
     Interface 1: Upload de arquivos, analise e geracao da definicao de ontologia
@@ -219,6 +222,22 @@ def generate_ontology():
                     file,
                     file.filename
                 )
+
+                # Validacao por magic bytes: extensao por si nao basta.
+                try:
+                    validate_uploaded_file(file_info["path"], file_info["original_filename"])
+                except InvalidFileContent as exc:
+                    logger.warning("Upload rejeitado por conteudo invalido: %s", exc)
+                    try:
+                        os.remove(file_info["path"])
+                    except OSError:
+                        pass
+                    ProjectManager.delete_project(project.project_id)
+                    return jsonify({
+                        "success": False,
+                        "error": str(exc),
+                    }), 400
+
                 project.files.append({
                     "filename": file_info["original_filename"],
                     "size": file_info["size"]
@@ -322,6 +341,7 @@ def generate_ontology():
 # ============== Interface 2: Construcao do grafo ==============
 
 @graph_bp.route('/build', methods=['POST'])
+@rate_limit(limit=5, window_seconds=60.0, scope='graph.build')
 def build_graph():
     """
     Interface 2: Construir grafo a partir do project_id
