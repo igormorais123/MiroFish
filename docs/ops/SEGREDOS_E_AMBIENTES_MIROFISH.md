@@ -111,7 +111,7 @@ Valores reais de `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPAB
 | Graphiti | `GRAPHITI_BASE_URL`, `GRAPHITI_TIMEOUT`, `GRAPHITI_MODEL` | Sim | Não usar `localhost` em produção | Sim |
 | Zep legado | `ZEP_BASE_URL`, `ZEP_API_KEY`, `ZEP_MODE`, `ZEP_REQUIRED` | Sim, quando existir no ambiente vivo | Não para frontend estático | Sim |
 | Neo4j | `NEO4J_PASSWORD` | Sim | Não para frontend estático | Sim |
-| Auth interna | `INTERNAL_API_TOKEN` | Sim | Só se proxy/runtime precisar | Sim |
+| Auth interna | `INTERNAL_API_TOKEN` | Sim | Só se proxy/runtime precisar | Sim; consumidores internos devem guardar o mesmo valor como `MIROFISH_INTERNAL_TOKEN` ou equivalente |
 | Apify | `APIFY_API_TOKEN`, `APIFY_ENRICH_TIMEOUT_SECONDS`, `COLMEIA_SCRIPTS_PATH` | Pendente quando houver token real | Não para frontend estático | Sim |
 | Supabase | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Pendente quando houver projeto/valores reais | Só publicar `SUPABASE_URL`/anon quando necessário; nunca `SERVICE_ROLE` no cliente | Sim |
 | Dados locais | `MIROFISH_DATA_DIR` | Opcional | Não | Sim |
