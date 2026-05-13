@@ -13,6 +13,10 @@ from ..config import Config
 from ..models.project import ProjectManager, ProjectStatus
 from ..models.task import TaskManager, TaskStatus
 from ..services.graph_builder import GraphBuilderService
+from ..services.harness_evidence_bundle import (
+    HarnessEvidenceBundleNotFound,
+    build_harness_evidence_bundle,
+)
 from ..services.ontology_generator import OntologyGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner
@@ -269,6 +273,48 @@ def internal_health_public():
     (evita vazar LLM_BASE_URL/GRAPHITI_BASE_URL em monitoring externo).
     """
     return jsonify({"success": True, "status": "up"})
+
+
+@internal_bp.route('/harness/health', methods=['GET'])
+@require_internal_token
+def harness_health():
+    """Healthcheck do contrato de harness usado por sistemas internos."""
+    return jsonify({
+        "success": True,
+        "data": {
+            "service": "mirofish-harness",
+            "contract_version": "mirofish.harness.v1",
+            "endpoints": {
+                "create_run": "/api/internal/v1/harness/runs",
+                "get_task": "/api/internal/v1/tasks/<task_id>",
+                "get_evidence_bundle": "/api/internal/v1/harness/evidence-bundles/<simulation_id>",
+            },
+        },
+    })
+
+
+@internal_bp.route('/harness/evidence-bundles/<simulation_id>', methods=['GET'])
+@require_internal_token
+def get_harness_evidence_bundle(simulation_id: str):
+    """Entrega evidencias MiroFish em contrato estavel para Vox e outros sistemas."""
+    try:
+        bundle = build_harness_evidence_bundle(
+            simulation_id=simulation_id,
+            base_url=request.url_root,
+        )
+        return jsonify(bundle)
+    except HarnessEvidenceBundleNotFound as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 404
+    except Exception as exc:
+        logger.error(f"Falha ao montar bundle de evidencias do harness: {exc}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": "Falha ao montar bundle de evidencias MiroFish",
+        }), 500
 
 
 @internal_bp.route('/projects', methods=['POST'])
@@ -1111,6 +1157,13 @@ def run_preset():
         logger.error(f"Falha run-preset: {exc}")
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@internal_bp.route('/harness/runs', methods=['POST'])
+@require_internal_token
+def create_harness_run():
+    """Alias semantico para iniciar a pesquisa completa via harness MiroFish."""
+    return run_preset()
 
 
 @internal_bp.route('/token-usage', methods=['GET'])
