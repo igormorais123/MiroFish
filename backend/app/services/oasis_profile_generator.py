@@ -18,6 +18,7 @@ from datetime import datetime
 from openai import OpenAI
 from ..config import Config
 from ..utils.logger import get_logger
+from .sergipe_synthetic_voters import SERGIPE_SYNTHETIC_VOTER_TYPE
 from .zep_entity_reader import EntityNode, ZepEntityReader
 
 logger = get_logger('mirofish.oasis_profile')
@@ -223,6 +224,8 @@ class OasisProfileGenerator:
             OasisAgentProfile
         """
         entity_type = entity.get_entity_type() or "Entity"
+        if entity_type == SERGIPE_SYNTHETIC_VOTER_TYPE:
+            return self._generate_synthetic_voter_profile(entity, user_id)
 
         # Informacoes basicas
         name = entity.name
@@ -268,6 +271,125 @@ class OasisProfileGenerator:
             interested_topics=profile_data.get("interested_topics", []),
             source_entity_uuid=entity.uuid,
             source_entity_type=entity_type,
+        )
+
+    @staticmethod
+    def _normalize_username_part(value: str) -> str:
+        import re
+        import unicodedata
+
+        normalized = unicodedata.normalize("NFKD", value or "")
+        normalized = normalized.encode("ascii", "ignore").decode("ascii")
+        normalized = normalized.lower()
+        normalized = re.sub(r"[^a-z0-9]+", "_", normalized)
+        return normalized.strip("_")
+
+    def _synthetic_voter_username(self, entity: EntityNode) -> str:
+        import hashlib
+
+        attrs = entity.attributes or {}
+        voter_id = self._normalize_username_part(str(attrs.get("id") or entity.uuid))
+        name = self._normalize_username_part(entity.name)
+        base = "_".join(part for part in (voter_id, name) if part)
+        if base:
+            return base[:64]
+        digest = hashlib.sha1(entity.uuid.encode("utf-8")).hexdigest()[:10]
+        return f"sergipe_voter_{digest}"
+
+    @staticmethod
+    def _map_synthetic_voter_gender(value: Optional[str]) -> str:
+        gender = (value or "").strip().lower()
+        if gender in {"masculino", "homem", "male", "m"}:
+            return "male"
+        if gender in {"feminino", "mulher", "female", "f"}:
+            return "female"
+        return "other"
+
+    @staticmethod
+    def _compact_list(value: Any, limit: int = 4) -> List[str]:
+        if isinstance(value, list):
+            return [str(item) for item in value[:limit] if item]
+        if isinstance(value, dict):
+            return [f"{key}: {item}" for key, item in list(value.items())[:limit]]
+        if value:
+            return [str(value)]
+        return []
+
+    def _synthetic_voter_topics(self, attrs: Dict[str, Any]) -> List[str]:
+        topics: List[str] = []
+        for key in ("preocupacoes", "valores", "fontes_informacao"):
+            topics.extend(self._compact_list(attrs.get(key), limit=3))
+        for key in ("municipio", "mesorregiao", "religiao", "orientacao_politica"):
+            if attrs.get(key):
+                topics.append(str(attrs[key]))
+
+        deduped: List[str] = []
+        seen = set()
+        for topic in topics:
+            marker = topic.lower()
+            if marker in seen:
+                continue
+            seen.add(marker)
+            deduped.append(topic)
+        return deduped[:12]
+
+    def _generate_synthetic_voter_profile(
+        self,
+        entity: EntityNode,
+        user_id: int,
+    ) -> OasisAgentProfile:
+        attrs = entity.attributes or {}
+        story = str(attrs.get("historia_resumida") or entity.summary or "").strip()
+        behavioral_instruction = str(attrs.get("instrucao_comportamental") or "").strip()
+        municipality = attrs.get("municipio") or "Sergipe"
+        mesoregion = attrs.get("mesorregiao")
+        vote_2022 = attrs.get("voto_2t_2022")
+        vote_gov = attrs.get("intencao_voto_2026_gov")
+        vote_pres = attrs.get("intencao_voto_2026_pres")
+        concerns = ", ".join(self._compact_list(attrs.get("preocupacoes"), limit=6))
+        media_sources = ", ".join(self._compact_list(attrs.get("fontes_informacao"), limit=5))
+
+        persona_parts = [
+            entity.summary,
+            f"Use este perfil como eleitor(a) sintetico(a) de Sergipe, municipio {municipality}.",
+        ]
+        if mesoregion:
+            persona_parts.append(f"Recorte territorial: {mesoregion}.")
+        if concerns:
+            persona_parts.append(f"Preocupacoes centrais: {concerns}.")
+        if media_sources:
+            persona_parts.append(f"Fontes de informacao usuais: {media_sources}.")
+        if vote_2022 or vote_gov or vote_pres:
+            persona_parts.append(
+                "Ancoras eleitorais declaradas: "
+                f"2T 2022={vote_2022 or 'nao informado'}, "
+                f"governo 2026={vote_gov or 'nao informado'}, "
+                f"presidencia 2026={vote_pres or 'nao informado'}."
+            )
+        if behavioral_instruction:
+            persona_parts.append(f"Instrucao comportamental: {behavioral_instruction}")
+
+        seed = str(attrs.get("id") or entity.uuid)
+        mbti_index = sum(ord(char) for char in seed) % len(self.MBTI_TYPES)
+
+        return OasisAgentProfile(
+            user_id=user_id,
+            user_name=self._synthetic_voter_username(entity),
+            name=entity.name,
+            bio=story[:500] if story else f"Eleitor(a) sintetico(a) de {municipality}, Sergipe.",
+            persona=" ".join(part for part in persona_parts if part),
+            karma=1000 + (sum(ord(char) for char in seed) % 2500),
+            friend_count=80 + (sum(ord(char) for char in entity.name) % 420),
+            follower_count=60 + (sum(ord(char) for char in seed + entity.name) % 700),
+            statuses_count=200 + (sum(ord(char) for char in entity.name + seed) % 1800),
+            age=attrs.get("idade"),
+            gender=self._map_synthetic_voter_gender(attrs.get("genero")),
+            mbti=self.MBTI_TYPES[mbti_index],
+            country="Brazil",
+            profession=attrs.get("profissao"),
+            interested_topics=self._synthetic_voter_topics(attrs),
+            source_entity_uuid=entity.uuid,
+            source_entity_type=SERGIPE_SYNTHETIC_VOTER_TYPE,
         )
 
     def _generate_username(self, name: str) -> str:
