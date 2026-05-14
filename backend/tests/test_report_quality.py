@@ -272,7 +272,7 @@ def test_content_consistency_bloqueia_blockquote_repetido():
     assert "repeated_blockquote" in issue_ids
 
 
-def test_extract_numeric_claims_ignora_cabecalho_de_tabela_com_faixa_textual():
+def test_extract_numeric_claims_marca_probabilidade_de_tabela_como_metricavel():
     claims = extract_numeric_claims(
         "| Cenario | Probabilidade | Narrativa-chave (1-2 linhas) | Gatilho de virada |\n"
         "|---------|--------------|------------------------------|-------------------|\n"
@@ -280,7 +280,8 @@ def test_extract_numeric_claims_ignora_cabecalho_de_tabela_com_faixa_textual():
     )
 
     assert [claim["number"] for claim in claims] == ["25%"]
-    assert claims[0]["labeled_inference"] is True
+    assert claims[0]["labeled_inference"] is False
+    assert claims[0]["requires_metric_support"] is True
 
 
 def test_report_system_gate_inclui_metricas_do_grafo_para_auditoria(monkeypatch, tmp_path):
@@ -361,15 +362,32 @@ def test_report_system_gate_inclui_metricas_do_grafo_para_auditoria(monkeypatch,
     assert result.metrics["graph_facts_count"] == 5
 
 
-def test_audit_report_evidence_aceita_numero_rotulado_como_inferencia():
+def test_audit_report_evidence_bloqueia_probabilidade_rotulada_sem_metrica():
     audit = audit_report_evidence(
         "[Inferencia calibrada] Cenario Base tem 68% de probabilidade.",
         ["A simulacao registrou 10 acoes."],
         fail_on_unsupported_numbers=True,
     )
 
-    assert audit["passes_gate"] is True
+    assert audit["passes_gate"] is False
     assert audit["numbers_labeled_inference"] == 1
+    assert audit["numbers_unsupported"] == 1
+
+
+def test_audit_report_evidence_aceita_probabilidade_do_decision_packet():
+    audit = audit_report_evidence(
+        "[Inferencia calibrada] Cenario Base tem 68% de probabilidade.",
+        ["A simulacao registrou 10 acoes."],
+        fail_on_unsupported_numbers=True,
+        structured_metrics={
+            "decision_packet": {
+                "scenario_base_probability_percent": 68,
+            }
+        },
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_supported_by_structured_metrics"] == 1
 
 
 def test_audit_report_evidence_aceita_prazo_rotulado_como_sugestao_operacional():

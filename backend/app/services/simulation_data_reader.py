@@ -14,6 +14,7 @@ from collections import Counter, defaultdict
 
 from ..config import Config
 from ..utils.logger import get_logger
+from .social_bootstrap import get_social_bootstrap_target, is_social_bootstrap_enabled
 
 logger = get_logger('mirofish.sim_data_reader')
 
@@ -281,9 +282,15 @@ class SimulationDataReader:
             count for action, count in total_counts.items()
             if action in self.TRACE_INTERACTIVE_ACTIONS
         )
-        configured_initial_posts = self._get_initial_posts_count()
+        simulation_config = self._load_simulation_config()
+        configured_initial_posts = self._get_initial_posts_count(simulation_config)
         expected_initial_posts = configured_initial_posts * db_files_found
         dynamic_create_posts = max(0, total_counts.get("create_post", 0) - expected_initial_posts)
+        bootstrap_interactive = self._estimate_bootstrap_interactive_actions(
+            simulation_config,
+            platform_counts,
+        )
+        emergent_interactive = max(0, interactive_total - bootstrap_interactive)
 
         return {
             "db_files_found": db_files_found,
@@ -295,16 +302,57 @@ class SimulationDataReader:
             "expected_initial_posts_total": expected_initial_posts,
             "dynamic_create_posts_estimate": dynamic_create_posts,
             "interactive_actions_total": interactive_total,
+            "bootstrap_interactive_actions_estimate": bootstrap_interactive,
+            "emergent_interactive_actions_estimate": emergent_interactive,
         }
 
-    def _get_initial_posts_count(self) -> int:
+    def _load_simulation_config(self) -> Dict[str, Any]:
         config_path = os.path.join(self.sim_dir, "simulation_config.json")
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
+            return config if isinstance(config, dict) else {}
+        except Exception:
+            return {}
+
+    def _get_initial_posts_count(self, config: Optional[Dict[str, Any]] = None) -> int:
+        config = config if isinstance(config, dict) else self._load_simulation_config()
+        try:
             return len((config.get("event_config") or {}).get("initial_posts", []) or [])
         except Exception:
             return 0
+
+    def _estimate_bootstrap_interactive_actions(
+        self,
+        config: Dict[str, Any],
+        platform_counts: Dict[str, Dict[str, int]],
+    ) -> int:
+        """Estima o pulso induzido para separar lastro emergente de bootstrap."""
+        if not config or not is_social_bootstrap_enabled(config):
+            return 0
+
+        seed_post_count = self._get_initial_posts_count(config)
+        candidate_count = len((config.get("agent_configs") or []) or [])
+        if seed_post_count <= 0 or candidate_count <= 0:
+            return 0
+
+        total = 0
+        for platform, counts in platform_counts.items():
+            if not counts:
+                continue
+            target = get_social_bootstrap_target(
+                config,
+                platform,
+                seed_post_count=seed_post_count,
+                candidate_count=candidate_count,
+            )
+            observed_interactive = sum(
+                int(count)
+                for action, count in (counts or {}).items()
+                if action in self.TRACE_INTERACTIVE_ACTIONS
+            )
+            total += min(target, observed_interactive)
+        return total
 
     def _get_entity_type_action_counts(self, actions: List[Dict[str, Any]]) -> Counter:
         """Conta acoes por entity_type usando simulation_config.json quando existir."""

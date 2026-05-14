@@ -343,14 +343,18 @@ def evaluate_report_system_gate(
                 warnings.append(message)
 
         oasis_trace = diversity.get("oasis_trace", {}) or {}
+        emergent_interactive_actions = oasis_trace.get(
+            "emergent_interactive_actions_estimate",
+            oasis_trace.get("interactive_actions_total", 0),
+        )
         if (
             oasis_trace.get("db_files_found", 0) > 0
-            and oasis_trace.get("interactive_actions_total", 0) <= 0
+            and emergent_interactive_actions <= 0
             and oasis_trace.get("dynamic_create_posts_estimate", 0) <= 0
         ):
             issues.append(
                 "Trace OASIS sem comportamento social pos-estimulo: "
-                "nao foram detectados comentarios, curtidas, repostagens, follows ou novas postagens alem dos estimulos iniciais"
+                "nao foram detectados comentarios, curtidas, repostagens, follows ou novas postagens emergentes alem dos estimulos iniciais"
             )
 
         if diversity.get("entity_type_coverage", 0) < 2:

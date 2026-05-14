@@ -120,4 +120,47 @@ def test_oasis_trace_metrics_detecta_interacoes_reais(tmp_path, monkeypatch):
     assert metrics["expected_initial_posts_total"] == 2
     assert metrics["dynamic_create_posts_estimate"] == 0
     assert metrics["interactive_actions_total"] == 2
+    assert metrics["bootstrap_interactive_actions_estimate"] == 0
+    assert metrics["emergent_interactive_actions_estimate"] == 2
     assert metrics["behavioral_entropy_norm"] > 0
+
+
+def test_oasis_trace_metrics_separa_bootstrap_de_interacao_emergente(tmp_path, monkeypatch):
+    uploads = tmp_path / "uploads"
+    sim_root = uploads / "simulations" / "sim_bootstrap_trace"
+    sim_root.mkdir(parents=True)
+    (sim_root / "simulation_config.json").write_text(
+        json.dumps(
+            {
+                "event_config": {"initial_posts": [{"content": "a"}, {"content": "b"}]},
+                "agent_configs": [{"agent_id": 1}, {"agent_id": 2}, {"agent_id": 3}],
+                "social_dynamics": {"twitter_bootstrap_actions": 2, "bootstrap_max_actions": 2},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    db_path = sim_root / "twitter_simulation.db"
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE trace (user_id INTEGER, created_at TEXT, action TEXT, info TEXT)")
+    cursor.executemany(
+        "INSERT INTO trace VALUES (?, ?, ?, ?)",
+        [
+            (1, "1", "create_post", '{"content":"a"}'),
+            (2, "2", "create_post", '{"content":"b"}'),
+            (2, "3", "like_post", '{"post_id":1}'),
+            (3, "4", "create_comment", '{"post_id":1,"content":"pulso inicial"}'),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    from app.config import Config
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", str(uploads))
+
+    metrics = SimulationDataReader("sim_bootstrap_trace").get_oasis_trace_metrics()
+
+    assert metrics["interactive_actions_total"] == 2
+    assert metrics["bootstrap_interactive_actions_estimate"] == 2
+    assert metrics["emergent_interactive_actions_estimate"] == 0
