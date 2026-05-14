@@ -88,6 +88,22 @@ def build_decision_packet(
     reversal_risk_percent = int(round(_clamp(contrary_probability_percent + (1 - social_scale) * 8, 12, 44)))
     execution_risk_percent = int(round(_clamp((1 - components["execution"]) * 38 + 8, 8, 42)))
     evidence_risk_percent = int(round(_clamp((1 - components["knowledge_backing"]) * 34 + 6, 6, 38)))
+    convergence = _build_convergence_assessment(
+        components=components,
+        conviction=conviction,
+        total_actions=total_actions,
+        min_actions=min_actions,
+        current_round=current_round,
+        total_rounds=total_rounds,
+    )
+    red_team = _build_red_team_assessment(
+        components=components,
+        social_scale=social_scale,
+        source_scale=source_scale,
+        contrary_probability_percent=contrary_probability_percent,
+        reversal_risk_percent=reversal_risk_percent,
+        evidence_risk_percent=evidence_risk_percent,
+    )
 
     structured_metrics = {
         "conviction_operational": conviction,
@@ -98,6 +114,8 @@ def build_decision_packet(
         "reversal_risk_probability_percent": reversal_risk_percent,
         "execution_risk_probability_percent": execution_risk_percent,
         "evidence_risk_probability_percent": evidence_risk_percent,
+        "convergence_score_percent": convergence["score_percent"],
+        "red_team_pressure_percent": red_team["pressure_percent"],
         "emergent_interactive_actions_estimate": emergent_interactions,
         "dynamic_create_posts_estimate": dynamic_posts,
         "total_actions_count": total_actions,
@@ -106,12 +124,22 @@ def build_decision_packet(
 
     thesis = (outline_summary or simulation_requirement or "tese vencedora da simulacao").strip()
     return {
-        "schema": "mirofish.decision_packet.v1",
+        "schema": "mirofish.decision_packet.v2",
         "simulation_id": simulation_id,
         "thesis": thesis[:360],
         "conviction_operational": conviction,
         "conviction_operational_percent": structured_metrics["conviction_operational_percent"],
         "reference_class": "simulacao social INTEIA com eleitores sinteticos calibrados e auditoria de evidencias",
+        "method_lock": {
+            "status": "locked",
+            "rules": [
+                "usar somente percentuais oficiais do decision_packet",
+                "apresentar tese adversaria mais forte",
+                "declarar gatilhos de reversao",
+                "diferenciar sinal emergente de bootstrap",
+                "registrar previsao monitoravel no forecast ledger",
+            ],
+        },
         "probability_basis": {
             "method": "weighted_operational_conviction_v1",
             "components": components,
@@ -155,6 +183,8 @@ def build_decision_packet(
                 "probability_percent": evidence_risk_percent,
             },
         },
+        "convergence": convergence,
+        "red_team": red_team,
         "indicators": {
             "total_actions": total_actions,
             "generated_texts": generated_texts,
@@ -182,6 +212,8 @@ def decision_packet_prompt_block(packet: Mapping[str, Any] | None) -> str:
     scenarios = packet.get("scenarios") if isinstance(packet.get("scenarios"), Mapping) else {}
     risks = packet.get("risks") if isinstance(packet.get("risks"), Mapping) else {}
     indicators = packet.get("indicators") if isinstance(packet.get("indicators"), Mapping) else {}
+    convergence = packet.get("convergence") if isinstance(packet.get("convergence"), Mapping) else {}
+    red_team = packet.get("red_team") if isinstance(packet.get("red_team"), Mapping) else {}
 
     def pct(path: tuple[str, str], default: int = 0) -> int:
         group = scenarios.get(path[0]) if path[0] in scenarios else risks.get(path[0])
@@ -209,8 +241,109 @@ def decision_packet_prompt_block(packet: Mapping[str, Any] | None) -> str:
             f"- Acoes sociais emergentes: {indicators.get('emergent_interactive_actions', 0)}; "
             f"novas postagens emergentes: {indicators.get('dynamic_create_posts', 0)}"
         ),
+        "Convergencia metodologica:",
+        (
+            f"- Score: {convergence.get('score_percent', 0)}%; "
+            f"estado: {convergence.get('status', 'indefinido')}; "
+            f"rodadas de reforco recomendadas: {convergence.get('recommended_next_runs', 0)}"
+        ),
+        "Red team obrigatorio:",
+        f"- Tese adversaria: {red_team.get('opposing_thesis', '')}",
+        f"- Vetor de ataque: {red_team.get('attack_vector', '')}",
+        f"- Gatilhos de reversao: {'; '.join(red_team.get('reversal_triggers', []) or [])}",
     ]
     return "\n".join(lines)
+
+
+def _build_convergence_assessment(
+    *,
+    components: Mapping[str, float],
+    conviction: float,
+    total_actions: int,
+    min_actions: int,
+    current_round: int,
+    total_rounds: int,
+) -> dict[str, Any]:
+    component_values = [float(value) for value in components.values()]
+    weakest = min(component_values) if component_values else 0.0
+    spread = max(component_values) - weakest if component_values else 1.0
+    balance = 1 - _cap(spread)
+    volume = _cap(total_actions / max(min_actions * 4, 1))
+    completion = _cap(current_round / total_rounds) if total_rounds else 0.55
+    score = _clamp(conviction * 0.45 + weakest * 0.25 + balance * 0.15 + volume * 0.10 + completion * 0.05, 0.0, 1.0)
+    if score >= 0.78:
+        status = "forte"
+        recommended_next_runs = 0
+    elif score >= 0.62:
+        status = "operacional"
+        recommended_next_runs = 1
+    else:
+        status = "pressionada"
+        recommended_next_runs = 2
+
+    return {
+        "score": round(score, 4),
+        "score_percent": int(round(score * 100)),
+        "status": status,
+        "recommended_next_runs": recommended_next_runs,
+        "weakest_component": _weakest_component(components),
+        "component_spread": round(spread, 4),
+    }
+
+
+def _build_red_team_assessment(
+    *,
+    components: Mapping[str, float],
+    social_scale: float,
+    source_scale: float,
+    contrary_probability_percent: int,
+    reversal_risk_percent: int,
+    evidence_risk_percent: int,
+) -> dict[str, Any]:
+    weakest = _weakest_component(components)
+    pressure = int(round(_clamp((contrary_probability_percent + reversal_risk_percent + evidence_risk_percent) / 300, 0.0, 1.0) * 100))
+    thesis_by_component = {
+        "execution": "A tese adversaria dira que a execucao ainda nao acumulou rodadas e acoes suficientes para sustentar a linha dominante.",
+        "semantic_density": "A tese adversaria dira que o discurso dos agentes ainda nao diferenciou mensagens o bastante para cravar a narrativa vencedora.",
+        "agent_diversity": "A tese adversaria dira que a coalizao simulada ainda esta concentrada demais para representar conflito real.",
+        "behavioral_signal": "A tese adversaria dira que a tracao social emergente ainda nao venceu o pulso induzido da simulacao.",
+        "knowledge_backing": "A tese adversaria dira que o grafo e o material-base ainda nao bastam para blindar a recomendacao contra contestacao externa.",
+    }
+    attack_by_component = {
+        "execution": "pressionar volume, rodadas e persistencia temporal",
+        "semantic_density": "atacar repeticao semantica e baixa diferenca entre grupos",
+        "agent_diversity": "atacar representatividade e heterogeneidade dos perfis",
+        "behavioral_signal": "atacar ausencia de reacao social espontanea",
+        "knowledge_backing": "atacar lastro documental e conexoes do grafo",
+    }
+    triggers = [
+        "queda do score de convergencia abaixo de 62%",
+        "cenario Contrario superar o Otimista na proxima rodada",
+        "interacoes emergentes ficarem abaixo do pulso bootstrap",
+    ]
+    if social_scale < 0.5:
+        triggers.append("baixo volume de comentario, repostagem ou nova publicacao emergente")
+    if source_scale < 0.8:
+        triggers.append("entrada de documento externo que contradiga a tese vencedora")
+
+    return {
+        "pressure_percent": pressure,
+        "weakest_component": weakest,
+        "opposing_thesis": thesis_by_component.get(weakest, thesis_by_component["behavioral_signal"]),
+        "attack_vector": attack_by_component.get(weakest, attack_by_component["behavioral_signal"]),
+        "reversal_triggers": triggers,
+        "falsification_tests": [
+            "rodar nova simulacao mantendo a tese vencedora e elevando opositores",
+            "rodar nova simulacao invertendo o enquadramento inicial",
+            "comparar se a tese base permanece dominante nos indicadores emergentes",
+        ],
+    }
+
+
+def _weakest_component(components: Mapping[str, float]) -> str:
+    if not components:
+        return "behavioral_signal"
+    return min(components.items(), key=lambda item: float(item[1]))[0]
 
 
 def _positive_int(value: Any, *, default: int) -> int:

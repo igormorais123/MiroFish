@@ -20,6 +20,24 @@ def _publishable_report(report_id="report_1"):
     )
 
 
+def _decision_packet():
+    return {
+        "schema": "mirofish.decision_packet.v2",
+        "conviction_operational": 0.78,
+        "method_lock": {"status": "locked"},
+        "scenarios": {
+            "base": {"probability_percent": 64},
+            "optimistic": {"probability_percent": 20},
+            "contrary": {"probability_percent": 16},
+        },
+        "convergence": {"score_percent": 74},
+        "red_team": {
+            "opposing_thesis": "A tese adversaria ataca o sinal emergente.",
+            "reversal_triggers": ["cenario contrario ganha forca"],
+        },
+    }
+
+
 @pytest.fixture
 def report_store(monkeypatch, tmp_path):
     reports_dir = tmp_path / "reports"
@@ -30,6 +48,7 @@ def report_store(monkeypatch, tmp_path):
 def _create_export(report_store):
     report = _publishable_report()
     ReportManager.save_report(report)
+    ReportManager.save_json_artifact(report.report_id, "decision_packet.json", _decision_packet())
     manifest = create_report_export(report.report_id)
     export_dir = report_store / report.report_id / "exports" / manifest["export_id"]
     return report, manifest, export_dir

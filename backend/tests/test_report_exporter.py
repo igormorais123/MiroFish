@@ -25,6 +25,29 @@ def _publishable_report(report_id="report_1", markdown=None):
     )
 
 
+def _decision_packet():
+    return {
+        "schema": "mirofish.decision_packet.v2",
+        "conviction_operational": 0.78,
+        "method_lock": {"status": "locked"},
+        "scenarios": {
+            "base": {"probability_percent": 64},
+            "optimistic": {"probability_percent": 20},
+            "contrary": {"probability_percent": 16},
+        },
+        "convergence": {"score_percent": 74},
+        "red_team": {
+            "opposing_thesis": "A tese adversaria ataca o sinal emergente.",
+            "reversal_triggers": ["cenario contrario ganha forca"],
+        },
+    }
+
+
+def _save_publishable_report(report):
+    ReportManager.save_report(report)
+    ReportManager.save_json_artifact(report.report_id, "decision_packet.json", _decision_packet())
+
+
 @pytest.fixture
 def report_store(monkeypatch, tmp_path):
     reports_dir = tmp_path / "reports"
@@ -34,7 +57,7 @@ def report_store(monkeypatch, tmp_path):
 
 def test_export_creates_draft_with_safe_html_and_manifest(report_store):
     report = _publishable_report()
-    ReportManager.save_report(report)
+    _save_publishable_report(report)
 
     manifest = create_report_export(report.report_id)
 
@@ -62,7 +85,7 @@ def test_export_creates_draft_with_safe_html_and_manifest(report_store):
 
 def test_list_exports_does_not_expose_internal_path(report_store):
     report = _publishable_report()
-    ReportManager.save_report(report)
+    _save_publishable_report(report)
     create_report_export(report.report_id)
 
     exports = list_report_exports(report.report_id)
@@ -74,7 +97,7 @@ def test_list_exports_does_not_expose_internal_path(report_store):
 def test_export_blocks_unpublishable_report(report_store):
     report = _publishable_report()
     report.quality_gate = {"passes_gate": False, "metrics": {}}
-    ReportManager.save_report(report)
+    _save_publishable_report(report)
 
     with pytest.raises(ReportExportConflict):
         create_report_export(report.report_id)
@@ -82,7 +105,7 @@ def test_export_blocks_unpublishable_report(report_store):
 
 def test_download_path_uses_manifest_allowlist(report_store):
     report = _publishable_report()
-    ReportManager.save_report(report)
+    _save_publishable_report(report)
     manifest = create_report_export(report.report_id)
 
     path = allowed_export_file_path(report.report_id, manifest["export_id"], "full_report.html")

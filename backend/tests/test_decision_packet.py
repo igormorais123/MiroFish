@@ -39,11 +39,16 @@ def test_decision_packet_gera_probabilidades_deterministicas_com_soma_100():
         for scenario in packet["scenarios"].values()
     ]
 
-    assert packet["schema"] == "mirofish.decision_packet.v1"
+    assert packet["schema"] == "mirofish.decision_packet.v2"
     assert sum(probabilities) == 100
     assert packet["scenarios"]["base"]["probability_percent"] > packet["scenarios"]["contrary"]["probability_percent"]
     assert packet["conviction_operational"] > 0.75
     assert packet["structured_metrics"]["scenario_base_probability_percent"] == packet["scenarios"]["base"]["probability_percent"]
+    assert packet["method_lock"]["status"] == "locked"
+    assert packet["convergence"]["score_percent"] > 0
+    assert packet["red_team"]["opposing_thesis"]
+    assert packet["red_team"]["reversal_triggers"]
+    assert packet["structured_metrics"]["red_team_pressure_percent"] == packet["red_team"]["pressure_percent"]
 
 
 def test_decision_packet_prompt_expoe_percentuais_oficiais():
@@ -73,3 +78,5 @@ def test_decision_packet_prompt_expoe_percentuais_oficiais():
     assert "Conviccao operacional INTEIA" in block
     assert f"Base: {packet['scenarios']['base']['probability_percent']}%" in block
     assert f"Contrario: {packet['scenarios']['contrary']['probability_percent']}%" in block
+    assert "Red team obrigatorio" in block
+    assert packet["red_team"]["attack_vector"] in block
