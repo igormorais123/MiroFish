@@ -946,7 +946,7 @@ secao final intitulada "Analise Estrategica" que contenha:
 
 1. **Sintese Executiva** (3-5 linhas): o que esta simulacao revelou que NAO era obvio antes
 2. **Tres Cenarios Probabilisticos** (OBRIGATORIO): tabela em Markdown com 3 cenarios mutuamente exclusivos
-   cuja soma de probabilidades = 100%. Formato exato:
+   usando os percentuais oficiais do Pacote de Decisao Preditiva. Formato exato:
 
    | Cenario | Probabilidade | Narrativa-chave (1-2 linhas) | Gatilho de virada |
    |---------|--------------|------------------------------|-------------------|
@@ -955,26 +955,24 @@ secao final intitulada "Analise Estrategica" que contenha:
    | **Contrario** (devil's advocate) | ZZ% | ... | ... |
 
    O cenario Contrario deve oferecer uma leitura estruturalmente oposta a do Base (nao apenas "menos do mesmo").
-   XX + YY + ZZ DEVE ser 100. Se a amostra for pequena, ajuste as probabilidades para refletir incerteza
-   (ex: 40/30/30 ao inves de 70/20/10).
+   XX + YY + ZZ DEVE ser 100. Nao invente percentuais: use os numeros oficiais do pacote.
 
-3. **Riscos Criticos**: riscos concretos identificados, com probabilidade estimada (0-100%)
+3. **Riscos Criticos**: riscos concretos identificados, com probabilidade oficial do Pacote de Decisao Preditiva (0-100%)
 4. **Oportunidades**: janelas de acao que a simulacao revelou
 5. **Recomendacoes Praticas**: acoes concretas com prazos, priorizadas por impacto
-6. **Confianca da Previsao**: calibracao honesta — quao confiaveis sao estes resultados \
-   (considerar: tamanho da amostra de agentes, numero de rodadas, diversidade de perfis)
-7. **Limites e Campo Necessario**: o que foi simulado, o que foi confirmado e o que ainda exige dado externo
+6. **Conviccao Operacional INTEIA**: use o percentual oficial do pacote e explique o lastro em uma frase forte
+7. **Campo que aumenta poder preditivo**: dados externos que ampliam acerto na proxima rodada, escritos como ofensiva metodologica
 
 [Regras Absolutas]
 - Lidere com a recomendacao, fundamente depois
 - Zero linguagem de esquiva ("depende", "e complexo", "ha muitas variaveis")
 - A tabela de 3 cenarios e OBRIGATORIA — relatorio sem ela e considerado incompleto
-- Cada risco com probabilidade numerica
+- Cada risco com probabilidade numerica oficial do pacote
 - Cada recomendacao com prazo e responsavel quando aplicavel
 - Rotule claims como [Fato], [Simulacao], [Inferencia] ou [Campo necessario]
-- Probabilidades de cenario, risco e confianca sao [Inferencia calibrada], nunca [Fato], salvo se o numero aparecer literalmente no corpus
+- Probabilidades de cenario, risco e conviccao sao [Inferencia calibrada] e devem bater exatamente com o Pacote de Decisao Preditiva
 - Nao use aspas diretas se a frase nao aparece literalmente no relatorio ou nos dados simulados
-- Se a evidencia for fraca, reduza a confianca e declare o limite; nao compense com retorica
+- Se o lastro for menor, siga o pacote: a conviccao cai pelo metodo, nao por linguagem defensiva
 - Nao repita o titulo "Analise Estrategica"; o sistema ja adiciona esse titulo antes da sua resposta
 - Se Agentes/Rodadas/Plataformas tiverem valores numericos ou nomes conhecidos em [Escala], e proibido escrever que sao desconhecidos, ausentes ou nao confirmados
 - Em tabelas Markdown, toda linha deve comecar com "|"; rotulos como [Inferencia calibrada] devem ficar dentro da celula, nunca antes da barra vertical
@@ -992,6 +990,9 @@ Demanda: {simulation_requirement}
 - Agentes: {total_agents}
 - Rodadas executadas: {total_rounds}
 - Plataformas: {platforms}
+
+[Pacote de Decisao Preditiva - fonte obrigatoria para percentuais]
+{decision_packet}
 
 [Relatorio Completo da Simulacao]
 {report_content}
@@ -2425,6 +2426,24 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             
             # Usa o ReportManager para montar o relatorio completo
             assembled_content = ReportManager.assemble_full_report(report_id, outline)
+            from .decision_packet import build_decision_packet
+
+            decision_packet = build_decision_packet(
+                simulation_id=self.simulation_id,
+                simulation_requirement=self.simulation_requirement,
+                quality_gate=report.quality_gate,
+                outline_summary=outline.summary,
+            )
+            if report.quality_gate is None:
+                report.quality_gate = {}
+            report.quality_gate["decision_packet"] = decision_packet
+            report.quality_gate.setdefault("metrics", {})
+            report.quality_gate["metrics"]["decision_packet"] = decision_packet.get(
+                "structured_metrics",
+                {},
+            )
+            ReportManager.save_json_artifact(report_id, "decision_packet.json", decision_packet)
+            ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
 
             # Fase 4: Analise Estrategica Helena Strategos
             self._switch_cost_phase("helena")
@@ -2439,7 +2458,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
 
             try:
                 helena_analysis = self._generate_helena_analysis(
-                    assembled_content, outline
+                    assembled_content, outline, decision_packet
                 )
                 if helena_analysis:
                     helena_analysis, helena_attribution = self._normalize_section_attribution(
@@ -2579,6 +2598,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
 
                 ledger = ForecastLedger()
                 first_section = outline.sections[0].title if outline.sections else "previsao central"
+                base_scenario = (decision_packet.get("scenarios", {}) or {}).get("base", {})
                 ledger.registrar_previsao(
                     enunciado=f"Tese central monitoravel: {outline.summary or first_section}",
                     janela="proximos 15, 30 e 60 dias",
@@ -2586,17 +2606,20 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                         "simulation_id": self.simulation_id,
                         "report_id": report_id,
                         "graph_id": self.graph_id,
+                        "decision_packet_schema": decision_packet.get("schema"),
                     },
                     sinais=[
                         "tese vencedora",
                         "tese adversaria",
                         "gatilhos de reversao",
+                        "conviccao operacional INTEIA",
                     ],
-                    grau_confianca_operacional=(
-                        report.quality_gate.get("strategic_density", {}).get("final_score")
-                        if report.quality_gate
-                        else None
-                    ),
+                    grau_confianca_operacional=decision_packet.get("conviction_operational"),
+                    probability=base_scenario.get("probability"),
+                    prior=0.5,
+                    base_rate=decision_packet.get("conviction_operational"),
+                    reference_class=decision_packet.get("reference_class"),
+                    indicators=decision_packet.get("indicators"),
                 )
                 ReportManager.save_json_artifact(
                     report_id,
@@ -2867,6 +2890,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         self,
         report_content: str,
         outline: ReportOutline,
+        decision_packet: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
         """Gera analise estrategica final usando Helena Strategos com o melhor modelo disponivel.
 
@@ -2883,12 +2907,14 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         ]
 
         scale_context = self._build_helena_scale_context(self.simulation_id)
+        from .decision_packet import decision_packet_prompt_block
 
         user_prompt = HELENA_USER_PROMPT_TEMPLATE.format(
             simulation_requirement=self.simulation_requirement,
             total_agents=scale_context["total_agents"],
             total_rounds=scale_context["total_rounds"],
             platforms=scale_context["platforms"],
+            decision_packet=decision_packet_prompt_block(decision_packet),
             report_content=report_content[:12000],  # Truncar para caber no contexto
         )
 

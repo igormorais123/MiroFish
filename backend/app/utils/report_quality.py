@@ -38,7 +38,13 @@ _METRIC_CATEGORY_TERMS = {
     "minutes": ("minute", "minutes", "minuto", "minutos"),
     "actions": ("action", "actions", "acao", "acoes"),
     "agents": ("agent", "agents", "agente", "agentes", "profile", "profiles", "perfil", "perfis"),
+    "probability": ("probability", "probabilidade", "chance", "percentual", "cenario", "cenarios", "base", "otimista", "contrario", "risco", "riscos", "confianca", "conviccao"),
 }
+
+_PREDICTIVE_NUMERIC_CONTEXT_RE = re.compile(
+    r"\b(?:probabilidade|chance|cen[aá]rio|risco|confian[cç]a|convic[cç][aã]o|base|otimista|contr[aá]rio)\b",
+    re.IGNORECASE,
+)
 
 
 def _normalize(text: str) -> list[str]:
@@ -449,10 +455,17 @@ def extract_numeric_claims(text: str) -> list[dict]:
         if not stripped.startswith("|"):
             active_table_header = ""
 
-        table_marks_inference = bool(
+        predictive_table_number = bool(
             active_table_header
             and stripped.startswith("|")
             and re.search(r"\b(?:probabilidade|cen[aá]rio|risco|confian[cç]a)\b", active_table_header, re.IGNORECASE)
+        )
+        requires_metric_support = bool(
+            predictive_table_number
+            or (
+                "%" in stripped
+                and _PREDICTIVE_NUMERIC_CONTEXT_RE.search(stripped)
+            )
         )
         for match in _NUMBER_RE.finditer(stripped):
             raw = match.group(0).strip()
@@ -461,7 +474,8 @@ def extract_numeric_claims(text: str) -> list[dict]:
                     "number": raw,
                     "line": line_no,
                     "context": stripped[:240],
-                    "labeled_inference": bool(_INFERENCE_MARKER_RE.search(stripped)) or table_marks_inference,
+                    "labeled_inference": bool(_INFERENCE_MARKER_RE.search(stripped)),
+                    "requires_metric_support": requires_metric_support,
                 })
     return claims
 
@@ -584,13 +598,16 @@ def audit_report_evidence(
         for claim in numeric_claims
         if number_supported_by_structured_metrics(claim, structured_metrics)
     ]
-    unsupported_numbers = [
-        claim
-        for claim in numeric_claims
-        if not claim.get("labeled_inference")
-        and not number_supported_by_evidence(claim.get("number", ""), evidence_list)
-        and not number_supported_by_structured_metrics(claim, structured_metrics)
-    ]
+    unsupported_numbers = []
+    for claim in numeric_claims:
+        evidence_supported = number_supported_by_evidence(claim.get("number", ""), evidence_list)
+        metric_supported = number_supported_by_structured_metrics(claim, structured_metrics)
+        if claim.get("requires_metric_support"):
+            if not evidence_supported and not metric_supported:
+                unsupported_numbers.append(claim)
+            continue
+        if not claim.get("labeled_inference") and not evidence_supported and not metric_supported:
+            unsupported_numbers.append(claim)
     supported_numbers = [
         claim
         for claim in numeric_claims

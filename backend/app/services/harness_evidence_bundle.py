@@ -24,6 +24,7 @@ def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str
     artifacts = _safe_artifacts(report.report_id)
     artifact_names = [item["name"] for item in artifacts if item.get("name")]
     forecast_ledger = ReportManager.load_json_artifact(report.report_id, "forecast_ledger.json") or {}
+    decision_packet = ReportManager.load_json_artifact(report.report_id, "decision_packet.json") or {}
 
     return {
         "id": f"mirofish_bundle_{simulation_id}",
@@ -31,8 +32,8 @@ def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str
         "title": _bundle_title(report),
         "source": "mirofish",
         "generatedAt": _now_iso(),
-        "evidence": _build_evidence(report, artifacts, base_url),
-        "graph": _build_graph(report, artifact_names),
+        "evidence": _build_evidence(report, artifacts, base_url, decision_packet),
+        "graph": _build_graph(report, artifact_names, decision_packet),
         "forecasts": _build_forecasts(forecast_ledger),
         "limitations": _build_limitations(report, artifact_names, forecast_ledger),
     }
@@ -54,15 +55,21 @@ def _bundle_title(report: Report) -> str:
     return f"Pacote de evidencias MiroFish {report.simulation_id}"
 
 
-def _build_evidence(report: Report, artifacts: List[Dict[str, Any]], base_url: str) -> List[Dict[str, Any]]:
+def _build_evidence(
+    report: Report,
+    artifacts: List[Dict[str, Any]],
+    base_url: str,
+    decision_packet: Dict[str, Any],
+) -> List[Dict[str, Any]]:
     collected_at = _normalize_iso_datetime(report.completed_at or report.created_at)
     delivery_status = report.delivery_status()
+    report_confidence = _report_confidence(report, decision_packet)
     primary_evidence = {
         "id": f"{report.report_id}:report",
         "title": f"Relatorio MiroFish {report.report_id}",
         "sourceUri": _absolute_api_url(base_url, f"/api/report/{report.report_id}"),
         "claim": _primary_claim(report),
-        "confidence": _report_confidence(report),
+        "confidence": report_confidence,
         "collectedAt": collected_at,
         "tags": ["mirofish", "report", delivery_status],
     }
@@ -81,7 +88,7 @@ def _build_evidence(report: Report, artifacts: List[Dict[str, Any]], base_url: s
                 "title": f"Artefato MiroFish {name}",
                 "sourceUri": _artifact_url(base_url, report.report_id, name),
                 "claim": f"Artefato {name} gerado pelo harness MiroFish para auditoria da missao.",
-                "confidence": 0.72 if report.status == ReportStatus.COMPLETED else 0.55,
+                "confidence": round(max(0.55, report_confidence - 0.12), 4),
                 "collectedAt": collected_at,
                 "tags": ["mirofish", "artifact", _artifact_tag(name)],
             }
@@ -90,7 +97,12 @@ def _build_evidence(report: Report, artifacts: List[Dict[str, Any]], base_url: s
     return evidence
 
 
-def _build_graph(report: Report, artifact_names: Iterable[str]) -> Dict[str, Any]:
+def _build_graph(
+    report: Report,
+    artifact_names: Iterable[str],
+    decision_packet: Dict[str, Any],
+) -> Dict[str, Any]:
+    report_confidence = _report_confidence(report, decision_packet)
     nodes = [
         {"id": report.simulation_id, "label": f"Simulacao {report.simulation_id}", "type": "simulation"},
         {"id": report.report_id, "label": f"Relatorio {report.report_id}", "type": "report"},
@@ -111,7 +123,7 @@ def _build_graph(report: Report, artifact_names: Iterable[str]) -> Dict[str, Any
                 "source": report.graph_id,
                 "target": report.report_id,
                 "relation": "supports",
-                "weight": 0.86,
+                "weight": report_confidence,
             }
         )
 
@@ -123,7 +135,7 @@ def _build_graph(report: Report, artifact_names: Iterable[str]) -> Dict[str, Any
                 "source": report.report_id,
                 "target": artifact_id,
                 "relation": "contains_artifact",
-                "weight": 0.7,
+                "weight": round(max(0.5, report_confidence - 0.2), 4),
             }
         )
 
@@ -183,7 +195,14 @@ def _primary_claim(report: Report) -> str:
     return "Relatorio MiroFish disponivel para a simulacao solicitada."
 
 
-def _report_confidence(report: Report) -> float:
+def _report_confidence(report: Report, decision_packet: Optional[Dict[str, Any]] = None) -> float:
+    if isinstance(decision_packet, dict):
+        try:
+            conviction = float(decision_packet.get("conviction_operational"))
+            if 0 <= conviction <= 1:
+                return round(conviction, 4)
+        except (TypeError, ValueError):
+            pass
     if report.is_publishable():
         return 0.9
     if report.status == ReportStatus.COMPLETED:
