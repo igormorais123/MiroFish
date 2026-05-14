@@ -95,6 +95,17 @@ def evaluate_report_method_checklist(report_id: str) -> dict[str, Any]:
         "Auditoria de evidencias aprovada." if evidence_passes else "Auditoria de evidencias ausente ou reprovada.",
     ))
 
+    decision_packet = ReportManager.load_json_artifact(report_id, "decision_packet.json")
+    decision_packet_passes = _decision_packet_passes(decision_packet)
+    checks.append(_item(
+        "decision_packet_locked",
+        HARD_BLOCKER,
+        decision_packet_passes,
+        "Pacote de decisao preditiva travado com cenarios, convergencia e red team."
+        if decision_packet_passes
+        else "decision_packet.json ausente ou incompleto; entrega preditiva fica sem lastro oficial.",
+    ))
+
     full_report_content, has_full_report = _read_full_report(report_id)
     checks.append(_item(
         "full_report_present",
@@ -155,3 +166,33 @@ def _build_payload(report_id: str, checks: list[dict[str, Any]]) -> dict[str, An
             "checks": len(checks),
         },
     }
+
+
+def _decision_packet_passes(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    scenarios = payload.get("scenarios")
+    red_team = payload.get("red_team")
+    convergence = payload.get("convergence")
+    method_lock = payload.get("method_lock")
+    if not all(isinstance(item, dict) for item in (scenarios, red_team, convergence, method_lock)):
+        return False
+
+    scenario_values = [
+        item.get("probability_percent")
+        for item in scenarios.values()
+        if isinstance(item, dict)
+    ]
+    try:
+        sums_to_100 = sum(int(value) for value in scenario_values) == 100
+    except (TypeError, ValueError):
+        sums_to_100 = False
+
+    return bool(
+        sums_to_100
+        and payload.get("conviction_operational") is not None
+        and convergence.get("score_percent") is not None
+        and red_team.get("opposing_thesis")
+        and red_team.get("reversal_triggers")
+        and method_lock.get("status") == "locked"
+    )
