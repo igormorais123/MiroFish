@@ -10,12 +10,14 @@ import vue from '@vitejs/plugin-vue'
 //
 // Setar via env: VITE_BASE=/mirofish/ npm run build
 const base = process.env.VITE_BASE || '/'
+const devPort = Number(process.env.VITE_DEV_PORT || 5173)
 
 export default defineConfig({
   base,
   plugins: [vue()],
   server: {
-    port: 3000,
+    port: devPort,
+    strictPort: true,
     open: true,
     proxy: {
       '/api': {
