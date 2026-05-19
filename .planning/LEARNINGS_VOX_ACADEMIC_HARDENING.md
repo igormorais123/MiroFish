@@ -13,7 +13,6 @@
    - `LATENT_CONSTRUCT_CEILING = 0.50`
    - `CORRELATION_ALERT_THRESHOLD = 0.65`
    - `PROMPT_FIELD_TOKEN_LIMIT = 200`
-   - `LGPD_DISCLAIMER` (texto literal)
 
 ## O que funcionou bem
 
@@ -21,7 +20,6 @@
 - **Schema versionado (`schema: ...v1` → `v2`) com flag `legacy_schema=true`** preservou retro-compatibilidade do `prompt_registry`. Nenhum teste antigo quebrou.
 - **Módulo `metrics.py` puro-python** (sem scipy/numpy) evitou risco operacional na VPS. Wasserstein, KL, MAE, DPD funcionando com 11/11 testes verde.
 - **Helena/Efesto operando autônomos via modo `--auto`** no SPEC poupou Igor de 15+ perguntas técnicas. Coerente com CLAUDE.md ("não perguntar decisão técnica a leigo").
-- **Disclaimer LGPD como constante única importada** garantiu consistência entre executive_package, report_exporter e UI.
 - **`data-testid` em pills da UI** permitiu validação Playwright determinística sem depender de texto traduzido.
 
 ## O que poderia ter rodado pior
@@ -46,9 +44,7 @@
 | Métricas no painel Step4 UI | 6 | **12** |
 | Constantes auditáveis travadas | 0 | **5** |
 | Schemas Vox Science v2 | 0 | **3** (prompt, model_run, claim_policy, fidelity) |
-| Disclaimer LGPD presente | parcial | **MD + HTML + PDF + UI** |
 | Roadmap calibração humana | inexistente | documento de 200+ linhas |
 
 ## Posicionamento epistêmico declarado
 
-O Mirofish INTEIA é honesto sobre suas limitações: opera no teto estrutural ~40–50% para construtos latentes (Hu & Collier 2024), usa agentes sintéticos apenas para exploração e pré-teste (consenso 2024–2026), e exige painel humano para qualquer decisão sensível (NIST AI 600-1, LGPD art. 7º IV). Esse posicionamento é defensável academicamente e protege Igor de exposição jurídica.

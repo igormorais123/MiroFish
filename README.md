@@ -12,9 +12,7 @@
 
 *Fork adaptado para o contexto brasileiro: simulação político-eleitoral, jurídico-institucional e análise de crise.*
 
-**Posicionamento metodológico:** produto **exploratório auditado** (claim levels C0–C2). Cada relatório carrega disclaimer LGPD art. 7º IV e atravessa o gate científico Vox Science Harness (11 artefatos auditáveis + métricas Wasserstein/KL/MAE/DPD, teto epistêmico r ≤ 0.50, teste-cego de variáveis-alvo). Calibração C3/C4 com painel humano fica em [roadmap contingente](docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md).
-
-**Posicionamento metodológico:** produto **exploratório auditado** (claim levels C0–C2). Cada relatório carrega disclaimer LGPD art. 7º IV e atravessa o gate científico Vox Science Harness (11 artefatos auditáveis + métricas Wasserstein/KL/MAE/DPD, teto epistêmico r ≤ 0.50, teste-cego de variáveis-alvo). Calibração C3/C4 com painel humano fica em [roadmap contingente](docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md).
+**Posicionamento metodológico:** Vox Science Harness opera com 11 artefatos auditáveis, métricas Wasserstein/KL/MAE/DPD, teto epistêmico r ≤ 0.50 para construtos latentes, teste-cego de variáveis-alvo e gate científico bloqueando paridade demográfica acima de 15%. Calibração com painel humano fica em [roadmap contingente](docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md).
 
 [Sobre](#sobre) · [O que mudou no fork](#o-que-mudou-no-fork-inteia) · [Como Rodar](#como-rodar) · [Deploy](#deploy-com-docker) · [Documentação](#documentação)
 

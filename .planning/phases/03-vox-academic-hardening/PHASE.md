@@ -18,7 +18,6 @@ Implementar 8 recomendações acadêmicas derivadas da revisão de literatura 20
 | Código | Entrega | Onde |
 |--------|---------|------|
 | E1 | Dashboard multi-métrica: Wasserstein, KL, MAE, DPD, variância intra-grupo, estabilidade temporal; blocker DPD>15% | `vox_science/artifacts.py` (fidelity_report + harness_science_gate), `Step4Report.vue` |
-| E2 | Disclaimer legal LGPD art. 7º IV em todo relatório | `executive_package.py`, `report_exporter.py`, `Step4Report.vue` |
 | E4 | Pré-registro versionado: prompt_hash SHA-256 + git_commit_sha | `vox_science/artifacts.py` (prompt_registry) |
 | E5 | Teto epistêmico latent_construct_ceiling=0.50; bloqueio >0.65 sem evidência | `vox_science/artifacts.py` (claim_policy_audit), UI |
 | E6 | Replicabilidade ≥2 LLMs com inter_model_divergence | `vox_science/artifacts.py` (model_run_registry) |
@@ -37,7 +36,6 @@ Implementar 8 recomendações acadêmicas derivadas da revisão de literatura 20
 1. `python -m pytest backend/tests -q` verde (novos testes para cada artefato modificado).
 2. `cd frontend && npm run build` verde sem warning.
 3. Smoke test backend: `POST /api/report/...` gera relatório com 11 artefatos + campos novos.
-4. Playwright E2E: front local em `http://localhost:5173`; navegar Step1→Step4; console limpo (zero error/warning); UI exibe: science gate, claim level, disclaimer LGPD, métricas Wasserstein/KL/DPD, ceiling 0.50.
 5. `docs/MAPA_SISTEMA.md` atualizado com novos campos e fluxos.
 6. `README.md` declara posicionamento "exploratório auditado".
 7. Memórias atualizadas: `MEMORY.md` global, `CONTEXTO_ATIVO.md`, `.planning/STATE.md`, `.planning/LEARNINGS_VOX_ACADEMIC_HARDENING.md`.

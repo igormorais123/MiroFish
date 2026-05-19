@@ -30,13 +30,6 @@ CORRELATION_ALERT_THRESHOLD = 0.65
 PROMPT_FIELD_TOKEN_LIMIT = 200
 
 
-LGPD_DISCLAIMER = (
-    "Esta análise é exploratória. Decisões sensíveis (RH, disciplina, "
-    "segurança, direito individual) exigem painel humano auditor "
-    "independente. Compatível com LGPD art. 7º IV."
-)
-
-
 VOX_SCIENCE_FILENAMES = (
     "methodology_manifest.json",
     "baseline_registry.json",

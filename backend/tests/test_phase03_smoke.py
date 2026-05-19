@@ -8,7 +8,6 @@ from app.services.vox_science.artifacts import (
     CORRELATION_ALERT_THRESHOLD,
     DPD_BLOCKER_THRESHOLD,
     LATENT_CONSTRUCT_CEILING,
-    LGPD_DISCLAIMER,
 )
 
 
@@ -115,10 +114,6 @@ def test_smoke_e2e_fase03_todos_artefatos_e_campos_novos():
     gate = artifacts["harness_science_gate.json"]
     assert gate["passes_gate"] is True
     assert gate["claim_level"] in {"C1", "C2"}
-
-    # ===== LGPD disclaimer constante presente =====
-    assert "LGPD" in LGPD_DISCLAIMER
-    assert "exploratória" in LGPD_DISCLAIMER
 
 
 def test_smoke_e2e_fase03_dpd_violation_e_blind_leak_bloqueiam_gate():

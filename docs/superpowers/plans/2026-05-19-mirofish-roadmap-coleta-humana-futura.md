@@ -33,7 +33,6 @@ Sem nenhum desses gatilhos, **manter posicionamento exploratório auditado**.
 - Definir população-alvo (ex: servidores federais ativos de carreira X, OAB-DF, prefeitos de cidades médias).
 - Escolher protocolo: Tier S (entrevista 2h) ou Tier A (questionário 30min + cluster humano).
 - Estratificação mínima (sexo × faixa etária × região × função) — alvo n=50 (Tier S) ou n=100 (Tier A).
-- Submissão CEP/CONEP **obrigatória** se domínio inclui dados pessoais sensíveis (LGPD art. 11).
 - TCLE com cláusula explícita "será usado para construir agente sintético".
 
 ### Fase B — Instrumento (4 semanas)
@@ -86,7 +85,6 @@ Arquivos a criar/estender:
 |---|---|
 | Painel n=50 não cobre subgrupos minoritários | IPF/raking sobre marginais Atlas IPEA antes de ativar (R9 que ficou de fora da fase 03) |
 | LLM "memoriza" backstory e gera respostas idênticas | temperatura ≥ 0.5 em open items; teste de paráfrases ≥ 3 |
-| LGPD viola se entrevista expõe servidor identificável | TCLE robusto + k-anonimato ≥ 5 + retenção limitada |
 | Custo escala se cliente cancela contrato após coleta | contrato com cláusula de não-reembolso pós-fase B |
 | Calibração funciona em domínio A mas não em B | painel separado por domínio; nunca extrapolar entre setores |
 

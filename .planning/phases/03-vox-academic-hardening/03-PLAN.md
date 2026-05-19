@@ -25,18 +25,13 @@
 
 Commit pattern: `feat(vox-science): T{N} — {curta descrição}`.
 
-### Onda 2 — Disclaimer + Executive Package
-
 | # | Tarefa | Arquivo | LoC est. | Testes |
 |---|---|---|---|---|
-| T9 | R3a — Constante `LGPD_DISCLAIMER` + injetar em `executive_package.py` sumário | `backend/app/services/executive_package.py` | +20 | snapshot test |
-| T10 | R3b — Injetar disclaimer em rodapé MD/HTML/PDF em `report_exporter.py` | `backend/app/services/report_exporter.py` | +30 | +3 testes |
 
 ### Onda 3 — Frontend UI
 
 | # | Tarefa | Arquivo | LoC est. | Testes |
 |---|---|---|---|---|
-| T11 | R3c — Banner LGPD persistente acima do conteúdo no Step4Report | `frontend/src/components/Step4Report.vue` | +25 | manual |
 | T12 | R1+R2 UI — cards DPD/Wasserstein/KL no painel science | `frontend/src/components/Step4Report.vue` | +80 | manual |
 | T13 | R5 UI — label "Teto epistêmico ≤0.50" no claim level card | `frontend/src/components/Step4Report.vue` | +15 | manual |
 | T14 | R6 UI — chip "Replicado em N modelos" se replicators>0 | `frontend/src/components/Step4Report.vue` | +20 | manual |
@@ -73,7 +68,6 @@ Commit pattern: `feat(vox-science): T{N} — {curta descrição}`.
 ## Cronograma estimado
 
 - Onda 1 (backend metrics+artifacts): **3–4 h**
-- Onda 2 (disclaimer): **30 min**
 - Onda 3 (UI): **1–2 h**
 - Onda 4 (docs): **45 min**
 - Onda 5 (validação E2E): **1 h**
@@ -84,7 +78,6 @@ Commit pattern: `feat(vox-science): T{N} — {curta descrição}`.
 ## Pontos de checkpoint (commitar trabalho a cada)
 
 1. Após Onda 1 (vox_science endurecido + testes).
-2. Após Onda 2 (disclaimer).
 3. Após Onda 3 (UI).
 4. Após Onda 4 (docs).
 5. Após Onda 5 com TUDO verde (caso contrário, voltar e corrigir).

@@ -14,7 +14,6 @@ from .report_agent import ReportManager
 from .inteia_report_html import inteia_renderer_metadata, render_inteia_report_html
 from .report_method_checklist import evaluate_report_method_checklist
 from .safe_markdown_renderer import render_safe_markdown
-from .vox_science.artifacts import LGPD_DISCLAIMER
 
 
 EXPORT_FILENAMES = {
@@ -164,14 +163,7 @@ def create_report_export(report_id: str) -> dict[str, Any]:
     export_dir = resolve_export_dir(report_id, export_id)
     export_dir.mkdir(parents=True, exist_ok=False)
 
-    raw_markdown = _read_report_markdown(report_id, report.markdown_content)
-    # R3b (fase 03): cabecalho + rodape LGPD em todo bundle exportado (MD/HTML/PDF).
-    markdown_with_disclaimer = (
-        f"> **Aviso LGPD (Vox Science / Mirofish):** {LGPD_DISCLAIMER}\n\n"
-        f"{raw_markdown}\n\n---\n\n"
-        f"*{LGPD_DISCLAIMER}*\n"
-    )
-    full_result = render_safe_markdown(markdown_with_disclaimer)
+    full_result = render_safe_markdown(_read_report_markdown(report_id, report.markdown_content))
     evidence_result = render_safe_markdown(_evidence_annex_markdown(report_id))
 
     _safe_child(export_dir, "full_report.html").write_text(
@@ -242,7 +234,6 @@ def create_report_export(report_id: str) -> dict[str, Any]:
         "files": files,
         "download_filenames": sorted(EXPORT_FILENAMES),
         "internal_path": str(export_dir),
-        "lgpd_disclaimer": LGPD_DISCLAIMER,
         "claim_positioning": "exploratorio_auditado",
     }
     _write_json(_safe_child(export_dir, "export_manifest.json"), export_manifest)

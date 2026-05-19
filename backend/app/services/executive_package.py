@@ -11,7 +11,6 @@ from typing import Any
 from .inteia_report_html import inteia_renderer_metadata, render_inteia_report_html
 from .report_agent import ReportManager
 from .safe_markdown_renderer import render_safe_markdown
-from .vox_science.artifacts import LGPD_DISCLAIMER
 
 
 EXECUTIVE_PACKAGE_FILENAMES = {
@@ -164,12 +163,7 @@ def build_executive_package(report_id: str, *, output_dir: Path | None = None) -
         for filename in ARTIFACT_INPUTS
     }
 
-    summary_md = _read_report_markdown(report_id, report.markdown_content)
-    # R3a (fase 03): bloco LGPD obrigatorio no topo do sumario executivo.
-    summary_md_with_disclaimer = (
-        f"> **Aviso LGPD (Vox Science / Mirofish):** {LGPD_DISCLAIMER}\n\n{summary_md}"
-    )
-    summary_result = render_safe_markdown(summary_md_with_disclaimer)
+    summary_result = render_safe_markdown(_read_report_markdown(report_id, report.markdown_content))
     annex_result = render_safe_markdown(_evidence_annex_markdown(report_id, artifacts))
 
     summary_path = package_dir / "executive_summary.html"
@@ -223,7 +217,6 @@ def build_executive_package(report_id: str, *, output_dir: Path | None = None) -
             "executive_summary.html": inteia_renderer_metadata(summary_result.metadata),
             "evidence_annex.html": inteia_renderer_metadata(annex_result.metadata),
         },
-        "lgpd_disclaimer": LGPD_DISCLAIMER,
         "claim_positioning": "exploratorio_auditado",
     }
 

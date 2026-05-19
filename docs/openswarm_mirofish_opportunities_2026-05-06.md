@@ -55,7 +55,6 @@ No Mirofish, o equivalente e uma camada `deliverable_quality`:
 
 - renderizar `report.source.html` em screenshot;
 - detectar paginas em branco, blocos ausentes, texto estourando e tabelas largas;
-- garantir que cadeia de custodia, auditoria de evidencias e disclaimer de `diagnostic_only` aparecem no export;
 - bloquear export cliente quando o relatorio nao e `publishable`.
 
 ### 4. Orquestrador que roteia, nao executa

@@ -18,7 +18,6 @@
 | 2 | `npm run build` | sem warning novo | build verde 10.8s, apenas chunk-size warning pré-existente | ✅ |
 | 3 | Smoke test API | 11 artefatos + R1–R8 preenchidos | `test_phase03_smoke.py` 2/2 passed | ✅ |
 | 4 | Playwright E2E console limpo | 0 error / 0 warning | **0 error, 0 warning, 0 network failure** após fix `35fd71e` (mission-bundle 409 → 200 pending). Validado por `tests/phase03_e2e_validation.py`. | ✅ |
-| 4b | UI exibe science gate, claim level, disclaimer, métricas DPD/Wasserstein, ceiling 0.50 | todos visíveis | **6/6 selectors confirmados via `browser_evaluate`** | ✅ |
 | 5 | `docs/MAPA_SISTEMA.md` reflete novos campos | sim | seção "Posicionamento metodológico" com tabela R1–R10 | ✅ |
 | 6 | `README.md` declara "exploratório auditado" | sim | bloco adicionado abaixo do subtítulo | ✅ |
 | 7 | Memórias registradas | LEARNINGS + MEMORY + STATE | Onda 6 (próxima após este relatório) | em andamento |
@@ -27,8 +26,6 @@
 
 ```javascript
 {
-  lgpdBanner: true,
-  lgpdText: "LGPD art. 7º IVEsta análise é exploratória. Decisões sensíveis (RH, disciplina, segurança, direito individual) exigem painel humano auditor",
   ceiling: "Teto epistêmico construto latente · r ≤ 0.50",
   dpd: "DPD 0.02 (limite 0.15)",
   replicators: "Replicado em 1 modelo  · KL máx 0.02",

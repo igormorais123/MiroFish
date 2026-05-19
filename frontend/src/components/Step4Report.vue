@@ -290,11 +290,6 @@
           </div>
         </div>
 
-        <div v-if="voxScienceVisible" class="vox-lgpd-banner" data-testid="vox-lgpd-banner">
-          <span class="vox-lgpd-tag mono">LGPD art. 7º IV</span>
-          <span class="vox-lgpd-text">{{ voxLgpdDisclaimer }}</span>
-        </div>
-
         <div v-if="voxScienceVisible" class="vox-science-panel" :class="voxSciencePanelClass">
           <div class="vox-science-header">
             <div class="vox-science-title-row">
@@ -2309,14 +2304,6 @@ const voxModelRunRegistry = computed(() => {
 
 const voxPromptRegistry = computed(() => {
   return parseArtifactContent(artifactContentByName('prompt_registry.json')) || null
-})
-
-const voxLgpdDisclaimer = computed(() => {
-  return (
-    'Esta análise é exploratória. Decisões sensíveis (RH, disciplina, segurança, ' +
-    'direito individual) exigem painel humano auditor independente. ' +
-    'Compatível com LGPD art. 7º IV.'
-  )
 })
 
 const voxLatentCeiling = computed(() => claimPolicyAudit.value?.latent_construct_ceiling)
@@ -4469,35 +4456,6 @@ watch(() => props.reportId, (newId) => {
 }
 
 /* Fase 03 — vox academic hardening */
-.vox-lgpd-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(201, 149, 42, 0.12), rgba(201, 149, 42, 0.02));
-  border: 1px solid rgba(201, 149, 42, 0.45);
-  border-radius: 10px;
-  margin-bottom: 14px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #4a3a14;
-}
-
-.vox-lgpd-tag {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  background: #c9952a;
-  color: #fff;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.vox-lgpd-text {
-  flex: 1;
-}
-
 .vox-science-pill-row {
   display: flex;
   flex-wrap: wrap;

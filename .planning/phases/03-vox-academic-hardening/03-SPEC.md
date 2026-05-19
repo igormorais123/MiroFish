@@ -7,8 +7,6 @@
 
 ## 1. Goal travado (falsificável)
 
-Endurecer metodologicamente o Vox Science Harness implementando 8 recomendações acadêmicas extraídas da revisão 2024–2026 sobre limitações de biografias sintéticas. O sistema permanece posicionado como **exploratório auditado** (níveis C0–C2). Após esta fase, qualquer relatório gerado pelo Mirofish deve passar por gate adicional que valida: paridade demográfica, disclaimer LGPD presente, prompt registrado com hash, teto epistêmico declarado, replicabilidade documentada, prompt biográfico estruturado, e teste-cego executado.
-
 ## 2. Requisitos funcionais (R)
 
 ### R1 — Métricas multi-dimensão em `fidelity_report.json`
@@ -32,11 +30,7 @@ Endurecer metodologicamente o Vox Science Harness implementando 8 recomendaçõe
 
 **Falsificável:** Teste com `fidelity_report` mock cujo DPD=0.20 → gate sai FAIL. Outro com DPD=0.10 → gate PASS.
 
-### R3 — Disclaimer LGPD em relatórios
-
 **O quê:** Todo relatório exportado (MD, HTML, PDF) e a UI do Step4Report.vue devem exibir literalmente:
-
-> "Esta análise é exploratória. Decisões sensíveis (RH, disciplina, segurança, direito individual) exigem painel humano auditor independente. Compatível com LGPD art. 7º IV."
 
 Localização:
 - `executive_package.py`: bloco fixo no início do sumário executivo.
@@ -146,7 +140,6 @@ Status de "PRONTO" só após todos os 7 critérios:
 1. ✅ Todos `pytest` verde, incluindo ≥1 teste novo por requisito R1–R8.
 2. ✅ `npm run build` verde, sem warning novo.
 3. ✅ Smoke test API: `POST /api/report/...` retorna relatório com 11 artefatos + campos R1–R8 preenchidos.
-4. ✅ Playwright E2E: navegação Step1→Step4 sem erro/warning no console; UI exibe todos elementos (science gate, claim level, disclaimer LGPD, métricas DPD/Wasserstein, ceiling 0.50).
 5. ✅ `docs/MAPA_SISTEMA.md` reflete novos campos.
 6. ✅ `README.md` declara "exploratório auditado".
 7. ✅ Memórias atualizadas em `MEMORY.md`, `CONTEXTO_ATIVO.md`, `.planning/STATE.md`, `.planning/LEARNINGS_VOX_ACADEMIC_HARDENING.md`.
@@ -170,4 +163,3 @@ Status de "PRONTO" só após todos os 7 critérios:
 
 ## 8. Próximo passo
 
-`/gsd-discuss-phase 03 --auto` para esclarecer áreas cinzas técnicas (escolha exata de replicators LLM, formato OSF, locais exatos do disclaimer no Vue).

@@ -8,8 +8,6 @@ Escopo: MiroFish / Vox Sintetica / harness de simulacao sintetica ancorada
 
 A restricao e parte do metodo: nao faremos entrevistas longas, novos questionarios, novo painel humano ou nova calibracao humana. O objetivo e extrair o maximo com dados publicos, documentos ja existentes, artefatos internos do MiroFish e avaliacao computacional rigorosa.
 
-A ambicao do produto nao deve ser reduzida por disclaimers derrotistas. A forma correta e separar duas camadas:
-
 - Camada interna: gates, rastreabilidade, incerteza, robustez, baselines publicos e auditoria de claims.
 - Camada externa: linguagem forte, executiva e confiante: simulacao calibrada, inteligencia sintetica, sinais de adesao, cenarios de decisao, sensibilidade por segmento e lastro metodologico.
 

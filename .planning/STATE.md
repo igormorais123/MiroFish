@@ -6,7 +6,6 @@ Atualizado em: 2026-05-19
 
 - **Milestone:** v1.3 — Consultoria por Simulação Auditável
 - **Status:** P0 + Fase 03 (Vox Academic Hardening) implementados e validados localmente.
-- **Validação:** `python -m pytest backend/tests -q` com **347 testes aprovados** (era 322 antes da Fase 03; 25 testes novos para R1–R8 + smoke E2E); `npm run build` verde (sem warning novo); Playwright E2E confirma UI exibindo banner LGPD, teto epistêmico r ≤ 0.50, DPD com limite, replicadores e teste-cego.
 - **Servidores locais verificados:** backend `http://127.0.0.1:5001/health` 200 e frontend `http://127.0.0.1:5173` 200.
 - **Posicionamento travado:** **exploratório auditado** (C0–C2). C3–C4 bloqueados sem painel humano. Roadmap Tier S contingente em `docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md`.
 
@@ -52,8 +51,6 @@ Atualizado em: 2026-05-19
 5. Continuar testes de API e frontend, hoje ainda sem suite automatizada de componentes.
 
 ## Roadmap Evolution
-
-- 2026-05-19: Fase 03 (vox-academic-hardening) adicionada — implementar 8 recomendações acadêmicas (Wasserstein/KL/MAE/DPD, disclaimer LGPD, prompt_hash, ceiling 0.50, replicabilidade multi-LLM, prompt biográfico estruturado, teste-cego, roadmap Tier S). Posicionamento travado: exploratório auditado.
 
 ## Histórico relevante
 

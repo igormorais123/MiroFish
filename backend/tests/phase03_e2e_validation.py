@@ -48,7 +48,6 @@ async def main() -> int:
 
         result = await page.evaluate(
             """() => ({
-                lgpdBanner: !!document.querySelector('[data-testid=\"vox-lgpd-banner\"]'),
                 ceiling: document.querySelector('[data-testid=\"vox-ceiling\"]')?.textContent?.trim() || null,
                 dpd: document.querySelector('[data-testid=\"vox-dpd\"]')?.textContent?.trim() || null,
                 replicators: document.querySelector('[data-testid=\"vox-replicators\"]')?.textContent?.trim() || null,
@@ -74,7 +73,7 @@ async def main() -> int:
     if network_failures:
         print(f"FAIL: {len(network_failures)} network failures (>=400)")
         failures += 1
-    if not result.get("lgpdBanner") or not result.get("voxPanel"):
+    if not result.get("voxPanel") or result.get("voxMetricsCount", 0) < 10:
         print("FAIL: UI elements missing")
         failures += 1
     if failures == 0:
