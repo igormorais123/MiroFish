@@ -1,7 +1,28 @@
 # Mapa do Sistema MiroFish INTEIA — GPS para IAs
 
 > Documento de orientação técnica para instâncias de IA (Claude Code, Codex, Cursor, Copilot).
-> Atualizado 2026-05-11. Use em paralelo com `CLAUDE.md`.
+> Atualizado 2026-05-19. Use em paralelo com `CLAUDE.md`.
+
+## ⚠️ Posicionamento metodológico (Fase 03 — Vox Academic Hardening)
+
+O Mirofish INTEIA está posicionado como **produto exploratório auditado**. Implementa, a partir da Fase 03, 8 recomendações acadêmicas derivadas da revisão 2024–2026 sobre limitações de biografias sintéticas:
+
+| Recomendação | Onde no código |
+|---|---|
+| R1 — métricas Wasserstein/KL/MAE/DPD/variância/temporal | `backend/app/services/vox_science/metrics.py` + `fidelity_report.json` |
+| R2 — blocker DPD > 0.15 em `harness_science_gate.json` | `vox_science/artifacts.py` |
+| R3 — disclaimer LGPD art. 7º IV em MD/HTML/PDF/UI | `executive_package.py`, `report_exporter.py`, `Step4Report.vue` |
+| R4 — `prompt_hash` SHA-256 + `git_commit_sha` | `prompt_registry.json` (schema v2) |
+| R5 — `latent_construct_ceiling=0.50` + bloqueio >0.65 | `claim_policy_audit.json` (schema v2) |
+| R6 — `replicators[]` + `inter_model_divergence` | `model_run_registry.json` (schema v2) |
+| R7 — prompt biográfico estruturado (3 campos, 200 tokens) | `prompt_registry.json` (schema v2) |
+| R8 — `blind_test` com validação literal | `fidelity_report.json` |
+| R10 — roadmap Tier S (calibração com painel humano) | [`docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md`](superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md) |
+
+Constantes travadas em `vox_science/artifacts.py`:
+`DPD_BLOCKER_THRESHOLD=0.15`, `LATENT_CONSTRUCT_CEILING=0.50`,
+`CORRELATION_ALERT_THRESHOLD=0.65`, `PROMPT_FIELD_TOKEN_LIMIT=200`,
+`LGPD_DISCLAIMER` (texto literal).
 
 ---
 
