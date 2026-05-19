@@ -59,6 +59,23 @@ def test_cors_default_rejects_untrusted_origin():
     assert "Access-Control-Allow-Origin" not in response.headers
 
 
+def test_cors_debug_allows_vite_default_origin(monkeypatch):
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+
+    class DebugConfig(app_module.Config):
+        DEBUG = True
+
+    client = app_module.create_app(DebugConfig).test_client()
+
+    response = client.get(
+        "/api/internal/v1/health/public",
+        headers={"Origin": "http://localhost:5173"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["Access-Control-Allow-Origin"] == "http://localhost:5173"
+
+
 def test_request_logging_does_not_record_json_body(monkeypatch):
     debug_messages = []
 
