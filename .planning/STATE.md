@@ -1,13 +1,14 @@
 # STATE — MiroFish INTEIA
 
-Atualizado em: 2026-05-04
+Atualizado em: 2026-05-19
 
 ## Current
 
-- **Milestone:** v1.3 — Consultoria por Simulação Auditavel
-- **Status:** P0 estrutural implementado e validado localmente.
-- **Validação:** `python -m pytest backend\tests` com 76 testes aprovados; `npm run build` aprovado; `git diff --check` sem erro de whitespace.
-- **Servidores locais verificados:** backend `http://localhost:5001/health` e frontend `http://localhost:5173` responderam 200.
+- **Milestone:** v1.3 — Consultoria por Simulação Auditável
+- **Status:** P0 + Fase 03 (Vox Academic Hardening) implementados e validados localmente.
+- **Validação:** `python -m pytest backend/tests -q` com **347 testes aprovados** (era 322 antes da Fase 03; 25 testes novos para R1–R8 + smoke E2E); `npm run build` verde (sem warning novo); Playwright E2E confirma UI exibindo banner LGPD, teto epistêmico r ≤ 0.50, DPD com limite, replicadores e teste-cego.
+- **Servidores locais verificados:** backend `http://127.0.0.1:5001/health` 200 e frontend `http://127.0.0.1:5173` 200.
+- **Posicionamento travado:** **exploratório auditado** (C0–C2). C3–C4 bloqueados sem painel humano. Roadmap Tier S contingente em `docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md`.
 
 ## O que mudou nesta fase
 
