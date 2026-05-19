@@ -7,9 +7,34 @@ report/harness state that already exists, without inventing human calibration.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
+import subprocess
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
+
+from .metrics import (
+    demographic_parity_difference,
+    intra_group_variance,
+    kl_divergence,
+    mean_absolute_error,
+    temporal_stability,
+    wasserstein_1d,
+)
+
+
+# Threshold travado pela Fase 03 (vox-academic-hardening).
+DPD_BLOCKER_THRESHOLD = 0.15
+LATENT_CONSTRUCT_CEILING = 0.50
+CORRELATION_ALERT_THRESHOLD = 0.65
+PROMPT_FIELD_TOKEN_LIMIT = 200
+
+
+LGPD_DISCLAIMER = (
+    "Esta análise é exploratória. Decisões sensíveis (RH, disciplina, "
+    "segurança, direito individual) exigem painel humano auditor "
+    "independente. Compatível com LGPD art. 7º IV."
+)
 
 
 VOX_SCIENCE_FILENAMES = (
@@ -40,6 +65,16 @@ def build_vox_science_artifacts(
     source_text: str | None = None,
     assembled_content: str | None = None,
     model_name: str | None = None,
+    biography: Mapping[str, str] | None = None,
+    replicators: Sequence[Mapping[str, Any]] | None = None,
+    target_variable: str | None = None,
+    subgroup_rates: Mapping[str, float] | None = None,
+    samples_by_group: Mapping[str, Sequence[float]] | None = None,
+    baseline_distribution: Sequence[float] | None = None,
+    sample_distribution: Sequence[float] | None = None,
+    temporal_baseline: Sequence[float] | None = None,
+    reported_correlations: Mapping[str, float] | None = None,
+    evidence_overrides: Mapping[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Build the P0 Vox Science artifact set for a report."""
     generated_at = _now_iso()
@@ -51,7 +86,13 @@ def build_vox_science_artifacts(
     domain = _detect_domain(requirement, source_text or assembled_content or "")
     baselines = _baseline_sources(domain)
     anchors = _public_data_anchors(domain, baselines)
-    prompt_registry = _prompt_registry(requirement, domain, generated_at)
+    prompt_registry = _prompt_registry(
+        requirement,
+        domain,
+        generated_at,
+        biography=biography,
+        target_variable=target_variable,
+    )
     model_registry = _model_run_registry(
         report_id=report_id,
         simulation_id=simulation_id,
@@ -60,13 +101,27 @@ def build_vox_science_artifacts(
         generated_at=generated_at,
         quality_gate=gate,
         prompt_registry=prompt_registry,
+        replicators=replicators,
     )
     synthetic_manifest = _synthetic_manifest(
         simulation_id=simulation_id,
         quality_gate=gate,
         generated_at=generated_at,
     )
-    fidelity = _fidelity_report(gate, evidence, baselines, synthetic_manifest, generated_at)
+    fidelity = _fidelity_report(
+        gate,
+        evidence,
+        baselines,
+        synthetic_manifest,
+        generated_at,
+        subgroup_rates=subgroup_rates,
+        samples_by_group=samples_by_group,
+        baseline_distribution=baseline_distribution,
+        sample_distribution=sample_distribution,
+        temporal_baseline=temporal_baseline,
+        target_variable=target_variable,
+        prompt_registry=prompt_registry,
+    )
     pimmur = _pimmur_audit(gate, anchors, prompt_registry, generated_at)
     compost = _compost_audit(baselines, prompt_registry, generated_at)
     claim_policy = _claim_policy_audit(
@@ -76,6 +131,8 @@ def build_vox_science_artifacts(
         pimmur=pimmur,
         compost=compost,
         generated_at=generated_at,
+        reported_correlations=reported_correlations,
+        evidence_overrides=evidence_overrides,
     )
     science_gate = _science_gate(
         quality_gate=gate,
@@ -249,29 +306,70 @@ def _public_data_anchors(
     return anchors
 
 
-def _prompt_registry(requirement: str, domain: Mapping[str, str], generated_at: str) -> dict[str, Any]:
+def _prompt_registry(
+    requirement: str,
+    domain: Mapping[str, str],
+    generated_at: str,
+    *,
+    biography: Mapping[str, str] | None = None,
+    target_variable: str | None = None,
+) -> dict[str, Any]:
     base_question = requirement or "Avaliar aceitacao, resistencia e condicoes de mudanca diante da proposta."
     paraphrases = [
         base_question,
         f"Como voce avaliaria a proposta considerando seu contexto de {domain['population']}?",
         "Quais sinais de aceitacao, resistencia e condicoes de mudanca aparecem diante deste cenario?",
     ]
-    return {
-        "schema": "mirofish.vox.prompt_registry.v1",
+
+    if biography:
+        bio_ctx = _truncate_tokens(biography.get("biographical_context", ""), PROMPT_FIELD_TOKEN_LIMIT)
+        role_ctx = _truncate_tokens(biography.get("role_context", ""), PROMPT_FIELD_TOKEN_LIMIT)
+        scenario_ctx = _truncate_tokens(biography.get("scenario_context", ""), PROMPT_FIELD_TOKEN_LIMIT)
+        legacy = False
+    else:
+        bio_ctx = _truncate_tokens(
+            f"Perfil ancorado em dados publicos do dominio {domain['id']} ({domain['population']}).",
+            PROMPT_FIELD_TOKEN_LIMIT,
+        )
+        role_ctx = _truncate_tokens(
+            f"Participante caracterizado pelos baselines publicos do dominio {domain['id']}.",
+            PROMPT_FIELD_TOKEN_LIMIT,
+        )
+        scenario_ctx = _truncate_tokens(base_question, PROMPT_FIELD_TOKEN_LIMIT)
+        legacy = True
+
+    questions = [
+        {
+            "question_id": "q_core_acceptance_001",
+            "construct": "proposal_acceptance_resistance",
+            "claim_use": "C2",
+            "biographical_context": bio_ctx,
+            "role_context": role_ctx,
+            "scenario_context": scenario_ctx,
+            "paraphrases": paraphrases,
+            "response_schema": {"type": "mixed", "closed": "likert_5", "open": "rationale"},
+            "randomization_policy": "rotate_options_when_closed",
+            "forbidden_context": ["target_distribution", "expected_answer", "validation_outcome"],
+            "target_variable": target_variable,
+            "legacy_schema": legacy,
+            "token_limits": {
+                "biographical_context": PROMPT_FIELD_TOKEN_LIMIT,
+                "role_context": PROMPT_FIELD_TOKEN_LIMIT,
+                "scenario_context": PROMPT_FIELD_TOKEN_LIMIT,
+            },
+        }
+    ]
+    payload = {
+        "schema": "mirofish.vox.prompt_registry.v2",
         "generated_at": generated_at,
-        "prompt_family": "vox_public_data_grounded_v1",
-        "questions": [
-            {
-                "question_id": "q_core_acceptance_001",
-                "construct": "proposal_acceptance_resistance",
-                "claim_use": "C2",
-                "paraphrases": paraphrases,
-                "response_schema": {"type": "mixed", "closed": "likert_5", "open": "rationale"},
-                "randomization_policy": "rotate_options_when_closed",
-                "forbidden_context": ["target_distribution", "expected_answer", "validation_outcome"],
-            }
-        ],
+        "prompt_family": "vox_public_data_grounded_v2",
+        "schema_migration": "v1_to_v2_structured_biography",
+        "questions": questions,
     }
+    payload["prompt_hash"] = _canonical_sha256(payload)
+    payload["git_commit_sha"] = _git_head_sha()
+    payload["osf_preregistration_url"] = None
+    return payload
 
 
 def _model_run_registry(
@@ -283,16 +381,13 @@ def _model_run_registry(
     generated_at: str,
     quality_gate: Mapping[str, Any],
     prompt_registry: Mapping[str, Any],
+    replicators: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    prompt_hash = _hash_dict(prompt_registry)
+    prompt_hash = prompt_registry.get("prompt_hash") or _hash_dict(prompt_registry)
     metrics = _metrics(quality_gate)
-    return {
-        "schema": "mirofish.vox.model_run_registry.v1",
-        "generated_at": generated_at,
-        "report_id": report_id,
-        "simulation_id": simulation_id,
-        "graph_id": graph_id,
-        "model": model_name or "configured_llm_agent_model",
+    primary = {
+        "name": model_name or "configured_llm_agent_model",
+        "role": "primary",
         "temperature_policy": {
             "closed_item": 0.2,
             "open_item": 0.5,
@@ -303,6 +398,59 @@ def _model_run_registry(
             "minimum_seeds_per_paraphrase": 5,
             "status": "planned_or_partial_trace",
         },
+    }
+    replicator_list: list[dict[str, Any]] = []
+    inter_divergence: dict[str, Any] | None = None
+    if replicators:
+        for replicator in replicators:
+            replicator_list.append(
+                {
+                    "name": str(replicator.get("name", "unknown")),
+                    "role": "replicator",
+                    "version": replicator.get("version"),
+                    "temperature": replicator.get("temperature"),
+                    "seed": replicator.get("seed"),
+                    "response_distribution": list(replicator.get("response_distribution", []) or []),
+                }
+            )
+        # Calculate pairwise KL divergence between primary and each replicator.
+        primary_dist = list(
+            next(
+                (r.get("primary_distribution", []) for r in replicators if r.get("primary_distribution")),
+                [],
+            )
+        )
+        pairs: list[dict[str, Any]] = []
+        max_value = 0.0
+        for replicator in replicator_list:
+            dist = replicator.get("response_distribution") or []
+            if not primary_dist or not dist or len(primary_dist) != len(dist):
+                continue
+            value = kl_divergence(primary_dist, dist)
+            pairs.append(
+                {
+                    "pair": ["primary", replicator["name"]],
+                    "value": round(value, 6),
+                }
+            )
+            max_value = max(max_value, value)
+        inter_divergence = {
+            "metric": "kl_divergence",
+            "pairs": pairs,
+            "max_value": round(max_value, 6) if pairs else None,
+        }
+    return {
+        "schema": "mirofish.vox.model_run_registry.v2",
+        "generated_at": generated_at,
+        "report_id": report_id,
+        "simulation_id": simulation_id,
+        "graph_id": graph_id,
+        "primary_model": primary,
+        "replicators": replicator_list,
+        "inter_model_divergence": inter_divergence,
+        "model": primary["name"],
+        "temperature_policy": primary["temperature_policy"],
+        "seed_policy": primary["seed_policy"],
         "prompt_registry_hash": prompt_hash,
         "observed_harness_metrics": {
             "total_actions": _int(metrics.get("total_actions_count") or metrics.get("total_actions")),
@@ -346,6 +494,14 @@ def _fidelity_report(
     baselines: list[Mapping[str, Any]],
     synthetic_manifest: Mapping[str, Any],
     generated_at: str,
+    *,
+    subgroup_rates: Mapping[str, float] | None = None,
+    samples_by_group: Mapping[str, Sequence[float]] | None = None,
+    baseline_distribution: Sequence[float] | None = None,
+    sample_distribution: Sequence[float] | None = None,
+    temporal_baseline: Sequence[float] | None = None,
+    target_variable: str | None = None,
+    prompt_registry: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     metrics = _metrics(quality_gate)
     diversity = metrics.get("diversity") if isinstance(metrics.get("diversity"), Mapping) else {}
@@ -358,19 +514,50 @@ def _fidelity_report(
     baseline_validation = any(source.get("allowed_for_validation") for source in baselines)
     trace_score = min(1.0, (profiles / 100.0) * 0.35 + (actions / 100.0) * 0.35 + distinct * 0.15 + entropy * 0.15)
     robustness_score = round(max(0.0, min(1.0, trace_score)), 4)
+
+    # R1 — multi-metric block (Wasserstein, KL, MAE, DPD, intra variance, temporal).
+    wasserstein_val: float | None = None
+    kl_val: float | None = None
+    mae_val: float | None = None
+    if baseline_distribution and sample_distribution:
+        wasserstein_val = round(wasserstein_1d(baseline_distribution, sample_distribution), 6)
+        kl_val = round(kl_divergence(baseline_distribution, sample_distribution), 6)
+        mae_val = round(mean_absolute_error(baseline_distribution, sample_distribution), 6)
+    dpd_block = demographic_parity_difference(subgroup_rates) if subgroup_rates else None
+    intra_var = intra_group_variance(samples_by_group) if samples_by_group else None
+    temporal_score: float | None = None
+    if temporal_baseline and sample_distribution:
+        temporal_score = round(temporal_stability(temporal_baseline, sample_distribution), 6)
+
+    multi_metric = {
+        "wasserstein_distance": wasserstein_val,
+        "kl_divergence": kl_val,
+        "mae": mae_val,
+        "dpd": dpd_block,
+        "intra_group_variance": intra_var,
+        "temporal_stability": temporal_score,
+    }
+    dpd_max = dpd_block.get("__max__", {}).get("value") if dpd_block else None
+    dpd_violation = bool(dpd_max is not None and dpd_max > DPD_BLOCKER_THRESHOLD)
+
+    # R8 — blind test: validate target_variable is not present literally in any prompt field.
+    blind = _blind_test_block(target_variable, prompt_registry)
+
     passes = bool(
         quality_gate.get("passes_gate") is True
         and profiles > 0
         and actions > 0
         and robustness_score >= 0.45
         and evidence_passes is not False
+        and not dpd_violation
+        and blind["masked_in_prompt"] is not False
     )
     return {
-        "schema": "mirofish.vox.fidelity_report.v1",
+        "schema": "mirofish.vox.fidelity_report.v2",
         "generated_at": generated_at,
         "overall_score": robustness_score,
         "baseline_validation_available": baseline_validation,
-        "mean_absolute_error_pp": None,
+        "mean_absolute_error_pp": mae_val,
         "subgroup_max_error_pp": None,
         "variance_ratio": round(max(0.5, min(1.0, (distinct + entropy + behavior_entropy) / 3)), 4)
         if any((distinct, entropy, behavior_entropy))
@@ -382,6 +569,47 @@ def _fidelity_report(
         "passes_gate": passes,
         "threshold_status": "green" if passes and robustness_score >= 0.7 else "yellow" if passes else "red",
         "measurement_mode": "trace_based_until_full_seed_paraphrase_matrix",
+        "multi_metric": multi_metric,
+        "dpd_max": dpd_max,
+        "dpd_threshold": DPD_BLOCKER_THRESHOLD,
+        "dpd_violation": dpd_violation,
+        "blind_test": blind,
+    }
+
+
+def _blind_test_block(
+    target_variable: str | None,
+    prompt_registry: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not target_variable:
+        return {
+            "target_variable": None,
+            "masked_in_prompt": None,
+            "recovery_score": None,
+            "method": "not_applicable",
+        }
+    if not prompt_registry:
+        return {
+            "target_variable": target_variable,
+            "masked_in_prompt": None,
+            "recovery_score": None,
+            "method": "literal_substring",
+        }
+    target_norm = target_variable.lower().strip()
+    leak_detected = False
+    for question in prompt_registry.get("questions", []) or []:
+        for field in ("biographical_context", "role_context", "scenario_context"):
+            value = (question.get(field) or "").lower()
+            if target_norm and target_norm in value:
+                leak_detected = True
+                break
+        if leak_detected:
+            break
+    return {
+        "target_variable": target_variable,
+        "masked_in_prompt": not leak_detected,
+        "recovery_score": 0.0 if not leak_detected else 1.0,
+        "method": "literal_substring",
     }
 
 
@@ -445,13 +673,34 @@ def _claim_policy_audit(
     pimmur: Mapping[str, Any],
     compost: Mapping[str, Any],
     generated_at: str,
+    reported_correlations: Mapping[str, float] | None = None,
+    evidence_overrides: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     has_forecast = bool(forecast.get("previsoes") or forecast.get("forecasts"))
     claim_level = _claim_level(fidelity, pimmur, compost, has_forecast)
+
+    blocked_claims: list[dict[str, Any]] = []
+    overrides = evidence_overrides or {}
+    if reported_correlations:
+        for construct, value in reported_correlations.items():
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if numeric > CORRELATION_ALERT_THRESHOLD and not overrides.get(construct):
+                blocked_claims.append(
+                    {
+                        "construct": construct,
+                        "reported_correlation": numeric,
+                        "threshold": CORRELATION_ALERT_THRESHOLD,
+                        "reason": "correlation_above_ceiling_without_external_evidence",
+                    }
+                )
+
     return {
-        "schema": "mirofish.vox.claim_policy_audit.v1",
+        "schema": "mirofish.vox.claim_policy_audit.v2",
         "generated_at": generated_at,
-        "passes_gate": claim_level in {"C1", "C2", "C3", "C4"},
+        "passes_gate": claim_level in {"C1", "C2", "C3", "C4"} and not blocked_claims,
         "claim_level": claim_level,
         "decision_packet_conviction": decision.get("conviction_operational"),
         "allowed_language": _allowed_language(claim_level),
@@ -461,6 +710,14 @@ def _claim_policy_audit(
             "intencao real de voto sem baseline",
             "representa a populacao sem calibracao publica",
         ],
+        "latent_construct_ceiling": LATENT_CONSTRUCT_CEILING,
+        "correlation_alert_threshold": CORRELATION_ALERT_THRESHOLD,
+        "blocked_claims": blocked_claims,
+        "epistemic_ceiling_notice": (
+            "Construtos latentes (persuadibilidade, integridade, identidade social) "
+            "têm teto estrutural ~0.50 com agentes sintéticos. Correlações reportadas "
+            f"acima de {CORRELATION_ALERT_THRESHOLD} sem evidência externa adicional são bloqueadas."
+        ),
     }
 
 
@@ -493,6 +750,16 @@ def _science_gate(
         warnings.append("full_seed_paraphrase_matrix_pending")
     if fidelity.get("mean_absolute_error_pp") is None:
         warnings.append("external_baseline_error_not_measured_yet")
+    # R2 — blocker: demographic parity violation.
+    if fidelity.get("dpd_violation"):
+        blockers.append("demographic_parity_violation")
+    # R8 — blind test leak.
+    blind = fidelity.get("blind_test") if isinstance(fidelity.get("blind_test"), Mapping) else {}
+    if blind.get("masked_in_prompt") is False:
+        blockers.append("blind_test_leak")
+    # R5 — blocked claims by epistemic ceiling.
+    if claim_policy.get("blocked_claims"):
+        blockers.append("claim_above_correlation_ceiling")
 
     passes = not blockers
     claim_level = "C0" if not passes else str(claim_policy.get("claim_level") or "C1")
@@ -575,3 +842,35 @@ def _clean_text(value: str | None) -> str:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _truncate_tokens(text: str, max_tokens: int) -> str:
+    """Trunca por whitespace (proxy de tokens). Mantem semantica."""
+    if not text:
+        return ""
+    tokens = text.split()
+    if len(tokens) <= max_tokens:
+        return text
+    return " ".join(tokens[:max_tokens])
+
+
+def _canonical_sha256(payload: Mapping[str, Any]) -> str:
+    """SHA-256 do JSON canonico (sorted keys)."""
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _git_head_sha() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip() or None
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    return None
