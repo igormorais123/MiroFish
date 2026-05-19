@@ -26,6 +26,17 @@ ARTIFACT_INPUTS = [
     "mission_bundle.json",
     "forecast_ledger.json",
     "cost_meter.json",
+    "methodology_manifest.json",
+    "baseline_registry.json",
+    "public_data_anchors.json",
+    "prompt_registry.json",
+    "model_run_registry.json",
+    "synthetic_interviews_manifest.json",
+    "fidelity_report.json",
+    "pimmur_audit.json",
+    "compost_audit.json",
+    "claim_policy_audit.json",
+    "harness_science_gate.json",
 ]
 
 
@@ -206,6 +217,7 @@ def build_executive_package(report_id: str, *, output_dir: Path | None = None) -
             "executive_summary.html": inteia_renderer_metadata(summary_result.metadata),
             "evidence_annex.html": inteia_renderer_metadata(annex_result.metadata),
         },
+        "claim_positioning": "exploratorio_auditado",
     }
 
     manifest_path = package_dir / "executive_package_manifest.json"

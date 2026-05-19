@@ -58,6 +58,7 @@ def report_store(monkeypatch, tmp_path):
 def test_export_creates_draft_with_safe_html_and_manifest(report_store):
     report = _publishable_report()
     _save_publishable_report(report)
+    ReportManager.save_json_artifact(report.report_id, "harness_science_gate.json", {"passes_gate": True})
 
     manifest = create_report_export(report.report_id)
 
@@ -69,9 +70,11 @@ def test_export_creates_draft_with_safe_html_and_manifest(report_store):
 
     export_dir = report_store / report.report_id / "exports" / manifest["export_id"]
     full_html = (export_dir / "full_report.html").read_text(encoding="utf-8")
+    annex_html = (export_dir / "evidence_annex.html").read_text(encoding="utf-8")
     assert "<script>" not in full_html
     assert "&lt;script&gt;" in full_html
     assert "javascript:alert" not in full_html
+    assert "harness_science_gate.json" in annex_html
 
     bundle_manifest = json.loads((export_dir / "report_bundle_manifest.json").read_text(encoding="utf-8"))
     assert set(bundle_manifest["expected_files"]) == {

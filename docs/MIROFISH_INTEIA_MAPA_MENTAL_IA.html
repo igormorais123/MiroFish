@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MiroFish INTEIA - Mapa Mental para IA</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171b22;
+      --panel-2: #202633;
+      --ink: #f3efe4;
+      --muted: #b8b0a1;
+      --line: #46505f;
+      --gold: #c9952a;
+      --blue: #74a7ff;
+      --green: #6bd18a;
+      --red: #f07878;
+      --violet: #b58cff;
+      --cyan: #64d2ff;
+      --shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    code { color: #f8d98a; background: rgba(201,149,42,.1); padding: 1px 5px; border-radius: 4px; }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid #2b3240;
+      background: #11151c;
+      padding: 22px 18px;
+    }
+
+    aside h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      color: var(--gold);
+      letter-spacing: .02em;
+    }
+
+    aside p {
+      color: var(--muted);
+      margin: 0 0 18px;
+      font-size: 13px;
+    }
+
+    nav a {
+      display: block;
+      padding: 8px 10px;
+      margin: 3px 0;
+      border-radius: 7px;
+      color: #d8d3c8;
+      border: 1px solid transparent;
+    }
+
+    nav a:hover {
+      background: rgba(201,149,42,.12);
+      border-color: rgba(201,149,42,.32);
+    }
+
+    main { min-width: 0; }
+
+    .hero {
+      padding: 34px 42px 22px;
+      border-bottom: 1px solid #2b3240;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(201,149,42,.18), transparent 28%),
+        linear-gradient(135deg, #121822, #0f1115 60%);
+    }
+
+    .hero h2 {
+      font-size: clamp(28px, 4vw, 48px);
+      margin: 0 0 10px;
+      line-height: 1.04;
+    }
+
+    .hero .subtitle {
+      max-width: 980px;
+      color: var(--muted);
+      font-size: 17px;
+      margin: 0;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .chip {
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: #e8e0d3;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .section {
+      padding: 28px 42px;
+      border-bottom: 1px solid #2b3240;
+    }
+
+    .section h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      color: #f8d98a;
+    }
+
+    .section > p {
+      margin-top: 0;
+      color: var(--muted);
+      max-width: 1020px;
+    }
+
+    .map-wrap {
+      background: #0b0f15;
+      border: 1px solid #2d3646;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid #2d3646;
+      background: #141923;
+    }
+
+    .toolbar .left, .toolbar .right { display: flex; gap: 8px; align-items: center; }
+    button, input {
+      background: #202633;
+      color: var(--ink);
+      border: 1px solid #3a4352;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--gold); }
+    input { min-width: 260px; }
+
+    svg {
+      width: 100%;
+      height: min(78vh, 820px);
+      display: block;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .edge { stroke: var(--line); stroke-width: 3; fill: none; opacity: .82; }
+    .edge.gold { stroke: rgba(201,149,42,.8); }
+    .edge.blue { stroke: rgba(116,167,255,.75); }
+    .edge.green { stroke: rgba(107,209,138,.75); }
+    .node rect {
+      rx: 12;
+      stroke-width: 2;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.4));
+    }
+    .node text { fill: #f8f1e4; font-weight: 650; pointer-events: none; }
+    .node .small { fill: #d0c8b8; font-size: 12px; font-weight: 500; }
+    .node:hover rect { stroke: #fff; }
+    .center rect { fill: #312719; stroke: var(--gold); }
+    .product rect { fill: #17243d; stroke: var(--blue); }
+    .code rect { fill: #142d21; stroke: var(--green); }
+    .method rect { fill: #2a1f3b; stroke: var(--violet); }
+    .ops rect { fill: #34211f; stroke: var(--red); }
+    .data rect { fill: #17313b; stroke: var(--cyan); }
+    .doc rect { fill: #2b2a23; stroke: var(--gold); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid #2d3646;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      color: #f8d98a;
+      font-size: 18px;
+    }
+
+    .card p, .card li { color: #d2cabd; }
+    .card ul { margin: 8px 0 0; padding-left: 18px; }
+
+    details {
+      background: var(--panel);
+      border: 1px solid #2d3646;
+      border-radius: 10px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 12px 14px;
+      background: var(--panel-2);
+      color: #f8d98a;
+      font-weight: 700;
+    }
+
+    details .inside {
+      padding: 14px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #303847;
+      padding: 9px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th { color: #f8d98a; background: #171c25; }
+    td { color: #d8d0c3; }
+
+    .callout {
+      border-left: 4px solid var(--gold);
+      background: rgba(201,149,42,.08);
+      padding: 13px 16px;
+      border-radius: 8px;
+      color: #eadfce;
+    }
+
+    .path {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      counter-reset: step;
+    }
+
+    .step {
+      background: #121821;
+      border: 1px solid #2d3646;
+      border-radius: 10px;
+      padding: 13px;
+      min-height: 112px;
+      position: relative;
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      color: var(--gold);
+      font-weight: 800;
+      opacity: .8;
+    }
+
+    .step strong { display: block; color: #fff2cb; margin-bottom: 5px; }
+    .step span { color: var(--muted); font-size: 13px; }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: relative; height: auto; }
+      .hero, .section { padding: 24px 18px; }
+      input { min-width: 0; width: 100%; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar .left, .toolbar .right { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <h1>MiroFish INTEIA</h1>
+      <p>Mapa mental SVG + wiki para estudo por IA, auditoria e continuação de trabalho.</p>
+      <nav>
+        <a href="#mapa">Mapa mental</a>
+        <a href="#karpathy">Técnica wiki/Karpathy</a>
+        <a href="#produto">Produto</a>
+        <a href="#pipeline">Pipeline</a>
+        <a href="#backend">Backend</a>
+        <a href="#frontend">Frontend</a>
+        <a href="#documentos">Documentos</a>
+        <a href="#inventario">Inventário</a>
+        <a href="#pesquisa">Pesquisa sintética</a>
+        <a href="#metodo">Método interno</a>
+        <a href="#operacao">Operação</a>
+        <a href="#auditoria">Auditoria</a>
+        <a href="#proximos">Próximos trabalhos</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <h2>Mapa mental completo para IA estudar o MiroFish INTEIA</h2>
+        <p class="subtitle">
+          Este HTML transforma a pasta em uma wiki visual navegável: o SVG mostra o sistema inteiro em uma visão única, e os cartões abaixo explicam os conceitos, arquivos, riscos, fluxos e trilhas de continuação.
+        </p>
+        <div class="chips">
+          <span class="chip">522 arquivos no inventário-base</span>
+          <span class="chip">+2 mapas novos</span>
+          <span class="chip">107 Markdown base</span>
+          <span class="chip">106 rotas Flask</span>
+          <span class="chip">50 testes backend</span>
+          <span class="chip">Vue 3 + Flask</span>
+          <span class="chip">Pesquisa sintética auditável</span>
+        </div>
+      </section>
+
+      <section id="mapa" class="section">
+        <h2>Grande Mapa Mental SVG</h2>
+        <p>Clique nos nós do mapa para saltar para a seção correspondente. Use zoom para estudar regiões específicas.</p>
+        <div class="map-wrap">
+          <div class="toolbar">
+            <div class="left">
+              <button type="button" onclick="zoomMap(1.12)">Zoom +</button>
+              <button type="button" onclick="zoomMap(0.88)">Zoom -</button>
+              <button type="button" onclick="resetMap()">Reset</button>
+            </div>
+            <div class="right">
+              <input id="search" type="search" placeholder="Filtrar cartões: relatório, Graphiti, Ralph, deploy..." oninput="filterCards(this.value)">
+            </div>
+          </div>
+
+          <svg viewBox="0 0 1800 1300" role="img" aria-label="Mapa mental do MiroFish INTEIA">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" fill="#637085"></path>
+              </marker>
+            </defs>
+            <g id="mapLayer">
+              <path class="edge gold" marker-end="url(#arrow)" d="M900 640 C790 500 660 420 500 320"></path>
+              <path class="edge blue" marker-end="url(#arrow)" d="M900 640 C980 500 1120 415 1320 300"></path>
+              <path class="edge green" marker-end="url(#arrow)" d="M900 640 C1050 660 1210 690 1390 760"></path>
+              <path class="edge" marker-end="url(#arrow)" d="M900 640 C740 685 575 750 420 880"></path>
+              <path class="edge" marker-end="url(#arrow)" d="M900 640 C890 790 850 930 760 1065"></path>
+              <path class="edge blue" marker-end="url(#arrow)" d="M900 640 C790 590 650 580 470 600"></path>
+              <path class="edge green" marker-end="url(#arrow)" d="M900 640 C1040 570 1190 560 1370 560"></path>
+              <path class="edge gold" marker-end="url(#arrow)" d="M900 640 C900 490 900 365 900 220"></path>
+              <path class="edge" marker-end="url(#arrow)" d="M900 640 C1010 810 1100 930 1180 1060"></path>
+
+              <a href="#produto" class="node center">
+                <g transform="translate(760 585)">
+                  <rect width="280" height="110"></rect>
+                  <text x="140" y="42" text-anchor="middle" font-size="22">MiroFish INTEIA</text>
+                  <text class="small" x="140" y="68" text-anchor="middle">simulação social + relatório Helena</text>
+                  <text class="small" x="140" y="88" text-anchor="middle">entrega auditável para decisão</text>
+                </g>
+              </a>
+
+              <a href="#produto" class="node product">
+                <g transform="translate(300 250)">
+                  <rect width="330" height="130"></rect>
+                  <text x="165" y="34" text-anchor="middle" font-size="18">Produto e promessa</text>
+                  <text class="small" x="165" y="60" text-anchor="middle">material real -> simulação -> decisão</text>
+                  <text class="small" x="165" y="82" text-anchor="middle">eleitoral, jurídico, reputação, crise</text>
+                  <text class="small" x="165" y="104" text-anchor="middle">não é chatbot nem relatório solto</text>
+                </g>
+              </a>
+
+              <a href="#pipeline" class="node product">
+                <g transform="translate(735 130)">
+                  <rect width="330" height="130"></rect>
+                  <text x="165" y="34" text-anchor="middle" font-size="18">Pipeline principal</text>
+                  <text class="small" x="165" y="60" text-anchor="middle">briefing -> grafo -> agentes</text>
+                  <text class="small" x="165" y="82" text-anchor="middle">simulação -> gate -> relatório</text>
+                  <text class="small" x="165" y="104" text-anchor="middle">pacote executivo verificável</text>
+                </g>
+              </a>
+
+              <a href="#backend" class="node code">
+                <g transform="translate(1210 235)">
+                  <rect width="330" height="145"></rect>
+                  <text x="165" y="34" text-anchor="middle" font-size="18">Backend Flask</text>
+                  <text class="small" x="165" y="60" text-anchor="middle">graph, simulation, report, internal</text>
+                  <text class="small" x="165" y="82" text-anchor="middle">106 rotas declaradas</text>
+                  <text class="small" x="165" y="104" text-anchor="middle">services: gates, pacote, forecast</text>
+                  <text class="small" x="165" y="126" text-anchor="middle">tests pytest em contratos críticos</text>
+                </g>
+              </a>
+
+              <a href="#frontend" class="node code">
+                <g transform="translate(1230 700)">
+                  <rect width="330" height="135"></rect>
+                  <text x="165" y="34" text-anchor="middle" font-size="18">Frontend Vue</text>
+                  <text class="small" x="165" y="60" text-anchor="middle">Home + wizard Step 1 a 5</text>
+                  <text class="small" x="165" y="82" text-anchor="middle">readiness, relatório, interação</text>
+                  <text class="small" x="165" y="104" text-anchor="middle">assets INTEIA e lab Helena</text>
+                </g>
+              </a>
+
+              <a href="#documentos" class="node doc">
+                <g transform="translate(240 540)">
+                  <rect width="350" height="145"></rect>
+                  <text x="175" y="34" text-anchor="middle" font-size="18">Documentação e wiki</text>
+                  <text class="small" x="175" y="60" text-anchor="middle">CLAUDE, AGENTS, README</text>
+                  <text class="small" x="175" y="82" text-anchor="middle">MAPA_SISTEMA e mapas técnicos</text>
+                  <text class="small" x="175" y="104" text-anchor="middle">planning, ops, PRD, DDD</text>
+                  <text class="small" x="175" y="126" text-anchor="middle">este HTML + GPT da pasta</text>
+                </g>
+              </a>
+
+              <a href="#pesquisa" class="node data">
+                <g transform="translate(250 820)">
+                  <rect width="340" height="145"></rect>
+                  <text x="170" y="34" text-anchor="middle" font-size="18">Pesquisa sintética</text>
+                  <text class="small" x="170" y="60" text-anchor="middle">dossiês, simulações, relatórios REL_*</text>
+                  <text class="small" x="170" y="82" text-anchor="middle">Banco Master, Sergipe, DF, jurídico</text>
+                  <text class="small" x="170" y="104" text-anchor="middle">lições anti-fabricação</text>
+                  <text class="small" x="170" y="126" text-anchor="middle">arquivo morto como evidência histórica</text>
+                </g>
+              </a>
+
+              <a href="#metodo" class="node method">
+                <g transform="translate(590 1025)">
+                  <rect width="345" height="145"></rect>
+                  <text x="172" y="34" text-anchor="middle" font-size="18">Método interno</text>
+                  <text class="small" x="172" y="60" text-anchor="middle">Ralph Loop: unidade pequena</text>
+                  <text class="small" x="172" y="82" text-anchor="middle">OpenSwarm: lanes e handoff</text>
+                  <text class="small" x="172" y="104" text-anchor="middle">AutoResearch: score e patch proposto</text>
+                  <text class="small" x="172" y="126" text-anchor="middle">não vira runtime de usuário</text>
+                </g>
+              </a>
+
+              <a href="#operacao" class="node ops">
+                <g transform="translate(1025 1020)">
+                  <rect width="360" height="150"></rect>
+                  <text x="180" y="34" text-anchor="middle" font-size="18">Operação e deploy</text>
+                  <text class="small" x="180" y="60" text-anchor="middle">GitHub é fonte única</text>
+                  <text class="small" x="180" y="82" text-anchor="middle">Vercel publica frontend</text>
+                  <text class="small" x="180" y="104" text-anchor="middle">VPS roda backend + Graphiti/Neo4j</text>
+                  <text class="small" x="180" y="126" text-anchor="middle">segredos fora do Git</text>
+                </g>
+              </a>
+
+              <a href="#auditoria" class="node data">
+                <g transform="translate(1190 515)">
+                  <rect width="365" height="130"></rect>
+                  <text x="182" y="34" text-anchor="middle" font-size="18">Auditoria e entrega</text>
+                  <text class="small" x="182" y="60" text-anchor="middle">gate estrutural e evidence audit</text>
+                  <text class="small" x="182" y="82" text-anchor="middle">forecast ledger + calibration</text>
+                  <text class="small" x="182" y="104" text-anchor="middle">manifesto/hash/download allowlist</text>
+                </g>
+              </a>
+
+              <a href="#proximos" class="node ops">
+                <g transform="translate(1140 1180)">
+                  <rect width="400" height="90"></rect>
+                  <text x="200" y="34" text-anchor="middle" font-size="18">Próximos trabalhos</text>
+                  <text class="small" x="200" y="60" text-anchor="middle">missão real, readiness completo, PDF/DOCX/deck, QA visual</text>
+                </g>
+              </a>
+
+              <g class="node doc" transform="translate(90 70)">
+                <rect width="330" height="88"></rect>
+                <text x="165" y="34" text-anchor="middle" font-size="17">Lei de leitura</text>
+                <text class="small" x="165" y="59" text-anchor="middle">não editar antes de entender gate + fonte única</text>
+              </g>
+
+              <g class="node data" transform="translate(1360 70)">
+                <rect width="330" height="88"></rect>
+                <text x="165" y="34" text-anchor="middle" font-size="17">Invariant central</text>
+                <text class="small" x="165" y="59" text-anchor="middle">relatório bonito sem evidência é risco</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section id="karpathy" class="section card-section">
+        <h2>Técnica Wiki/Karpathy Aplicada</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="karpathy wiki estudar">
+            <h3>1. Mapa topológico antes dos detalhes</h3>
+            <p>Comece pelo grafo mental: produto, pipeline, backend, frontend, documentos, pesquisa, método e operação. A IA deve saber onde está antes de ler arquivo específico.</p>
+          </article>
+          <article class="card searchable" data-tags="chunking estudo">
+            <h3>2. Chunking por domínio</h3>
+            <p>Cada pasta vira um chunk semântico: `backend` é motor, `frontend` é experiência, `docs/ops` é operação, `.ralph` é método, `_archive` é evidência histórica.</p>
+          </article>
+          <article class="card searchable" data-tags="invariantes regras">
+            <h3>3. Invariantes primeiro</h3>
+            <p>Preservar: GitHub como fonte única; relatório cliente exige gate; simulação fraca vira diagnóstico; segredo não entra no Git; método interno não aparece como produto.</p>
+          </article>
+          <article class="card searchable" data-tags="auditoria continuidade">
+            <h3>4. Trilhas de continuação</h3>
+            <p>Para continuar, escolha uma trilha: produto, pesquisa, backend, frontend, operação ou método. Não misture deploy, UX e algoritmo no mesmo PR sem necessidade.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="produto" class="section card-section">
+        <h2>Produto: o que este tema realmente é</h2>
+        <div class="callout">
+          O MiroFish INTEIA é um motor de pesquisa sintética e simulação social que transforma materiais reais em grafo, agentes, simulação, relatório Helena e pacote verificável. O objetivo não é gerar texto; é produzir decisão rastreável.
+        </div>
+        <div class="grid">
+          <article class="card searchable" data-tags="produto promessa">
+            <h3>Promessa</h3>
+            <p>Simulação auditável -> relatório publicável -> pacote executivo verificável.</p>
+            <ul>
+              <li>Eleitoral narrativo</li>
+              <li>Crise reputacional</li>
+              <li>Jurídico-institucional</li>
+              <li>Opinião pública e testes de narrativa</li>
+            </ul>
+          </article>
+          <article class="card searchable" data-tags="nao objetivos boundary">
+            <h3>Não objetivos</h3>
+            <p>Não substitui a plataforma INTEIA, não vira chatbot isolado, não deve depender cegamente de Zep, e o Vue não é a UI final de produção da INTEIA.</p>
+          </article>
+          <article class="card searchable" data-tags="helena entrega">
+            <h3>Camada Helena</h3>
+            <p>Helena é a leitura executiva final: síntese, fundamento, insight diferencial, recomendação, confiança, premissas e contradições.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="pipeline" class="section card-section">
+        <h2>Pipeline de entendimento</h2>
+        <div class="path">
+          <div class="step searchable" data-tags="pipeline briefing"><strong>Material-base</strong><span>Arquivos, briefing estruturado, contexto, atores, segmentos, canais, hipóteses e território.</span></div>
+          <div class="step searchable" data-tags="pipeline ontologia grafo"><strong>Ontologia e grafo</strong><span>Extração de entidades e relações por LLM/Graphiti, com fallback quando necessário.</span></div>
+          <div class="step searchable" data-tags="pipeline agentes"><strong>Agentes</strong><span>Perfis OASIS, poderes, personas, missões, pulso social inicial e contexto sintético.</span></div>
+          <div class="step searchable" data-tags="pipeline simulação"><strong>Simulação</strong><span>Execução social em rounds, ações, timeline, posts, comentários e métricas.</span></div>
+          <div class="step searchable" data-tags="pipeline gate auditoria"><strong>Gate</strong><span>Bloqueia relatório sem evidência suficiente, diversidade e cadeia de custódia.</span></div>
+          <div class="step searchable" data-tags="pipeline relatorio"><strong>Relatório</strong><span>ReportAgent + Helena + diagramas + reparo + attribution + checklist.</span></div>
+          <div class="step searchable" data-tags="pipeline pacote executivo"><strong>Entrega</strong><span>Forecast ledger, mission bundle, export verificado, manifesto e pacote executivo.</span></div>
+        </div>
+      </section>
+
+      <section id="backend" class="section card-section">
+        <h2>Backend: mapa de responsabilidade</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="backend api rotas flask">
+            <h3>APIs</h3>
+            <p>`graph.py`, `simulation.py`, `report.py` e `internal.py` expõem o contrato público, interno e de harness. O código atual declara 106 rotas Flask.</p>
+          </article>
+          <article class="card searchable" data-tags="backend grafo graphiti">
+            <h3>Grafo e ontologia</h3>
+            <p>`ontology_generator.py`, `graph_builder.py`, `graphiti_client.py`, `zep_tools.py` e leitores/updaters de entidade formam a camada de conhecimento.</p>
+          </article>
+          <article class="card searchable" data-tags="backend simulacao oasis">
+            <h3>Simulação</h3>
+            <p>`simulation_manager.py`, `simulation_runner.py`, `simulation_ipc.py`, `simulation_data_reader.py`, `simulation_config_generator.py` e `social_bootstrap.py` controlam execução e métricas.</p>
+          </article>
+          <article class="card searchable" data-tags="backend relatorio helena">
+            <h3>Relatório</h3>
+            <p>`report_agent.py` é o núcleo pesado; `helena_report_lab.py`, `report_diagrams.py`, `report_attribution.py`, `report_content_repair.py` e `safe_markdown_renderer.py` elevam qualidade e segurança.</p>
+          </article>
+          <article class="card searchable" data-tags="backend gate governanca">
+            <h3>Governança</h3>
+            <p>`report_system_gate.py`, `delivery_governance.py`, `decision_readiness.py`, `strategic_density_gate.py` e `report_method_checklist.py` impedem entrega fraca.</p>
+          </article>
+          <article class="card searchable" data-tags="backend pacote forecast export">
+            <h3>Entrega</h3>
+            <p>`forecast_ledger.py`, `mission_bundle.py`, `report_exporter.py`, `report_bundle_verifier.py`, `report_delivery_packet.py` e `executive_package.py` fecham o pacote auditável.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="frontend" class="section card-section">
+        <h2>Frontend: mapa de experiência</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="frontend home histórico">
+            <h3>Home</h3>
+            <p>`Home.vue` e `HistoryDatabase.vue` são a porta de entrada, histórico e início de projeto.</p>
+          </article>
+          <article class="card searchable" data-tags="frontend wizard step">
+            <h3>Wizard Step 1-5</h3>
+            <p>`Step1GraphBuild`, `Step2EnvSetup`, `Step3Simulation`, `Step4Report`, `Step5Interaction` representam a jornada inteira.</p>
+          </article>
+          <article class="card searchable" data-tags="frontend readiness step3">
+            <h3>Readiness no Step 3</h3>
+            <p>Traduz gates técnicos em próxima ação clara. O botão de relatório continua obedecendo o backend.</p>
+          </article>
+          <article class="card searchable" data-tags="frontend relatorio pacote step4">
+            <h3>Relatório no Step 4</h3>
+            <p>Exibe seções, logs, delivery package, reparos, export, previsões e pacote executivo.</p>
+          </article>
+          <article class="card searchable" data-tags="frontend interação chat">
+            <h3>Interação no Step 5</h3>
+            <p>Permite conversar com o relatório ou entrevistar agentes simulados, sem substituir o relatório auditado.</p>
+          </article>
+          <article class="card searchable" data-tags="frontend visual grafo tema">
+            <h3>Visual</h3>
+            <p>`GraphPanel.vue`, `InteiaBackground.vue` e `inteia-theme.css` mantêm identidade visual e exploração do grafo.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="documentos" class="section">
+        <h2>Documentos e onde estudar</h2>
+        <details open>
+          <summary>Entrada obrigatória e produto</summary>
+          <div class="inside">
+            <table>
+              <tr><th>Arquivo</th><th>Função</th></tr>
+              <tr><td><code>CLAUDE.md</code> e <code>AGENTS.md</code></td><td>Regras de branch, PR, segurança, idioma e coordenação multi-instância.</td></tr>
+              <tr><td><code>README.md</code></td><td>Visão pública, fluxo, stack, deploy e documentação.</td></tr>
+              <tr><td><code>PRD_MIROFISH_INTEIA_V2.md</code></td><td>Produto inicial: motor premium de simulação social.</td></tr>
+              <tr><td><code>PLANO_ADAPTACAO_MIROFISH_INTEIA_V2.md</code></td><td>Boundary INTEIA x MiroFish, pilotos e riscos.</td></tr>
+              <tr><td><code>BACKLOG_TECNICO_MIROFISH_INTEIA_V2.md</code></td><td>Épicos MI-001 a MI-091.</td></tr>
+              <tr><td><code>RELATORIO_HELENA_EFESTO_MIROFISH.md</code></td><td>Diagnóstico crítico que explica a criação dos gates anti-fabricação.</td></tr>
+            </table>
+          </div>
+        </details>
+        <details>
+          <summary>Mapas e wiki</summary>
+          <div class="inside">
+            <table>
+              <tr><th>Arquivo</th><th>Função</th></tr>
+              <tr><td><code>docs/GPT_DA_PASTA_MIROFISH_INTEIA.md</code></td><td>Índice consolidado textual da pasta inteira.</td></tr>
+              <tr><td><code>docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html</code></td><td>Este mapa mental SVG/HTML navegável.</td></tr>
+              <tr><td><code>docs/MAPA_SISTEMA.md</code></td><td>GPS técnico macro.</td></tr>
+              <tr><td><code>docs/_mapa_frontend.md</code></td><td>Mapa profundo do Vue.</td></tr>
+              <tr><td><code>docs/_mapa_backend_api.md</code></td><td>Mapa da API, config e modelos.</td></tr>
+              <tr><td><code>docs/_mapa_backend_services.md</code></td><td>Mapa de services e utils.</td></tr>
+            </table>
+          </div>
+        </details>
+        <details>
+          <summary>Operação e implantação</summary>
+          <div class="inside">
+            <table>
+              <tr><th>Arquivo</th><th>Função</th></tr>
+              <tr><td><code>docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md</code></td><td>GitHub como fonte, URLs corretas, VPS, deploy e política.</td></tr>
+              <tr><td><code>docs/ops/VERCEL_DEPLOY.md</code></td><td>Configuração Vercel e rewrites.</td></tr>
+              <tr><td><code>docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md</code></td><td>Política de segredos e variáveis.</td></tr>
+              <tr><td><code>docs/ops/RELATORIO_RECONCILIACAO_2026-05-10.md</code></td><td>Reconciliação VPS x GitHub.</td></tr>
+              <tr><td><code>docs/ops/MIROFISH_HARNESS_API.md</code></td><td>Contrato interno para consumidores como Vox.</td></tr>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section id="inventario" class="section">
+        <h2>Inventário explícito para consulta por IA</h2>
+        <p>Esta seção coloca dentro do HTML as listas que uma IA precisa para auditar ou continuar o trabalho sem abrir todos os arquivos às cegas.</p>
+        <details open>
+          <summary>Raiz e produto</summary>
+          <div class="inside">
+            <table>
+              <tr><th>Arquivo</th><th>Uso na auditoria</th><th>Quando abrir</th></tr>
+              <tr><td><code>CLAUDE.md</code></td><td>Regras canônicas de agentes, PR, branch e deploy.</td><td>Sempre antes de editar.</td></tr>
+              <tr><td><code>AGENTS.md</code></td><td>Resumo operacional para agentes não-Claude.</td><td>Sempre antes de editar.</td></tr>
+              <tr><td><code>README.md</code></td><td>Visão pública e operação básica.</td><td>Para explicar produto e rodar local.</td></tr>
+              <tr><td><code>PRD_MIROFISH_INTEIA_V2.md</code></td><td>Requisitos originais do motor premium.</td><td>Para decisões de produto.</td></tr>
+              <tr><td><code>PLANO_ADAPTACAO_MIROFISH_INTEIA_V2.md</code></td><td>Boundary INTEIA x MiroFish, pilotos e riscos.</td><td>Para integração e escopo.</td></tr>
+              <tr><td><code>BACKLOG_TECNICO_MIROFISH_INTEIA_V2.md</code></td><td>Épicos e tarefas históricas.</td><td>Para entender origem das features.</td></tr>
+              <tr><td><code>RELATORIO_HELENA_EFESTO_MIROFISH.md</code></td><td>Diagnóstico crítico do primeiro teste.</td><td>Para entender gates anti-fabricação.</td></tr>
+              <tr><td><code>Consultoria_Pesquisa_Analise_Dados.md</code></td><td>Dossiê de inteligência e caso de pesquisa.</td><td>Para estudar uso analítico.</td></tr>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>Documentação técnica e operacional</summary>
+          <div class="inside">
+            <table>
+              <tr><th>Grupo</th><th>Arquivos</th><th>Função</th></tr>
+              <tr><td>Mapas</td><td><code>docs/MAPA_SISTEMA.md</code>, <code>docs/_mapa_frontend.md</code>, <code>docs/_mapa_backend_api.md</code>, <code>docs/_mapa_backend_services.md</code></td><td>Arquitetura, componentes, rotas e services.</td></tr>
+              <tr><td>Wiki IA</td><td><code>docs/GPT_DA_PASTA_MIROFISH_INTEIA.md</code>, <code>docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html</code></td><td>Leitura topológica, mapa mental e trilhas.</td></tr>
+              <tr><td>Ops</td><td><code>docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md</code>, <code>VERCEL_DEPLOY.md</code>, <code>SEGREDOS_E_AMBIENTES_MIROFISH.md</code>, <code>RELATORIO_RECONCILIACAO_2026-05-10.md</code></td><td>GitHub, Vercel, VPS, segredos e reconciliação.</td></tr>
+              <tr><td>Sistêmico</td><td><code>docs/ops/ROLLOUT_INTELIGENCIA_SISTEMICA_2026-05-07.md</code>, <code>SUPER_AUDITORIA_IMPLANTACAO_PLANO_2026-05-07.md</code>, <code>VALIDACAO_POS_MERGE_INTELIGENCIA_SISTEMICA_2026-05-07.md</code></td><td>Entrega da pilha Ralph/OpenSwarm/AutoResearch e riscos residuais.</td></tr>
+              <tr><td>PRD/DDD</td><td><code>docs/prd/*</code>, <code>docs/ddd/*</code></td><td>Contrato de readiness, pacote executivo e bounded contexts.</td></tr>
+              <tr><td>Planos</td><td><code>docs/superpowers/plans/*</code></td><td>Planos de implementação detalhados.</td></tr>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>Código e pastas de execução</summary>
+          <div class="inside">
+            <table>
+              <tr><th>Pasta</th><th>Conteúdo</th><th>Como auditar</th></tr>
+              <tr><td><code>backend/app/api</code></td><td>4 blueprints principais e API interna/harness.</td><td>Buscar decorators de rota e contratos frontend.</td></tr>
+              <tr><td><code>backend/app/services</code></td><td>Grafo, simulação, relatório, gates, forecast, pacote e catálogos.</td><td>Auditar por domínio, começando por gates e entrega.</td></tr>
+              <tr><td><code>backend/app/utils</code></td><td>LLM, Graphiti, parsing, retry, token tracker, safe IDs.</td><td>Auditar segurança, custo e falha externa.</td></tr>
+              <tr><td><code>backend/tests</code></td><td>50 arquivos pytest.</td><td>Confirmar cobertura dos contratos críticos antes de mudar.</td></tr>
+              <tr><td><code>frontend/src/components</code></td><td>Step 1 a 5, GraphPanel, History, Background.</td><td>Auditar fluxo do usuário e estados bloqueados.</td></tr>
+              <tr><td><code>frontend/src/api</code></td><td>Clientes graph/simulation/report.</td><td>Conferir drift com backend.</td></tr>
+              <tr><td><code>.ralph</code>, <code>.autoresearch</code>, <code>runs</code></td><td>Método interno e loops registrados.</td><td>Usar para entender execução, não para UI de produto.</td></tr>
+              <tr><td><code>_archive</code></td><td>Relatórios, screenshots e scripts históricos.</td><td>Usar como evidência histórica, não estado atual.</td></tr>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section id="pesquisa" class="section card-section">
+        <h2>Pesquisa sintética e evidências históricas</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="pesquisa banco master df">
+            <h3>Banco Master / DF</h3>
+            <p>`Consultoria_Pesquisa_Analise_Dados.md` e `REL_MiroFish_BancoMaster...` registram análise política, financeira e institucional.</p>
+          </article>
+          <article class="card searchable" data-tags="pesquisa sergipe eleitoral">
+            <h3>Sergipe 2026</h3>
+            <p>`REL_sergipe_ddae1b1a.md` mostra uso eleitoral: camadas territoriais, transferência e fragmentação.</p>
+          </article>
+          <article class="card searchable" data-tags="pesquisa juridico julgamento">
+            <h3>Jurídico-institucional</h3>
+            <p>`REL_julgamento_9c556293.md` e o plano de Piloto C servem como referência para influência cruzada entre justiça, política, mídia e opinião pública.</p>
+          </article>
+          <article class="card searchable" data-tags="pesquisa falhas fabricação">
+            <h3>Falhas que viraram método</h3>
+            <p>O primeiro relatório local inventou citações e percentuais. A resposta técnica foi criar gates, auditoria de números, citação literal e separação demo/cliente.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="metodo" class="section card-section">
+        <h2>Método interno: Ralph, OpenSwarm e AutoResearch</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="ralph loop metodo">
+            <h3>Ralph Loop</h3>
+            <p>Unidade pequena, executar, verificar, auditar, registrar aprendizado e gerar próxima ação. Fica em `.ralph/` e `runs/LOOP-*`.</p>
+          </article>
+          <article class="card searchable" data-tags="openswarm handoff lanes">
+            <h3>OpenSwarm como padrão</h3>
+            <p>Não importar runtime. Usar apenas lanes, handoff limpo, pacote composto e validação antes de entrega.</p>
+          </article>
+          <article class="card searchable" data-tags="autoresearch karpathy opro">
+            <h3>AutoResearch</h3>
+            <p>Inspirado em Karpathy/OPRO/PBT/TextGrad. Mede score, gera ranking e pode propor diff. Não aplica patch automático em produção.</p>
+          </article>
+          <article class="card searchable" data-tags="metodo risco ui">
+            <h3>Não vazar para usuário</h3>
+            <p>Ralph, Swarm, AutoResearch, lanes e handoff são linguagem de engenharia. A UI deve falar em prontidão, próxima ação, relatório e pacote.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="operacao" class="section card-section">
+        <h2>Operação: o que mantém a casa em pé</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="github fonte unica pr">
+            <h3>GitHub fonte única</h3>
+            <p>Toda mudança deve sair de branch própria, commit, push e PR para `main`. Não trabalhar direto em `main`.</p>
+          </article>
+          <article class="card searchable" data-tags="vercel frontend deploy">
+            <h3>Vercel</h3>
+            <p>Frontend público em `https://inteia.com.br/mirofish`; API pública correta sob `/mirofish/api/...`.</p>
+          </article>
+          <article class="card searchable" data-tags="vps backend docker">
+            <h3>VPS</h3>
+            <p>Deploy deve partir de `/opt/mirofish-git`. Containers: app, Graphiti e Neo4j. Portas presas ao localhost.</p>
+          </article>
+          <article class="card searchable" data-tags="segredos env">
+            <h3>Segredos</h3>
+            <p>`.env`, tokens, uploads, logs vivos, `.vercel`, `node_modules`, dist e backups não entram no Git.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="auditoria" class="section card-section">
+        <h2>Auditoria e regras de segurança analítica</h2>
+        <div class="grid">
+          <article class="card searchable" data-tags="auditoria citação evidencia">
+            <h3>Citação direta</h3>
+            <p>Precisa existir literalmente no corpus local. Paráfrase, tradução ou inferência devem ser marcadas.</p>
+          </article>
+          <article class="card searchable" data-tags="auditoria numero probabilidade">
+            <h3>Números e probabilidades</h3>
+            <p>Percentuais, probabilidades e contagens precisam vir do corpus, da simulação, ou ser rotulados como inferência calibrada.</p>
+          </article>
+          <article class="card searchable" data-tags="auditoria gate">
+            <h3>Gate estrutural</h3>
+            <p>Relatório cliente exige simulação concluída, evidência local, diversidade, trace social e auditoria.</p>
+          </article>
+          <article class="card searchable" data-tags="auditoria pacote">
+            <h3>Pacote executivo</h3>
+            <p>Só pode ser gerado quando `delivery_status` é publicável. Downloads usam allowlist e manifesto.</p>
+          </article>
+          <article class="card searchable" data-tags="auditoria deste mapa limites">
+            <h3>Limite deste mapa</h3>
+            <p>Este HTML cobre conteúdo por síntese, índice e trilha de navegação. Ele não transcreve integralmente todos os documentos, para continuar útil como mapa de estudo.</p>
+          </article>
+          <article class="card searchable" data-tags="auditoria local ignorado segredo">
+            <h3>Arquivos ignorados</h3>
+            <p>`.env`, uploads, logs, `.vercel`, dependências e ambientes locais são mapeados por existência e política, não por conteúdo.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="proximos" class="section">
+        <h2>Próximos trabalhos recomendados</h2>
+        <div class="path">
+          <div class="step searchable" data-tags="proximo missao real"><strong>Validar missão real</strong><span>Rodar simulação curta com dados reais e registrar Step 3, Step 4, relatório, pacote e downloads.</span></div>
+          <div class="step searchable" data-tags="proximo prd ddd readiness"><strong>Reconciliar PRD/DDD</strong><span>Atualizar contrato real de readiness para não reintroduzir estados antigos.</span></div>
+          <div class="step searchable" data-tags="proximo testes readiness"><strong>Cobrir estados faltantes</strong><span>Adicionar testes explícitos para `report_diagnostic`, `report_blocked` e `report_in_progress`.</span></div>
+          <div class="step searchable" data-tags="proximo pdf docx deck"><strong>Entregáveis ricos</strong><span>Depois da missão real: PDF, DOCX, deck curto e histórico de pacotes.</span></div>
+          <div class="step searchable" data-tags="proximo qa visual"><strong>QA visual automatizado</strong><span>Screenshots dos estados principais, pacote bloqueado, pacote pronto e downloads.</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let scale = 1;
+    const layer = document.getElementById("mapLayer");
+
+    function zoomMap(factor) {
+      scale = Math.max(0.55, Math.min(2.2, scale * factor));
+      layer.setAttribute("transform", `translate(${900 - 900 * scale} ${650 - 650 * scale}) scale(${scale})`);
+    }
+
+    function resetMap() {
+      scale = 1;
+      layer.removeAttribute("transform");
+    }
+
+    function filterCards(query) {
+      const q = query.trim().toLowerCase();
+      document.querySelectorAll(".searchable").forEach((el) => {
+        const text = (el.textContent + " " + (el.dataset.tags || "")).toLowerCase();
+        el.classList.toggle("hidden", q && !text.includes(q));
+      });
+    }
+  </script>
+</body>
+</html>

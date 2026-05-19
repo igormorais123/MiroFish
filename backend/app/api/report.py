@@ -1013,13 +1013,16 @@ def get_mission_bundle(report_id: str):
             return jsonify({"success": False, "error": "Relatório não encontrado"}), 404
         if report.status != ReportStatus.COMPLETED:
             status_value = report.status.value if hasattr(report.status, "value") else str(report.status)
+            # 200 com pending=true (Fase 03): estado normal de "em geracao",
+            # evita poluir console do navegador com 4xx.
             return jsonify({
                 "success": False,
+                "pending": True,
                 "error": "Pacote final ainda não está pronto",
                 "data": {
                     "status": status_value,
                 },
-            }), 409
+            }), 200
 
         existing_bundle = ReportManager.load_json_artifact(report_id, "mission_bundle.json")
         if isinstance(existing_bundle, dict):
@@ -1042,13 +1045,16 @@ def get_mission_bundle(report_id: str):
             if payload is None
         ]
         if missing_artifacts:
+            # 200 com pending=true: artefatos ainda nao construidos. Cliente
+            # (frontend) pode re-tentar quando o usuario gerar pacote completo.
             return jsonify({
                 "success": False,
+                "pending": True,
                 "error": "Pacote final aguardando arquivos essenciais",
                 "data": {
                     "arquivos_pendentes": missing_artifacts,
                 },
-            }), 409
+            }), 200
 
         cost_meter = required_artifacts["cost_meter.json"] or {}
         power_selection = required_artifacts["power_selection.json"] or {}

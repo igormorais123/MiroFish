@@ -12,6 +12,8 @@
 
 *Fork adaptado para o contexto brasileiro: simulação político-eleitoral, jurídico-institucional e análise de crise.*
 
+**Posicionamento metodológico:** Vox Science Harness opera com 11 artefatos auditáveis, métricas Wasserstein/KL/MAE/DPD, teto epistêmico r ≤ 0.50 para construtos latentes, teste-cego de variáveis-alvo e gate científico bloqueando paridade demográfica acima de 15%. Calibração com painel humano fica em [roadmap contingente](docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md).
+
 [Sobre](#sobre) · [O que mudou no fork](#o-que-mudou-no-fork-inteia) · [Como Rodar](#como-rodar) · [Deploy](#deploy-com-docker) · [Documentação](#documentação)
 
 </div>
@@ -229,6 +231,9 @@ Requer conta Apify com token em `APIFY_TOKEN`. O Mirofish prossegue normalmente 
 | [Mapa de Documentação](.planning/DOCUMENTATION_MAP.md) | Onde ficam planos, mapas técnicos, memória e arquivos históricos |
 | [Plano Consultoria Simulada](.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md) | Implementação estrutural da promessa INTEIA de simular, verificar e entregar |
 | [Mapas Técnicos](.planning/codebase/STRUCTURE.md) | Estrutura, arquitetura, integrações, testes e riscos do código |
+| [GPT da Pasta](docs/GPT_DA_PASTA_MIROFISH_INTEIA.md) | Índice consolidado de ativos, documentos, mapas Mermaid e leitura para IA |
+| [Mapa Mental IA](docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html) | HTML navegável com SVG, busca e mapa visual completo para estudo por IA |
+| [Auditoria do Mapa IA](docs/AUDITORIA_MAPA_IA_2026-05-18.md) | Achados, ajustes e limites dos artefatos de mapa criados |
 | [Aprendizados Consultoria Auditável](.planning/LEARNINGS_CONSULTORIA_SIMULADA.md) | Aprendizados e decisões da fase v1.3 |
 | [Mapeamento PT-BR](MAPEAMENTO_PT-BR.md) | Referência de tradução |
 | [Integração Lenia](LENIA_MIROFISH_INTEGRACAO.md) | Ponte com sistema eleitoral |

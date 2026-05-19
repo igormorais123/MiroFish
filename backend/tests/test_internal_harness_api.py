@@ -40,7 +40,13 @@ def test_harness_evidence_bundle_retorna_contrato_para_vox(monkeypatch):
         completed_at="2026-05-13T10:00:00",
     )
 
-    artifacts = [{"name": "forecast_ledger.json"}, {"name": "system_gate.json"}]
+    artifacts = [
+        {"name": "forecast_ledger.json"},
+        {"name": "system_gate.json"},
+        {"name": "methodology_manifest.json"},
+        {"name": "baseline_registry.json"},
+        {"name": "harness_science_gate.json"},
+    ]
     payloads = {
         "forecast_ledger.json": {
             "previsoes": [
@@ -55,6 +61,17 @@ def test_harness_evidence_bundle_retorna_contrato_para_vox(monkeypatch):
             ]
         },
         "system_gate.json": {"passes_gate": True},
+        "methodology_manifest.json": {
+            "population": "Servidores publicos federais ativos",
+            "calibration_mode": "public_data_and_existing_assets",
+        },
+        "baseline_registry.json": {
+            "anchors": [
+                {"name": "PEP/MGI"},
+                {"name": "Pesquisa Vozes/MGI-Enap"},
+            ]
+        },
+        "harness_science_gate.json": {"passes_gate": True},
     }
 
     monkeypatch.setattr(ReportManager, "get_report_by_simulation", lambda simulation_id: report)
@@ -83,6 +100,11 @@ def test_harness_evidence_bundle_retorna_contrato_para_vox(monkeypatch):
     assert data["forecasts"][0]["horizon"] == "30 dias"
     assert data["forecasts"][0]["probability"] == 0.68
     assert data["forecasts"][0]["uncertainty"] == 0.5
+    assert data["methodology"]["contractVersion"] == "mirofish.vox_science.v1"
+    assert data["methodology"]["readiness"] == "passed"
+    assert data["methodology"]["newHumanCollection"] is False
+    assert "PEP/MGI" in data["methodology"]["publicDataAnchors"]
+    assert data["qualityGates"][0]["status"] == "passed"
     assert data["graph"]["nodes"][0]["id"] == "sim_vox"
     assert "publishable" in data["limitations"][0]
 

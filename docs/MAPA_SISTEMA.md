@@ -1,7 +1,26 @@
 # Mapa do Sistema MiroFish INTEIA — GPS para IAs
 
 > Documento de orientação técnica para instâncias de IA (Claude Code, Codex, Cursor, Copilot).
-> Atualizado 2026-05-11. Use em paralelo com `CLAUDE.md`.
+> Atualizado 2026-05-19. Use em paralelo com `CLAUDE.md`.
+
+## Endurecimento metodológico (Fase 03 — Vox Academic Hardening)
+
+A Fase 03 implementou 7 recomendações acadêmicas derivadas da revisão 2024–2026 sobre limitações de biografias sintéticas:
+
+| Recomendação | Onde no código |
+|---|---|
+| R1 — métricas Wasserstein/KL/MAE/DPD/variância/temporal | `backend/app/services/vox_science/metrics.py` + `fidelity_report.json` |
+| R2 — blocker DPD > 0.15 em `harness_science_gate.json` | `vox_science/artifacts.py` |
+| R4 — `prompt_hash` SHA-256 + `git_commit_sha` | `prompt_registry.json` (schema v2) |
+| R5 — `latent_construct_ceiling=0.50` + bloqueio >0.65 | `claim_policy_audit.json` (schema v2) |
+| R6 — `replicators[]` + `inter_model_divergence` | `model_run_registry.json` (schema v2) |
+| R7 — prompt biográfico estruturado (3 campos, 200 tokens) | `prompt_registry.json` (schema v2) |
+| R8 — `blind_test` com validação literal | `fidelity_report.json` |
+| R10 — roadmap Tier S (calibração com painel humano) | [`docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md`](superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md) |
+
+Constantes travadas em `vox_science/artifacts.py`:
+`DPD_BLOCKER_THRESHOLD=0.15`, `LATENT_CONSTRUCT_CEILING=0.50`,
+`CORRELATION_ALERT_THRESHOLD=0.65`, `PROMPT_FIELD_TOKEN_LIMIT=200`.
 
 ---
 
@@ -22,8 +41,11 @@ Este documento é a visão macro. Quando precisar do detalhe arquivo-por-arquivo
 | [`_mapa_frontend.md`](_mapa_frontend.md) | 23 arquivos Vue/JS, 58 funções de API, props/emits/state de cada componente, fluxo wizard |
 | [`_mapa_backend_api.md`](_mapa_backend_api.md) | 58 endpoints HTTP catalogados, 45+ env vars, anatomia de cada blueprint, models, Docker/Vercel |
 | [`_mapa_backend_services.md`](_mapa_backend_services.md) | 38 services agrupados por domínio, 11 utils, 4 sequenceDiagrams de fluxos completos |
+| [`GPT_DA_PASTA_MIROFISH_INTEIA.md`](GPT_DA_PASTA_MIROFISH_INTEIA.md) | Índice consolidado de ativos, documentos, artefatos, mapas Mermaid e trilha de leitura para IA |
+| [`MIROFISH_INTEIA_MAPA_MENTAL_IA.html`](MIROFISH_INTEIA_MAPA_MENTAL_IA.html) | Mapa mental visual em HTML/SVG navegável, com zoom, busca e trilhas de estudo |
+| [`AUDITORIA_MAPA_IA_2026-05-18.md`](AUDITORIA_MAPA_IA_2026-05-18.md) | Auditoria dos mapas IA criados nesta rodada, com achados, correções e limites |
 
-Os três mapas juntos cobrem **100% dos 70 arquivos de código** e foram gerados lendo os arquivos reais (não inferindo).
+Os mapas técnicos cobrem **100% dos 70 arquivos de código** do recorte original e foram gerados lendo os arquivos reais (não inferindo). O `GPT_DA_PASTA_MIROFISH_INTEIA.md` amplia esse recorte para documentação, artefatos, histórico e leitura por IA.
 
 ---
 

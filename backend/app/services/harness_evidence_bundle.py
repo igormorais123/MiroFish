@@ -13,6 +13,29 @@ class HarnessEvidenceBundleNotFound(ValueError):
     """Levantado quando nao existe relatorio para a simulacao solicitada."""
 
 
+SCIENCE_ARTIFACTS = {
+    "methodology_manifest.json": "Manifesto metodologico e escopo da simulacao.",
+    "baseline_registry.json": "Registro de bases publicas usadas como ancoragem.",
+    "public_data_anchors.json": "Mapeamento das variaveis ancoradas em dados externos.",
+    "prompt_registry.json": "Registro versionado de prompts, parafrases e ordem de itens.",
+    "model_run_registry.json": "Registro de modelo, temperatura, seed e execucoes.",
+    "synthetic_interviews_manifest.json": "Manifesto das entrevistas sinteticas executadas.",
+    "fidelity_report.json": "Metricas de fidelidade, robustez e dispersao.",
+    "pimmur_audit.json": "Auditoria Profile, Interaction, Memory, Minimal-Control, Unawareness e Realism.",
+    "compost_audit.json": "Auditoria de contaminacao e desenho comparativo.",
+    "claim_policy_audit.json": "Auditoria de forca de alegacao e linguagem de entrega.",
+    "harness_science_gate.json": "Gate cientifico final do harness Vox.",
+}
+
+REQUIRED_SCIENCE_ARTIFACTS = (
+    "methodology_manifest.json",
+    "baseline_registry.json",
+    "prompt_registry.json",
+    "model_run_registry.json",
+    "harness_science_gate.json",
+)
+
+
 def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str, Any]:
     """Monta o bundle estavel que sistemas internos usam como evidencia MiroFish."""
     report = ReportManager.get_report_by_simulation(simulation_id)
@@ -25,6 +48,7 @@ def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str
     artifact_names = [item["name"] for item in artifacts if item.get("name")]
     forecast_ledger = ReportManager.load_json_artifact(report.report_id, "forecast_ledger.json") or {}
     decision_packet = ReportManager.load_json_artifact(report.report_id, "decision_packet.json") or {}
+    science_payloads = _load_science_payloads(report.report_id, artifact_names)
 
     return {
         "id": f"mirofish_bundle_{simulation_id}",
@@ -35,6 +59,8 @@ def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str
         "evidence": _build_evidence(report, artifacts, base_url, decision_packet),
         "graph": _build_graph(report, artifact_names, decision_packet),
         "forecasts": _build_forecasts(forecast_ledger),
+        "methodology": _build_methodology(artifact_names, science_payloads),
+        "qualityGates": _build_quality_gates(science_payloads),
         "limitations": _build_limitations(report, artifact_names, forecast_ledger),
     }
 
@@ -44,6 +70,17 @@ def _safe_artifacts(report_id: str) -> List[Dict[str, Any]]:
         return ReportManager.list_json_artifacts(report_id) or []
     except Exception:
         return []
+
+
+def _load_science_payloads(report_id: str, artifact_names: Iterable[str]) -> Dict[str, Any]:
+    available = set(artifact_names)
+    payloads: Dict[str, Any] = {}
+    for name in SCIENCE_ARTIFACTS:
+        if name not in available:
+            payloads[name] = None
+            continue
+        payloads[name] = ReportManager.load_json_artifact(report_id, name)
+    return payloads
 
 
 def _bundle_title(report: Report) -> str:
@@ -168,6 +205,124 @@ def _build_forecasts(forecast_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
         )
 
     return forecasts
+
+
+def _build_methodology(
+    artifact_names: List[str],
+    science_payloads: Dict[str, Any],
+) -> Dict[str, Any]:
+    present = [name for name in SCIENCE_ARTIFACTS if name in artifact_names]
+    missing = [name for name in SCIENCE_ARTIFACTS if name not in artifact_names]
+    methodology_manifest = science_payloads.get("methodology_manifest.json") or {}
+    baseline_registry = science_payloads.get("baseline_registry.json") or {}
+    fidelity_report = science_payloads.get("fidelity_report.json") or {}
+
+    return {
+        "contractVersion": "mirofish.vox_science.v1",
+        "mode": "public_data_grounded_synthetic_harness",
+        "calibrationMode": "public_data_and_existing_assets",
+        "newHumanCollection": False,
+        "readiness": _science_readiness(science_payloads, present),
+        "availableArtifacts": present,
+        "recommendedMissingArtifacts": missing,
+        "population": _first_present(
+            methodology_manifest.get("population"),
+            methodology_manifest.get("target_population"),
+            baseline_registry.get("population"),
+        ),
+        "publicDataAnchors": _public_data_anchor_names(baseline_registry),
+        "robustness": _robustness_summary(fidelity_report),
+    }
+
+
+def _build_quality_gates(science_payloads: Dict[str, Any]) -> List[Dict[str, Any]]:
+    gates = []
+    for name in (
+        "harness_science_gate.json",
+        "fidelity_report.json",
+        "pimmur_audit.json",
+        "compost_audit.json",
+        "claim_policy_audit.json",
+    ):
+        payload = science_payloads.get(name)
+        gates.append(
+            {
+                "id": _artifact_tag(name),
+                "artifact": name,
+                "status": _gate_status(payload),
+                "description": SCIENCE_ARTIFACTS[name],
+            }
+        )
+    return gates
+
+
+def _science_readiness(science_payloads: Dict[str, Any], present: List[str]) -> str:
+    science_gate = science_payloads.get("harness_science_gate.json")
+    if _artifact_gate_passes(science_gate):
+        return "passed"
+    if all(name in present for name in REQUIRED_SCIENCE_ARTIFACTS):
+        return "ready_for_science_gate"
+    if present:
+        return "partial"
+    return "legacy"
+
+
+def _artifact_gate_passes(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    return bool(
+        payload.get("passes_gate") is True
+        or payload.get("passes") is True
+        or payload.get("bundle_verified") is True
+        or payload.get("status") == "passed"
+    )
+
+
+def _gate_status(payload: Any) -> str:
+    if payload is None:
+        return "missing"
+    if _artifact_gate_passes(payload):
+        return "passed"
+    return "review"
+
+
+def _public_data_anchor_names(payload: Any) -> List[str]:
+    if not isinstance(payload, dict):
+        return []
+    anchors = payload.get("anchors") or payload.get("baselines") or payload.get("sources") or []
+    names = []
+    for item in anchors:
+        if isinstance(item, dict):
+            name = item.get("name") or item.get("source") or item.get("dataset")
+            if name:
+                names.append(str(name))
+        elif str(item).strip():
+            names.append(str(item).strip())
+    return names
+
+
+def _robustness_summary(payload: Any) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        key: payload[key]
+        for key in (
+            "overall_score",
+            "seed_dispersion",
+            "paraphrase_dispersion",
+            "variance_ratio",
+            "subgroup_max_error_pp",
+            "passes_gate",
+        )
+        if key in payload
+    }
+
+
+def _first_present(*values: Any) -> Optional[Any]:
+    for value in values:
+        if value not in (None, "", [], {}):
+            return value
+    return None
 
 
 def _build_limitations(report: Report, artifact_names: List[str], forecast_ledger: Dict[str, Any]) -> List[str]:

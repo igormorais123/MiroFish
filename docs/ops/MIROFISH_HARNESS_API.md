@@ -88,9 +88,64 @@ Resposta direta no contrato `mirofish.harness.v1`:
       "assumptions": []
     }
   ],
+  "methodology": {
+    "contractVersion": "mirofish.vox_science.v1",
+    "mode": "public_data_grounded_synthetic_harness",
+    "calibrationMode": "public_data_and_existing_assets",
+    "newHumanCollection": false,
+    "readiness": "passed",
+    "availableArtifacts": ["methodology_manifest.json"],
+    "recommendedMissingArtifacts": [],
+    "population": "publico-alvo declarado na missao MiroFish",
+    "publicDataAnchors": ["IBGE Censo 2022"],
+    "robustness": {
+      "overall_score": 0.78,
+      "variance_ratio": 0.72,
+      "passes_gate": true
+    }
+  },
+  "qualityGates": [
+    {
+      "id": "harness-science-gate",
+      "artifact": "harness_science_gate.json",
+      "status": "passed",
+      "description": "Gate cientifico final do harness Vox."
+    }
+  ],
   "limitations": ["delivery_status=publishable; publishable=true"]
 }
 ```
+
+### Camada Vox Science v1
+
+O bundle preserva o contrato anterior e acrescenta, quando disponivel, duas
+chaves para consumidores internos:
+
+- `methodology`: resumo leve da metodologia, populacao, fontes publicas,
+  modo de calibracao e prontidao cientifica.
+- `qualityGates`: estado dos gates cientificos vinculados a artefatos JSON.
+
+Artefatos Vox Science reconhecidos:
+
+- `methodology_manifest.json`
+- `baseline_registry.json`
+- `public_data_anchors.json`
+- `prompt_registry.json`
+- `model_run_registry.json`
+- `synthetic_interviews_manifest.json`
+- `fidelity_report.json`
+- `pimmur_audit.json`
+- `compost_audit.json`
+- `claim_policy_audit.json`
+- `harness_science_gate.json`
+
+Valores de `methodology.readiness`:
+
+- `legacy`: relatorio antigo sem artefatos Vox Science.
+- `partial`: parte dos artefatos existe.
+- `ready_for_science_gate`: artefatos minimos existem, mas o gate final ainda
+  nao aprovou.
+- `passed`: `harness_science_gate.json` aprovou.
 
 ## Base URL para consumidores
 
