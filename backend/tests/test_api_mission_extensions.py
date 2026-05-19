@@ -158,8 +158,11 @@ def test_get_mission_bundle_aguarda_arquivos_essenciais(monkeypatch):
         response, status_code = report_api.get_mission_bundle("report_api_bundle_missing")
 
     data = response.get_json()
-    assert status_code == 409
+    # Fase 03 (b05e1d7+): 409 -> 200 com pending=true para nao poluir console
+    # do navegador quando o relatorio ainda nao tem artefatos essenciais.
+    assert status_code == 200
     assert data["success"] is False
+    assert data["pending"] is True
     assert "cost_meter.json" in data["data"]["arquivos_pendentes"]
     assert saved == {}
 
@@ -186,8 +189,10 @@ def test_get_mission_bundle_aguarda_relatorio_concluido(monkeypatch):
         response, status_code = report_api.get_mission_bundle("report_api_bundle_wait")
 
     data = response.get_json()
-    assert status_code == 409
+    # Fase 03: status 200 com pending=true (em vez de 409) para estado "em geracao".
+    assert status_code == 200
     assert data["success"] is False
+    assert data["pending"] is True
     assert data["data"]["status"] == "generating"
     assert saved == {}
 
