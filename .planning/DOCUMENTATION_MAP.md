@@ -24,6 +24,9 @@ Este mapa evita duplicacao e documento fora de lugar. Para retomadas futuras:
 | `MAPEAMENTO_PT-BR.md` | Mapa de traducao PT-BR | Referencia |
 | `LENIA_MIROFISH_INTEGRACAO.md` | Ponte com sistema Lenia | Referencia |
 | `RELATORIO_HELENA_EFESTO_MIROFISH.md` | Diagnostico Helena/Efesto de 2026-04-24 | Referencia estrategica |
+| `docs/GPT_DA_PASTA_MIROFISH_INTEIA.md` | Indice consolidado de ativos, mapas Mermaid, documentos e leitura para IA | Atualizado |
+| `docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html` | Mapa mental visual em HTML/SVG navegavel para estudo por IA | Novo |
+| `docs/AUDITORIA_MAPA_IA_2026-05-18.md` | Auditoria dos mapas IA criados nesta rodada | Novo |
 
 ## `.planning`
 

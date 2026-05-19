@@ -79,7 +79,30 @@ Entregue:
 4. Memoria acumulada: relatorio aprovado vira insumo versionado da proxima rodada.
 5. Exportacao executiva com anexo tecnico de evidencias.
 
-## P2 — Avaliacao de ROI e previsao calibrada
+## P3 — Vox Academic Hardening (Fase 03)
+
+**Status:** planejada (2026-05-19).
+
+**Goal:** Implementar 8 recomendações acadêmicas (revisão 2024-2026 sobre limitações metodológicas de biografias sintéticas) preservando o posicionamento "exploratório auditado" do Mirofish INTEIA. Compatível com restrição "zero coleta humana nova".
+
+**Depends on:** P0 (gate estrutural), P0.1 (validação empírica), Vox Science Harness v2 (artefatos P0).
+
+**Plans:**
+
+- E1. Dashboard multi-métrica: Wasserstein, KL, MAE, DPD (blocker DPD>15%), variância intra-grupo, estabilidade temporal — em `fidelity_report.json` + UI Step4Report.
+- E2. Disclaimer legal explícito em MD/HTML/PDF/UI: "análise exploratória; decisão sensível exige humano; LGPD art. 7º IV".
+- E4. Pré-registro versionado: `prompt_hash` SHA-256 + `git_commit_sha` em `prompt_registry.json`.
+- E5. Teto epistêmico: `latent_construct_ceiling=0.50` em `claim_policy_audit.json`; bloqueia claim com correlação >0.65 sem evidência adicional.
+- E6. Replicabilidade ≥2 LLMs em `model_run_registry.json` com `inter_model_divergence`.
+- E7. Prompt biográfico estruturado curto: `{biographical_context, role_context, scenario_context}` limite 200 tokens/campo.
+- E8. Teste-cego: campo `blind_test` em `fidelity_report.json` valida variável-alvo não aparece literal no prompt.
+- E10. Roadmap doc para coleta humana futura (Tier S contingente).
+
+**Fora de escopo:** calibração com painel humano (fere zero-coleta), IPF/SIAPE via LAI (processo de meses), fine-tuning de LLM.
+
+**Critérios de pronto:** pytest verde, `npm run build` verde, smoke API gera relatório com 11 artefatos + campos novos, Playwright E2E sem erro de console, `docs/MAPA_SISTEMA.md` e `README.md` atualizados, memórias registradas.
+
+## P2 — Avaliação de ROI e previsão calibrada
 
 1. Benchmark contra metodo tradicional: tempo, custo, retrabalho, contradicao e utilidade decisoria.
 2. Benchmark retrospectivo com casos reais.

@@ -50,6 +50,7 @@ def test_executive_package_creates_manifest_and_html(report_store):
     ReportManager.save_report(report)
     ReportManager.save_json_artifact(report.report_id, "evidence_manifest.json", {"claims": []})
     ReportManager.save_json_artifact(report.report_id, "forecast_ledger.json", {"previsoes": []})
+    ReportManager.save_json_artifact(report.report_id, "harness_science_gate.json", {"passes_gate": True})
 
     manifest = build_executive_package(report.report_id)
 
@@ -62,6 +63,7 @@ def test_executive_package_creates_manifest_and_html(report_store):
     }
     assert "evidence_manifest.json" in manifest["artifact_inputs"]
     assert "forecast_ledger.json" in manifest["artifact_inputs"]
+    assert "harness_science_gate.json" in manifest["artifact_inputs"]
 
     package_dir = report_store / report.report_id / "executive_package"
     summary = (package_dir / "executive_summary.html").read_text(encoding="utf-8")
@@ -71,6 +73,7 @@ def test_executive_package_creates_manifest_and_html(report_store):
     assert "<script>" not in summary
     assert "&lt;script&gt;" in summary
     assert "evidence_manifest.json" in annex
+    assert "harness_science_gate.json" in annex
     assert saved_manifest["report_id"] == report.report_id
     manifest_file = next(
         item for item in saved_manifest["files"]

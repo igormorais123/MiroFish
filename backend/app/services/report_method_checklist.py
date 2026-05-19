@@ -118,6 +118,17 @@ def evaluate_report_method_checklist(report_id: str) -> dict[str, Any]:
         "mission_bundle_present": "mission_bundle.json",
         "forecast_ledger_present": "forecast_ledger.json",
         "cost_meter_present": "cost_meter.json",
+        "methodology_manifest_present": "methodology_manifest.json",
+        "baseline_registry_present": "baseline_registry.json",
+        "public_data_anchors_present": "public_data_anchors.json",
+        "prompt_registry_present": "prompt_registry.json",
+        "model_run_registry_present": "model_run_registry.json",
+        "synthetic_interviews_manifest_present": "synthetic_interviews_manifest.json",
+        "fidelity_report_present": "fidelity_report.json",
+        "pimmur_audit_present": "pimmur_audit.json",
+        "compost_audit_present": "compost_audit.json",
+        "claim_policy_audit_present": "claim_policy_audit.json",
+        "harness_science_gate_present": "harness_science_gate.json",
     }
     for check_id, filename in optional_artifacts.items():
         present = ReportManager.load_json_artifact(report_id, filename) is not None

@@ -229,6 +229,9 @@ Requer conta Apify com token em `APIFY_TOKEN`. O Mirofish prossegue normalmente 
 | [Mapa de Documentação](.planning/DOCUMENTATION_MAP.md) | Onde ficam planos, mapas técnicos, memória e arquivos históricos |
 | [Plano Consultoria Simulada](.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md) | Implementação estrutural da promessa INTEIA de simular, verificar e entregar |
 | [Mapas Técnicos](.planning/codebase/STRUCTURE.md) | Estrutura, arquitetura, integrações, testes e riscos do código |
+| [GPT da Pasta](docs/GPT_DA_PASTA_MIROFISH_INTEIA.md) | Índice consolidado de ativos, documentos, mapas Mermaid e leitura para IA |
+| [Mapa Mental IA](docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html) | HTML navegável com SVG, busca e mapa visual completo para estudo por IA |
+| [Auditoria do Mapa IA](docs/AUDITORIA_MAPA_IA_2026-05-18.md) | Achados, ajustes e limites dos artefatos de mapa criados |
 | [Aprendizados Consultoria Auditável](.planning/LEARNINGS_CONSULTORIA_SIMULADA.md) | Aprendizados e decisões da fase v1.3 |
 | [Mapeamento PT-BR](MAPEAMENTO_PT-BR.md) | Referência de tradução |
 | [Integração Lenia](LENIA_MIROFISH_INTEGRACAO.md) | Ponte com sistema eleitoral |

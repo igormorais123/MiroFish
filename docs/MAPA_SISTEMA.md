@@ -22,8 +22,11 @@ Este documento é a visão macro. Quando precisar do detalhe arquivo-por-arquivo
 | [`_mapa_frontend.md`](_mapa_frontend.md) | 23 arquivos Vue/JS, 58 funções de API, props/emits/state de cada componente, fluxo wizard |
 | [`_mapa_backend_api.md`](_mapa_backend_api.md) | 58 endpoints HTTP catalogados, 45+ env vars, anatomia de cada blueprint, models, Docker/Vercel |
 | [`_mapa_backend_services.md`](_mapa_backend_services.md) | 38 services agrupados por domínio, 11 utils, 4 sequenceDiagrams de fluxos completos |
+| [`GPT_DA_PASTA_MIROFISH_INTEIA.md`](GPT_DA_PASTA_MIROFISH_INTEIA.md) | Índice consolidado de ativos, documentos, artefatos, mapas Mermaid e trilha de leitura para IA |
+| [`MIROFISH_INTEIA_MAPA_MENTAL_IA.html`](MIROFISH_INTEIA_MAPA_MENTAL_IA.html) | Mapa mental visual em HTML/SVG navegável, com zoom, busca e trilhas de estudo |
+| [`AUDITORIA_MAPA_IA_2026-05-18.md`](AUDITORIA_MAPA_IA_2026-05-18.md) | Auditoria dos mapas IA criados nesta rodada, com achados, correções e limites |
 
-Os três mapas juntos cobrem **100% dos 70 arquivos de código** e foram gerados lendo os arquivos reais (não inferindo).
+Os mapas técnicos cobrem **100% dos 70 arquivos de código** do recorte original e foram gerados lendo os arquivos reais (não inferindo). O `GPT_DA_PASTA_MIROFISH_INTEIA.md` amplia esse recorte para documentação, artefatos, histórico e leitura por IA.
 
 ---
 

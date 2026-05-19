@@ -2645,6 +2645,38 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             except Exception as diagram_err:
                 logger.warning(f"Nao foi possivel registrar metadados PaperBanana: {diagram_err}")
 
+            try:
+                from .vox_science import build_vox_science_artifacts
+
+                forecast_ledger = ReportManager.load_json_artifact(report_id, "forecast_ledger.json") or {}
+                vox_artifacts = build_vox_science_artifacts(
+                    report_id=report_id,
+                    simulation_id=self.simulation_id,
+                    graph_id=self.graph_id,
+                    simulation_requirement=self.simulation_requirement,
+                    quality_gate=report.quality_gate,
+                    evidence_audit=report.evidence_audit,
+                    decision_packet=decision_packet,
+                    forecast_ledger=forecast_ledger,
+                    source_text=source_text,
+                    assembled_content=assembled_content,
+                    model_name=Config.LLM_AGENT_MODEL,
+                )
+                for artifact_name, payload in vox_artifacts.items():
+                    ReportManager.save_json_artifact(report_id, artifact_name, payload)
+                science_gate = vox_artifacts.get("harness_science_gate.json", {})
+                if report.quality_gate is None:
+                    report.quality_gate = {}
+                report.quality_gate.setdefault("metrics", {})
+                report.quality_gate["metrics"]["vox_science"] = {
+                    "passes_gate": science_gate.get("passes_gate"),
+                    "claim_level": science_gate.get("claim_level"),
+                    "artifact_count": len(vox_artifacts),
+                }
+                ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
+            except Exception as vox_err:
+                logger.warning(f"Nao foi possivel gerar artefatos Vox Science: {vox_err}")
+
             report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.now().isoformat()

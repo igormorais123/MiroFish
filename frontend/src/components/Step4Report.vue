@@ -290,6 +290,55 @@
           </div>
         </div>
 
+        <div v-if="voxScienceVisible" class="vox-science-panel" :class="voxSciencePanelClass">
+          <div class="vox-science-header">
+            <div class="vox-science-title-row">
+              <span class="vox-science-dot"></span>
+              <span class="vox-science-title">Vox Science</span>
+            </div>
+            <span class="vox-science-status">{{ voxScienceStatusText }}</span>
+          </div>
+
+          <div class="vox-science-summary">
+            <div class="vox-science-main">
+              <span class="vox-science-label">Claim máximo</span>
+              <span class="vox-science-claim">{{ voxClaimLanguage }}</span>
+            </div>
+            <div class="vox-science-level mono">{{ voxClaimLevel }}</div>
+          </div>
+
+          <div class="vox-science-metrics">
+            <div
+              v-for="metric in voxScienceMetrics"
+              :key="metric.label"
+              class="vox-science-metric"
+            >
+              <span class="vox-science-metric-label">{{ metric.label }}</span>
+              <span class="vox-science-metric-value mono">{{ metric.value }}</span>
+            </div>
+          </div>
+
+          <div v-if="voxScienceSources.length" class="vox-science-sources">
+            <span
+              v-for="source in voxScienceSources"
+              :key="source"
+              class="vox-science-source"
+            >
+              {{ source }}
+            </span>
+          </div>
+
+          <div v-if="voxScienceWarnings.length" class="vox-science-warnings">
+            <div
+              v-for="warning in voxScienceWarnings.slice(0, 2)"
+              :key="warning"
+              class="vox-science-warning"
+            >
+              {{ warning }}
+            </div>
+          </div>
+        </div>
+
         <div v-if="costMeterVisible" class="value-panel" :class="`value-panel--${costMeterStateClass}`">
           <div class="value-header">
             <div class="value-title-row">
@@ -2125,6 +2174,120 @@ const parseArtifactContent = (content) => {
     return null
   }
 }
+
+const methodologyManifest = computed(() => {
+  return parseArtifactContent(artifactContentByName('methodology_manifest.json')) || null
+})
+
+const baselineRegistry = computed(() => {
+  return parseArtifactContent(artifactContentByName('baseline_registry.json')) || null
+})
+
+const fidelityReport = computed(() => {
+  return parseArtifactContent(artifactContentByName('fidelity_report.json')) || null
+})
+
+const pimmurAudit = computed(() => {
+  return parseArtifactContent(artifactContentByName('pimmur_audit.json')) || null
+})
+
+const claimPolicyAudit = computed(() => {
+  return parseArtifactContent(artifactContentByName('claim_policy_audit.json')) || null
+})
+
+const harnessScienceGate = computed(() => {
+  return parseArtifactContent(artifactContentByName('harness_science_gate.json')) || null
+})
+
+const voxScienceVisible = computed(() => {
+  return !!(
+    methodologyManifest.value ||
+    baselineRegistry.value ||
+    fidelityReport.value ||
+    pimmurAudit.value ||
+    claimPolicyAudit.value ||
+    harnessScienceGate.value
+  )
+})
+
+const voxSciencePassed = computed(() => {
+  return harnessScienceGate.value?.passes_gate === true
+})
+
+const voxScienceBlocked = computed(() => {
+  return harnessScienceGate.value?.passes_gate === false
+})
+
+const voxSciencePanelClass = computed(() => ({
+  approved: voxSciencePassed.value,
+  blocked: voxScienceBlocked.value,
+  pending: !voxSciencePassed.value && !voxScienceBlocked.value
+}))
+
+const voxClaimLevel = computed(() => {
+  return harnessScienceGate.value?.claim_level ||
+    claimPolicyAudit.value?.claim_level ||
+    methodologyManifest.value?.claim_target ||
+    'C0'
+})
+
+const voxScienceStatusText = computed(() => {
+  if (voxSciencePassed.value) return `Aprovado ${voxClaimLevel.value}`
+  if (voxScienceBlocked.value) return 'Bloqueado'
+  return 'Parcial'
+})
+
+const voxClaimLanguage = computed(() => {
+  return harnessScienceGate.value?.max_external_language ||
+    methodologyManifest.value?.external_language_policy ||
+    claimPolicyAudit.value?.allowed_language?.[0] ||
+    'simulação sintética rastreável'
+})
+
+const voxScienceSources = computed(() => {
+  const anchors = baselineRegistry.value?.anchors
+  if (!Array.isArray(anchors)) return []
+  return anchors
+    .map(anchor => anchor?.name || anchor?.source)
+    .filter(Boolean)
+    .slice(0, 4)
+})
+
+const voxScienceWarnings = computed(() => {
+  return [
+    ...(harnessScienceGate.value?.blockers || []).map(item => `Bloqueio: ${item}`),
+    ...(harnessScienceGate.value?.warnings || [])
+  ].map(item => String(item)).filter(Boolean)
+})
+
+const voxScienceMetrics = computed(() => {
+  return [
+    {
+      label: 'Artefatos',
+      value: formatInteger((harnessScienceGate.value?.required_artifacts || []).length)
+    },
+    {
+      label: 'Fidelidade',
+      value: formatMetric(fidelityReport.value?.overall_score)
+    },
+    {
+      label: 'Variância',
+      value: formatMetric(fidelityReport.value?.variance_ratio)
+    },
+    {
+      label: 'PIMMUR',
+      value: formatMetric(pimmurAudit.value?.score)
+    },
+    {
+      label: 'Baseline',
+      value: formatInteger((baselineRegistry.value?.anchors || []).length)
+    },
+    {
+      label: 'Coleta nova',
+      value: methodologyManifest.value?.new_human_collection === false ? 'Não' : '-'
+    }
+  ]
+})
 
 const costMeter = computed(() => {
   return qualityGate.value?.cost_meter || parseArtifactContent(artifactContentByName('cost_meter.json')) || null
@@ -4211,6 +4374,208 @@ watch(() => props.reportId, (newId) => {
   border: 1px solid rgba(185, 28, 28, 0.12);
   border-radius: 6px;
   padding: 6px 8px;
+}
+
+.vox-science-panel {
+  margin: 12px 20px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #BFD4E8;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%);
+}
+
+.vox-science-panel.approved {
+  border-color: #99D6C2;
+  background: linear-gradient(180deg, #F2FBF7 0%, #FFFFFF 100%);
+}
+
+.vox-science-panel.blocked {
+  border-color: #FECACA;
+  background: #FEF2F2;
+}
+
+.vox-science-header,
+.vox-science-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vox-science-header {
+  margin-bottom: 10px;
+}
+
+.vox-science-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vox-science-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2563EB;
+  flex: 0 0 auto;
+}
+
+.vox-science-panel.approved .vox-science-dot {
+  background: #059669;
+}
+
+.vox-science-panel.blocked .vox-science-dot {
+  background: #B91C1C;
+}
+
+.vox-science-title,
+.vox-science-status,
+.vox-science-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.vox-science-title {
+  color: #0F2747;
+}
+
+.vox-science-status {
+  color: #1D4ED8;
+  flex: 0 0 auto;
+}
+
+.vox-science-panel.approved .vox-science-status {
+  color: #047857;
+}
+
+.vox-science-panel.blocked .vox-science-status {
+  color: #991B1B;
+}
+
+.vox-science-main {
+  min-width: 0;
+}
+
+.vox-science-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748B;
+}
+
+.vox-science-claim {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.vox-science-level {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1D4ED8;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.vox-science-panel.approved .vox-science-level {
+  background: rgba(5, 150, 105, 0.1);
+  color: #047857;
+}
+
+.vox-science-panel.blocked .vox-science-level {
+  background: rgba(185, 28, 28, 0.1);
+  color: #991B1B;
+}
+
+.vox-science-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vox-science-metric {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(15, 39, 71, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.vox-science-metric-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #94A3B8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vox-science-metric-value {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.vox-science-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.vox-science-source {
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(15, 39, 71, 0.08);
+  color: #0F2747;
+  font-size: 10px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vox-science-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.vox-science-warning {
+  padding: 6px 8px;
+  border: 1px solid rgba(180, 83, 9, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 251, 235, 0.86);
+  color: #92400E;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .vox-science-header,
+  .vox-science-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .vox-science-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .value-panel {

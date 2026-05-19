@@ -23,6 +23,21 @@ EXPORT_FILENAMES = {
     "report_bundle_manifest.json",
 }
 
+EXPORT_ARTIFACT_INPUTS = [
+    "evidence_audit.json",
+    "methodology_manifest.json",
+    "baseline_registry.json",
+    "public_data_anchors.json",
+    "prompt_registry.json",
+    "model_run_registry.json",
+    "synthetic_interviews_manifest.json",
+    "fidelity_report.json",
+    "pimmur_audit.json",
+    "compost_audit.json",
+    "claim_policy_audit.json",
+    "harness_science_gate.json",
+]
+
 
 class ReportExportError(Exception):
     """Base export error."""
@@ -106,12 +121,30 @@ def _public_export_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
 
 
 def _evidence_annex_markdown(report_id: str) -> str:
-    evidence_audit = ReportManager.load_json_artifact(report_id, "evidence_audit.json")
-    if not evidence_audit:
+    artifacts: dict[str, Any] = {
+        filename: ReportManager.load_json_artifact(report_id, filename)
+        for filename in EXPORT_ARTIFACT_INPUTS
+    }
+    if not artifacts.get("evidence_audit.json"):
         report = ReportManager.get_report(report_id)
-        evidence_audit = report.evidence_audit if report else None
-    payload = json.dumps(evidence_audit or {}, ensure_ascii=False, indent=2)
-    return f"# Evidence Annex\n\n```json\n{payload}\n```"
+        artifacts["evidence_audit.json"] = report.evidence_audit if report else None
+
+    sections = ["# Evidence Annex", ""]
+    for filename in EXPORT_ARTIFACT_INPUTS:
+        payload = artifacts.get(filename)
+        if not payload:
+            continue
+        sections.extend([
+            f"## {filename}",
+            "",
+            "```json",
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            "```",
+            "",
+        ])
+    if len(sections) == 2:
+        sections.append("Nenhum artefato auditavel disponivel.")
+    return "\n".join(sections)
 
 
 def create_report_export(report_id: str) -> dict[str, Any]:
