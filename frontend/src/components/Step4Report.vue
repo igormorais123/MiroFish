@@ -290,11 +290,16 @@
           </div>
         </div>
 
+        <div v-if="voxScienceVisible" class="vox-lgpd-banner" data-testid="vox-lgpd-banner">
+          <span class="vox-lgpd-tag mono">LGPD art. 7º IV</span>
+          <span class="vox-lgpd-text">{{ voxLgpdDisclaimer }}</span>
+        </div>
+
         <div v-if="voxScienceVisible" class="vox-science-panel" :class="voxSciencePanelClass">
           <div class="vox-science-header">
             <div class="vox-science-title-row">
               <span class="vox-science-dot"></span>
-              <span class="vox-science-title">Vox Science</span>
+              <span class="vox-science-title">Vox Science · exploratório auditado</span>
             </div>
             <span class="vox-science-status">{{ voxScienceStatusText }}</span>
           </div>
@@ -305,6 +310,44 @@
               <span class="vox-science-claim">{{ voxClaimLanguage }}</span>
             </div>
             <div class="vox-science-level mono">{{ voxClaimLevel }}</div>
+          </div>
+
+          <div v-if="voxLatentCeiling != null" class="vox-science-pill-row">
+            <span class="vox-science-pill" data-testid="vox-ceiling">
+              Teto epistêmico construto latente · r ≤ {{ formatMetric(voxLatentCeiling) }}
+            </span>
+            <span
+              v-if="voxDpdMax != null"
+              class="vox-science-pill"
+              :class="{ alarm: voxDpdViolation }"
+              data-testid="vox-dpd"
+            >
+              DPD {{ formatMetric(voxDpdMax) }} (limite {{ formatMetric(voxDpdThreshold) }})
+            </span>
+            <span
+              v-if="voxReplicatorsCount > 0"
+              class="vox-science-pill"
+              data-testid="vox-replicators"
+            >
+              Replicado em {{ voxReplicatorsCount }} modelo{{ voxReplicatorsCount > 1 ? 's' : '' }}
+              <template v-if="voxInterModelDivergence != null">
+                · KL máx {{ formatMetric(voxInterModelDivergence) }}
+              </template>
+            </span>
+            <span
+              v-if="voxBlindTest && voxBlindTest.masked_in_prompt === true"
+              class="vox-science-pill ok"
+              data-testid="vox-blind-test"
+            >
+              Teste-cego · alvo "{{ voxBlindTest.target_variable }}" ausente do prompt
+            </span>
+            <span
+              v-if="voxBlindTest && voxBlindTest.masked_in_prompt === false"
+              class="vox-science-pill alarm"
+              data-testid="vox-blind-test-fail"
+            >
+              Teste-cego falhou · alvo vazou no prompt
+            </span>
           </div>
 
           <div class="vox-science-metrics">
@@ -2260,7 +2303,32 @@ const voxScienceWarnings = computed(() => {
   ].map(item => String(item)).filter(Boolean)
 })
 
+const voxModelRunRegistry = computed(() => {
+  return parseArtifactContent(artifactContentByName('model_run_registry.json')) || null
+})
+
+const voxPromptRegistry = computed(() => {
+  return parseArtifactContent(artifactContentByName('prompt_registry.json')) || null
+})
+
+const voxLgpdDisclaimer = computed(() => {
+  return (
+    'Esta análise é exploratória. Decisões sensíveis (RH, disciplina, segurança, ' +
+    'direito individual) exigem painel humano auditor independente. ' +
+    'Compatível com LGPD art. 7º IV.'
+  )
+})
+
+const voxLatentCeiling = computed(() => claimPolicyAudit.value?.latent_construct_ceiling)
+const voxDpdMax = computed(() => fidelityReport.value?.dpd_max)
+const voxDpdThreshold = computed(() => fidelityReport.value?.dpd_threshold ?? 0.15)
+const voxDpdViolation = computed(() => fidelityReport.value?.dpd_violation === true)
+const voxReplicatorsCount = computed(() => (voxModelRunRegistry.value?.replicators || []).length)
+const voxInterModelDivergence = computed(() => voxModelRunRegistry.value?.inter_model_divergence?.max_value)
+const voxBlindTest = computed(() => fidelityReport.value?.blind_test)
+
 const voxScienceMetrics = computed(() => {
+  const multi = fidelityReport.value?.multi_metric || {}
   return [
     {
       label: 'Artefatos',
@@ -2271,12 +2339,36 @@ const voxScienceMetrics = computed(() => {
       value: formatMetric(fidelityReport.value?.overall_score)
     },
     {
+      label: 'Wasserstein',
+      value: multi.wasserstein_distance != null ? formatMetric(multi.wasserstein_distance) : '–'
+    },
+    {
+      label: 'KL',
+      value: multi.kl_divergence != null ? formatMetric(multi.kl_divergence) : '–'
+    },
+    {
+      label: 'MAE',
+      value: multi.mae != null ? formatMetric(multi.mae) : '–'
+    },
+    {
+      label: 'DPD máx',
+      value: voxDpdMax.value != null ? formatMetric(voxDpdMax.value) : '–'
+    },
+    {
       label: 'Variância',
       value: formatMetric(fidelityReport.value?.variance_ratio)
     },
     {
       label: 'PIMMUR',
       value: formatMetric(pimmurAudit.value?.score)
+    },
+    {
+      label: 'Teto r',
+      value: voxLatentCeiling.value != null ? formatMetric(voxLatentCeiling.value) : '–'
+    },
+    {
+      label: 'Replicadores',
+      value: formatInteger(voxReplicatorsCount.value)
     },
     {
       label: 'Baseline',
@@ -4374,6 +4466,66 @@ watch(() => props.reportId, (newId) => {
   border: 1px solid rgba(185, 28, 28, 0.12);
   border-radius: 6px;
   padding: 6px 8px;
+}
+
+/* Fase 03 — vox academic hardening */
+.vox-lgpd-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(201, 149, 42, 0.12), rgba(201, 149, 42, 0.02));
+  border: 1px solid rgba(201, 149, 42, 0.45);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #4a3a14;
+}
+
+.vox-lgpd-tag {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  background: #c9952a;
+  color: #fff;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.vox-lgpd-text {
+  flex: 1;
+}
+
+.vox-science-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.vox-science-pill {
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 4px 9px;
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  color: #1f2937;
+}
+
+.vox-science-pill.ok {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #065f46;
+}
+
+.vox-science-pill.alarm {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #991B1B;
+  font-weight: 600;
 }
 
 .vox-science-panel {
