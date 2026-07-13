@@ -9,7 +9,6 @@ import threading
 from flask import request, jsonify, send_file
 
 from . import report_bp
-from ..config import Config
 from ..services.mission_bundle import MissionBundle
 from ..services.mission_selection import MissionSelection
 from ..services.power_catalog import PowerCatalog
@@ -728,6 +727,12 @@ def list_report_artifacts(report_id: str):
 
         include_content = request.args.get('include_content', 'false').lower() == 'true'
         artifacts = ReportManager.list_json_artifacts(report_id)
+        from ..services.harness_evidence_bundle import verified_vox_claim_projection
+
+        verified_vox_claim = verified_vox_claim_projection(
+            report_id,
+            [artifact.get("name") for artifact in artifacts if artifact.get("name")],
+        )
 
         if include_content:
             for artifact in artifacts:
@@ -739,6 +744,7 @@ def list_report_artifacts(report_id: str):
                 "report_id": report_id,
                 "simulation_id": report.simulation_id,
                 "artifacts": artifacts,
+                "verified_vox_claim": verified_vox_claim,
             }
         })
 

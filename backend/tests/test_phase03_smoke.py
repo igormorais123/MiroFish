@@ -68,12 +68,13 @@ def test_smoke_e2e_fase03_todos_artefatos_e_campos_novos():
     # ===== R1 multi-metric =====
     fidelity = artifacts["fidelity_report.json"]
     multi = fidelity["multi_metric"]
-    assert multi["wasserstein_distance"] is not None
-    assert multi["kl_divergence"] is not None
-    assert multi["mae"] is not None
+    # Vetores em memoria sem snapshot materializado/hash nao sao calibracao.
+    assert multi["wasserstein_distance"] is None
+    assert multi["kl_divergence"] is None
+    assert multi["mae"] is None
     assert multi["dpd"] is not None
     assert multi["intra_group_variance"] is not None
-    assert multi["temporal_stability"] is not None
+    assert multi["temporal_stability"] is None
 
     # ===== R2 DPD threshold respeitado =====
     assert fidelity["dpd_threshold"] == DPD_BLOCKER_THRESHOLD
@@ -113,7 +114,7 @@ def test_smoke_e2e_fase03_todos_artefatos_e_campos_novos():
     # ===== Science gate aprovado =====
     gate = artifacts["harness_science_gate.json"]
     assert gate["passes_gate"] is True
-    assert gate["claim_level"] in {"C1", "C2"}
+    assert gate["claim_level"] == "C1"
 
 
 def test_smoke_e2e_fase03_dpd_violation_e_blind_leak_bloqueiam_gate():
@@ -159,6 +160,6 @@ def test_smoke_e2e_fase03_dpd_violation_e_blind_leak_bloqueiam_gate():
     assert gate["passes_gate"] is False
     assert "demographic_parity_violation" in gate["blockers"]
     assert "blind_test_leak" in gate["blockers"]
-    assert "claim_above_correlation_ceiling" in gate["blockers"]
+    assert "claim_policy_rejected_assertion" in gate["claim_blockers"]
     assert fidelity["blind_test"]["masked_in_prompt"] is False
     assert len(claim_policy["blocked_claims"]) == 1

@@ -1,0 +1,31 @@
+{
+  "$id": "https://mirofish.local/schemas/vox/preregistration-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vox host-signed preregistration receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "issued_at", "preregistration_id", "report_id", "simulation_id", "run_id", "config_sha256", "input_sha256", "baseline_snapshot_sha256", "training_cutoff", "heldout_plan_ids", "forecast_path", "forecast_sha256", "performance_criteria", "signature_algorithm", "hmac_sha256"],
+  "properties": {
+    "schema": {"const": "mirofish.vox.preregistration_receipt.v1"}, "version": {"const": 1},
+    "issued_at": {"type": "string", "format": "date-time"}, "preregistration_id": {"type": "string", "minLength": 1},
+    "report_id": {"type": "string", "minLength": 1}, "simulation_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1}, "config_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "baseline_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "training_cutoff": {"type": "string", "format": "date-time"},
+    "heldout_plan_ids": {"type": "array", "minItems": 30, "maxItems": 10000, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "forecast_path": {"type": "string", "minLength": 1},
+    "forecast_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "performance_criteria": {
+      "type": "object", "additionalProperties": false,
+      "required": ["policy_id", "algorithm", "minimum_brier_skill_score", "maximum_log_loss_ratio"],
+      "properties": {
+        "policy_id": {"const": "vox-c4-material-v1"},
+        "algorithm": {"const": "multiclass_brier_log_loss_per_id.v1"},
+        "minimum_brier_skill_score": {"type": "number", "minimum": 0.05, "maximum": 1},
+        "maximum_log_loss_ratio": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.99}
+      }
+    },
+    "signature_algorithm": {"const": "hmac-sha256"}, "hmac_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

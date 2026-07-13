@@ -12,7 +12,7 @@
 
 *Fork adaptado para o contexto brasileiro: simulação político-eleitoral, jurídico-institucional e análise de crise.*
 
-**Posicionamento metodológico:** Vox Science Harness opera com 11 artefatos auditáveis, métricas Wasserstein/KL/MAE/DPD, teto epistêmico r ≤ 0.50 para construtos latentes, teste-cego de variáveis-alvo e gate científico bloqueando paridade demográfica acima de 15%. Calibração com painel humano fica em [roadmap contingente](docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md).
+**Posicionamento metodológico:** Vox Science Harness opera com 11 artefatos auditáveis. Um passe de execução prova apenas que pipeline e artefatos foram produzidos; por padrão, a saída é C1 exploratória. C2–C4 exigem snapshot e pacote de avaliação locais, canônicos e previamente autorizados por um manifesto cujo hash vem da configuração do backend. MAE, KL, Wasserstein, subgrupos, estabilidade e heldout são recalculados; dicionários ou vetores fornecidos pelo chamador não promovem claim. Veja [o contrato Vox Science](docs/ops/VOX_SCIENCE_HARNESS_V2.md).
 
 [Sobre](#sobre) · [O que mudou no fork](#o-que-mudou-no-fork-inteia) · [Como Rodar](#como-rodar) · [Deploy](#deploy-com-docker) · [Documentação](#documentação)
 

@@ -294,7 +294,7 @@
           <div class="vox-science-header">
             <div class="vox-science-title-row">
               <span class="vox-science-dot"></span>
-              <span class="vox-science-title">Vox Science · exploratório auditado</span>
+              <span class="vox-science-title">Vox Science</span>
             </div>
             <span class="vox-science-status">{{ voxScienceStatusText }}</span>
           </div>
@@ -304,10 +304,13 @@
               <span class="vox-science-label">Claim máximo</span>
               <span class="vox-science-claim">{{ voxClaimLanguage }}</span>
             </div>
-            <div class="vox-science-level mono">{{ voxClaimLevel }}</div>
+            <div class="vox-science-level mono">{{ voxClaimLevel || '—' }}</div>
           </div>
 
-          <div v-if="voxLatentCeiling != null" class="vox-science-pill-row">
+          <div
+            v-if="voxScienceAuthoritativeDetails && voxLatentCeiling != null"
+            class="vox-science-pill-row"
+          >
             <span class="vox-science-pill" data-testid="vox-ceiling">
               Teto epistêmico construto latente · r ≤ {{ formatMetric(voxLatentCeiling) }}
             </span>
@@ -345,7 +348,7 @@
             </span>
           </div>
 
-          <div class="vox-science-metrics">
+          <div v-if="voxScienceAuthoritativeDetails" class="vox-science-metrics">
             <div
               v-for="metric in voxScienceMetrics"
               :key="metric.label"
@@ -832,6 +835,7 @@ const renderMermaidDiagrams = async () => {
 const showRawResult = reactive({})
 const reportRecord = ref(null)
 const reportArtifacts = ref([])
+const verifiedVoxClaim = ref(null)
 const auditLoadError = ref(null)
 const missionBundleFetchedFor = ref(null)
 const deliveryPackage = ref(null)
@@ -2249,11 +2253,19 @@ const voxScienceVisible = computed(() => {
 })
 
 const voxSciencePassed = computed(() => {
-  return harnessScienceGate.value?.passes_gate === true
+  return verifiedVoxClaim.value?.verified === true &&
+    verifiedVoxClaim.value?.passes_execution_gate === true
 })
 
 const voxScienceBlocked = computed(() => {
-  return harnessScienceGate.value?.passes_gate === false
+  return verifiedVoxClaim.value?.verified === true &&
+    verifiedVoxClaim.value?.passes_execution_gate === false
+})
+
+const voxScienceAuthoritativeDetails = computed(() => {
+  return voxSciencePassed.value &&
+    verifiedVoxClaim.value?.calibrated === true &&
+    verifiedVoxClaim.value?.calibration_mode === 'materialized_external_baseline'
 })
 
 const voxSciencePanelClass = computed(() => ({
@@ -2263,26 +2275,27 @@ const voxSciencePanelClass = computed(() => ({
 }))
 
 const voxClaimLevel = computed(() => {
-  return harnessScienceGate.value?.claim_level ||
-    claimPolicyAudit.value?.claim_level ||
-    methodologyManifest.value?.claim_target ||
-    'C0'
+  return verifiedVoxClaim.value?.verified === true
+    ? (verifiedVoxClaim.value?.claim_level || 'C0')
+    : null
 })
 
 const voxScienceStatusText = computed(() => {
   if (voxSciencePassed.value) return `Aprovado ${voxClaimLevel.value}`
-  if (voxScienceBlocked.value) return 'Bloqueado'
-  return 'Parcial'
+  if (voxScienceBlocked.value) return `Bloqueado · ${voxClaimLevel.value || 'C0'}`
+  return 'Não verificado · sem claim'
 })
 
 const voxClaimLanguage = computed(() => {
-  return harnessScienceGate.value?.max_external_language ||
-    methodologyManifest.value?.external_language_policy ||
-    claimPolicyAudit.value?.allowed_language?.[0] ||
-    'simulação sintética rastreável'
+  if (voxSciencePassed.value) {
+    return verifiedVoxClaim.value?.max_external_language || 'simulação sintética exploratória'
+  }
+  if (voxScienceBlocked.value) return 'Execução bloqueada; nenhum claim autorizado'
+  return 'Integridade e autenticidade não verificadas'
 })
 
 const voxScienceSources = computed(() => {
+  if (!voxScienceAuthoritativeDetails.value) return []
   const anchors = baselineRegistry.value?.anchors
   if (!Array.isArray(anchors)) return []
   return anchors
@@ -2292,10 +2305,10 @@ const voxScienceSources = computed(() => {
 })
 
 const voxScienceWarnings = computed(() => {
-  return [
-    ...(harnessScienceGate.value?.blockers || []).map(item => `Bloqueio: ${item}`),
-    ...(harnessScienceGate.value?.warnings || [])
-  ].map(item => String(item)).filter(Boolean)
+  if (verifiedVoxClaim.value?.verified !== true) return []
+  return (verifiedVoxClaim.value?.blockers || [])
+    .map(item => `Bloqueio: ${String(item)}`)
+    .filter(Boolean)
 })
 
 const voxModelRunRegistry = computed(() => {
@@ -2315,6 +2328,7 @@ const voxInterModelDivergence = computed(() => voxModelRunRegistry.value?.inter_
 const voxBlindTest = computed(() => fidelityReport.value?.blind_test)
 
 const voxScienceMetrics = computed(() => {
+  if (!voxScienceAuthoritativeDetails.value) return []
   const multi = fidelityReport.value?.multi_metric || {}
   return [
     {
@@ -3325,6 +3339,7 @@ const fetchReportAudit = async () => {
 
     if (artifactsRes.success && artifactsRes.data) {
       reportArtifacts.value = artifactsRes.data.artifacts || []
+      verifiedVoxClaim.value = artifactsRes.data.verified_vox_claim || null
     }
 
     if (sectionsRes.success && sectionsRes.data) {
@@ -3425,6 +3440,7 @@ watch(() => props.reportId, (newId) => {
     startTime.value = null
     reportRecord.value = null
     reportArtifacts.value = []
+    verifiedVoxClaim.value = null
     missionBundleFetchedFor.value = null
     auditLoadError.value = null
     deliveryPackage.value = null

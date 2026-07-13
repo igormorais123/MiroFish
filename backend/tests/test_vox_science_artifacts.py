@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.services.vox_science import VOX_SCIENCE_FILENAMES, build_vox_science_artifacts
+from app.services.vox_science.artifacts import _blind_test_block
 
 
 def _gate(passes: bool = True) -> dict:
@@ -136,10 +137,10 @@ def test_compost_audit_exclui_outcome_do_prompt():
     assert audit["outcome_excluded_from_prompt"] is True
 
 
-def test_claim_policy_define_c2_para_trace_robusto_sem_erro_externo():
+def test_claim_policy_limita_trace_robusto_sem_erro_externo_a_c1():
     audit = _build()["claim_policy_audit.json"]
 
-    assert audit["claim_level"] == "C2"
+    assert audit["claim_level"] == "C1"
     assert "margem de erro amostral" in audit["blocked_language"]
 
 
@@ -147,8 +148,8 @@ def test_science_gate_carrega_claim_e_linguagem_maxima():
     gate = _build()["harness_science_gate.json"]
 
     assert gate["passes_gate"] is True
-    assert gate["claim_level"] == "C2"
-    assert "simulacao sintetica calibrada" in gate["max_external_language"]
+    assert gate["claim_level"] == "C1"
+    assert "simulacao sintetica exploratoria" in gate["max_external_language"]
 
 
 def test_science_gate_bloqueia_se_system_gate_falhar():
@@ -196,14 +197,15 @@ def test_R1_fidelity_multi_metric_block_existe():
     assert {"wasserstein_distance", "kl_divergence", "mae", "dpd", "intra_group_variance", "temporal_stability"} <= set(keys)
 
 
-def test_R1_fidelity_calcula_wasserstein_quando_baseline_fornecido():
+def test_R1_baseline_em_memoria_nao_e_evidencia_de_calibracao():
     fidelity = _build_with(
         baseline_distribution=[0.5, 0.3, 0.2],
         sample_distribution=[0.4, 0.4, 0.2],
     )["fidelity_report.json"]
-    assert fidelity["multi_metric"]["wasserstein_distance"] is not None
-    assert fidelity["multi_metric"]["kl_divergence"] is not None
-    assert fidelity["multi_metric"]["mae"] is not None
+    assert fidelity["multi_metric"]["wasserstein_distance"] is None
+    assert fidelity["multi_metric"]["kl_divergence"] is None
+    assert fidelity["multi_metric"]["mae"] is None
+    assert "legacy_in_memory_evidence_is_diagnostic_only" in fidelity["claim_blockers"]
 
 
 def test_R2_dpd_violation_dispara_blocker_no_science_gate():
@@ -231,7 +233,11 @@ def test_R4_prompt_registry_inclui_sha256_e_git_sha():
     assert git_sha is None or (isinstance(git_sha, str) and len(git_sha) == 40)
 
 
-def test_R4_prompt_hash_determinismo():
+def test_R4_prompt_hash_determinismo(monkeypatch):
+    timestamps = iter(("2026-07-13T10:00:00Z", "2026-07-13T10:00:05Z"))
+    monkeypatch.setattr(
+        "app.services.vox_science.artifacts._now_iso", lambda: next(timestamps)
+    )
     h1 = _build()["prompt_registry.json"]["prompt_hash"]
     h2 = _build()["prompt_registry.json"]["prompt_hash"]
     assert h1 == h2
@@ -253,13 +259,20 @@ def test_R5_correlacao_acima_de_0_65_sem_evidencia_bloqueia():
     assert audit["passes_gate"] is False
 
 
-def test_R5_correlacao_acima_com_evidencia_externa_permite():
+def test_R5_override_inline_sem_artefato_real_continua_bloqueado():
     artifacts = _build_with(
         reported_correlations={"persuadibilidade": 0.72},
-        evidence_overrides={"persuadibilidade": {"source": "Br-STPS Durelli 2017"}},
+        evidence_overrides={
+            "persuadibilidade": {
+                "status": "measured",
+                "construct": "persuadibilidade",
+                "source": "Br-STPS Durelli 2017",
+                "artifact_sha256": "a" * 64,
+            }
+        },
     )
     audit = artifacts["claim_policy_audit.json"]
-    assert audit["blocked_claims"] == []
+    assert len(audit["blocked_claims"]) == 1
 
 
 def test_R6_model_registry_single_model_nao_calcula_divergencia():
@@ -285,6 +298,70 @@ def test_R6_model_registry_com_replicators_calcula_divergencia():
     assert len(registry["replicators"]) == 2
     assert registry["inter_model_divergence"] is not None
     assert registry["inter_model_divergence"]["metric"] == "kl_divergence"
+
+
+def test_trace_counts_reject_bool_string_nan_and_infinity():
+    for invalid in (True, "120", float("nan"), float("inf")):
+        gate = _gate()
+        gate["metrics"]["profiles_count"] = invalid
+        artifacts = _build_with(quality_gate=gate)
+        assert artifacts["synthetic_interviews_manifest.json"]["population_units"] == 0
+        assert artifacts["harness_science_gate.json"]["passes_execution_gate"] is False
+
+
+def test_replicator_budget_is_fail_closed():
+    artifacts = _build_with(replicators=[{"name": f"r-{i}"} for i in range(33)])
+    registry = artifacts["model_run_registry.json"]
+    assert registry["replicator_input_valid"] is False
+    assert registry["replicators"] == []
+    assert artifacts["fidelity_report.json"]["passes_execution_gate"] is False
+    assert artifacts["harness_science_gate.json"]["claim_level"] == "C0"
+
+
+def test_replicator_fields_and_dimensions_are_bounded():
+    invalid_items = [
+        {"name": "x" * 129, "response_distribution": [0.5, 0.5]},
+        {"name": "r", "temperature": float("nan"), "response_distribution": [0.5, 0.5]},
+        {"name": "r", "seed": True, "response_distribution": [0.5, 0.5]},
+        {"name": "r", "response_distribution": [0.5, 0.5], "primary_distribution": [1.0]},
+        {"name": "r", "response_distribution": [0.0, 0.0]},
+        {"name": "r", "version": "v" * 129, "response_distribution": [0.5, 0.5]},
+        {"name": "r", "response_text": "x" * 4097, "response_distribution": [0.5, 0.5]},
+        {"name": "r", "response_distribution": [1.0] * 257},
+        {"name": "r", "response_distribution": [0.5, 0.5], "unexpected": True},
+    ]
+    for item in invalid_items:
+        artifacts = _build_with(replicators=[item])
+        registry = artifacts["model_run_registry.json"]
+        assert registry["replicator_input_valid"] is False
+        assert registry["replicators"] == []
+        assert artifacts["harness_science_gate.json"]["passes_execution_gate"] is False
+        assert artifacts["harness_science_gate.json"]["claim_level"] == "C0"
+
+
+def test_replicator_budgets_are_explicit_and_valid_boundary_is_preserved():
+    artifacts = _build_with(
+        replicators=[
+            {
+                "name": "r" * 128,
+                "version": "v" * 128,
+                "response_distribution": [1.0] * 256,
+                "primary_distribution": [1.0] * 256,
+                "response_text": "x" * 4096,
+            }
+        ]
+    )
+    registry = artifacts["model_run_registry.json"]
+
+    assert registry["replicator_input_valid"] is True
+    assert registry["replicator_budgets"] == {
+        "response_distribution_max_items": 256,
+        "primary_distribution_max_items": 256,
+        "name_max_chars": 128,
+        "version_max_chars": 128,
+        "response_text_max_chars": 4096,
+    }
+    assert artifacts["harness_science_gate.json"]["passes_execution_gate"] is True
 
 
 def test_R7_prompt_default_marca_legacy_e_respeita_token_limit():
@@ -334,3 +411,18 @@ def test_R8_blind_test_inativo_quando_target_nao_declarado():
     fidelity = _build()["fidelity_report.json"]
     assert fidelity["blind_test"]["masked_in_prompt"] is None
     assert fidelity["blind_test"]["method"] == "not_applicable"
+
+
+def test_R8_nested_target_variable_key_is_prompt_content_not_metadata():
+    result = _blind_test_block(
+        "persuadibilidade",
+        {
+            "questions": [
+                {
+                    "target_variable": "persuadibilidade",
+                    "prompt": {"target_variable": "persuadibilidade"},
+                }
+            ]
+        },
+    )
+    assert result["masked_in_prompt"] is False

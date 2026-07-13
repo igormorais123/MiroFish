@@ -143,6 +143,16 @@ class Config:
 
     # Auth entre servicos
     INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN', '')
+    # Fixed trust root for local Vox claim evidence. Empty means C1-only.
+    VOX_CLAIM_EVIDENCE_ROOT = os.environ.get('VOX_CLAIM_EVIDENCE_ROOT', '')
+    VOX_CLAIM_AUTHORITY_MANIFEST_SHA256 = os.environ.get(
+        'VOX_CLAIM_AUTHORITY_MANIFEST_SHA256', ''
+    ).strip().lower()
+    # Host-only authenticity and replay protection. Never commit a real key.
+    VOX_CLAIM_SIGNING_KEY = os.environ.get('VOX_CLAIM_SIGNING_KEY', '')
+    VOX_CLAIM_VERIFICATION_STATE_ROOT = os.environ.get(
+        'VOX_CLAIM_VERIFICATION_STATE_ROOT', ''
+    )
 
     # Upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mirofish.vox.verified-claim-projection.schema.json",
+  "title": "Server verified Vox claim projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verified",
+    "verification_status",
+    "passes_execution_gate",
+    "claim_level",
+    "calibrated",
+    "calibration_mode",
+    "calibration_evidence",
+    "new_human_collection",
+    "prospective_validation",
+    "max_external_language",
+    "generation_id",
+    "blockers"
+  ],
+  "properties": {
+    "verified": {"type": "boolean"},
+    "verification_status": {"enum": ["verified", "unverified"]},
+    "passes_execution_gate": {"type": "boolean"},
+    "claim_level": {"type": ["string", "null"], "enum": ["C0", "C1", "C2", "C3", "C4", null]},
+    "calibrated": {"type": "boolean"},
+    "calibration_mode": {
+      "enum": [
+        "unverified_no_calibration",
+        "synthetic_trace_only",
+        "materialized_external_baseline"
+      ]
+    },
+    "calibration_evidence": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "baseline_snapshot_sha256",
+        "claim_evidence_sha256",
+        "authority_manifest_sha256"
+      ],
+      "properties": {
+        "baseline_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "claim_evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "authority_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "new_human_collection": {"type": ["boolean", "null"]},
+    "prospective_validation": {"type": ["object", "null"]},
+    "max_external_language": {"type": ["string", "null"]},
+    "generation_id": {"type": ["string", "null"]},
+    "blockers": {"type": "array", "maxItems": 256, "items": {"type": "string", "maxLength": 512}}
+  }
+}

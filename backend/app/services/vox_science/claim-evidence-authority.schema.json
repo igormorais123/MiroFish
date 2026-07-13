@@ -1,0 +1,25 @@
+{
+  "$id": "https://mirofish.local/schemas/vox/claim-evidence-authority.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "registry": {
+      "type": "object",
+      "maxProperties": 256,
+      "propertyNames": {"pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    }
+  },
+  "title": "Vox configured claim evidence authority manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "generated_at", "baselines", "claim_evidence", "stability_runs", "preregistered_forecasts"],
+  "properties": {
+    "schema": {"const": "mirofish.vox.claim_evidence_authority.v1"},
+    "version": {"const": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "baselines": {"$ref": "#/$defs/registry", "minProperties": 1},
+    "claim_evidence": {"$ref": "#/$defs/registry", "minProperties": 1},
+    "stability_runs": {"$ref": "#/$defs/registry"},
+    "preregistered_forecasts": {"$ref": "#/$defs/registry"}
+  }
+}

@@ -1,10 +1,16 @@
 """Unit tests for vox_science.metrics — pure-Python statistical helpers."""
 
+import math
+
 from app.services.vox_science.metrics import (
+    categorical_temporal_stability,
+    categorical_wasserstein_1d,
     demographic_parity_difference,
     intra_group_variance,
     kl_divergence,
     mean_absolute_error,
+    multiclass_brier_score,
+    multiclass_log_loss,
     temporal_stability,
     wasserstein_1d,
 )
@@ -17,6 +23,35 @@ def test_wasserstein_identical_samples_is_zero():
 def test_wasserstein_shifted_sample_is_positive():
     distance = wasserstein_1d([1.0, 2.0, 3.0], [2.0, 3.0, 4.0])
     assert 0.5 < distance < 1.5
+
+
+def test_categorical_wasserstein_preserves_declared_order_and_identity():
+    assert categorical_wasserstein_1d([0.9, 0.1], [0.9, 0.1]) == 0.0
+    assert categorical_wasserstein_1d([0.9, 0.1], [0.1, 0.9]) == 0.8
+    assert categorical_temporal_stability([0.9, 0.1], [0.1, 0.9]) < 0.7
+
+
+def test_categorical_wasserstein_three_categories_uses_cumulative_mass():
+    assert categorical_wasserstein_1d([1.0, 0.0, 0.0], [0.0, 0.0, 1.0]) == 2.0
+
+
+def test_per_id_scores_distinguish_correct_swapped_and_uniform_predictions():
+    observed = [0, 1]
+    correct = [[0.9, 0.1], [0.1, 0.9]]
+    swapped = [[0.1, 0.9], [0.9, 0.1]]
+    uniform = [[0.5, 0.5], [0.5, 0.5]]
+
+    assert multiclass_brier_score(correct, observed) < multiclass_brier_score(uniform, observed)
+    assert multiclass_brier_score(swapped, observed) > multiclass_brier_score(uniform, observed)
+    assert multiclass_log_loss(correct, observed) < multiclass_log_loss(uniform, observed)
+    assert multiclass_log_loss(swapped, observed) > multiclass_log_loss(uniform, observed)
+
+
+def test_per_id_log_loss_clips_zero_and_supports_three_classes():
+    value = multiclass_log_loss([[0.0, 0.0, 1.0]], [0])
+    assert math.isfinite(value)
+    assert value > 30
+    assert multiclass_brier_score([[0.1, 0.2, 0.7]], [2]) < 0.2
 
 
 def test_kl_divergence_identical_is_zero():

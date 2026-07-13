@@ -91,24 +91,31 @@ Resposta direta no contrato `mirofish.harness.v1`:
   "methodology": {
     "contractVersion": "mirofish.vox_science.v1",
     "mode": "public_data_grounded_synthetic_harness",
-    "calibrationMode": "public_data_and_existing_assets",
+    "calibrationMode": "synthetic_trace_only",
+    "verificationStatus": "verified",
+    "claimLevel": "C1",
+    "passesExecutionGate": true,
+    "calibrationEvidence": null,
+    "authority": {
+      "status": "server_verified",
+      "verified": true,
+      "claimLevel": "C1",
+      "passesExecutionGate": true
+    },
     "newHumanCollection": false,
     "readiness": "passed",
     "availableArtifacts": ["methodology_manifest.json"],
     "recommendedMissingArtifacts": [],
-    "population": "publico-alvo declarado na missao MiroFish",
-    "publicDataAnchors": ["IBGE Censo 2022"],
-    "robustness": {
-      "overall_score": 0.78,
-      "variance_ratio": 0.72,
-      "passes_gate": true
-    }
+    "population": null,
+    "publicDataAnchors": [],
+    "robustness": null
   },
   "qualityGates": [
     {
       "id": "harness-science-gate",
       "artifact": "harness_science_gate.json",
       "status": "passed",
+      "authority": "server_verified",
       "description": "Gate cientifico final do harness Vox."
     }
   ],
@@ -124,6 +131,36 @@ chaves para consumidores internos:
 - `methodology`: resumo leve da metodologia, populacao, fontes publicas,
   modo de calibracao e prontidao cientifica.
 - `qualityGates`: estado dos gates cientificos vinculados a artefatos JSON.
+- `verified_vox_claim` na resposta de `/api/report/<id>/artifacts`: unica
+  projecao de claim confiavel para clientes. Se `verified=false`, clientes devem
+  exibir "nao verificado / sem claim" (`claim_level=null`) e ignorar claims,
+  metricas, fontes e linguagem crua dos JSONs. C0 e reservado ao bundle
+  autentico e corrente cujo gate de execucao foi bloqueado; C1 e reservado ao
+  trace sintetico autentico que passou a execucao.
+- `calibrationMode` e enum fechado:
+  `unverified_no_calibration`, `synthetic_trace_only` ou
+  `materialized_external_baseline`. O campo legado `mode` permanece
+  `public_data_grounded_synthetic_harness` no contrato v1 e nao carrega estado
+  de autoridade.
+- `authority` informa se a superficie e `server_verified` ou apenas
+  `diagnostic_only`. Population, anchors e robustness crus nunca sao
+  republicados quando a geracao e nao verificada/C0; C1 permanece diagnostico.
+- A verificacao exige HMAC do host, binding exato ao `report_id`, ancora corrente
+  por relatorio e reabertura da autoridade materializada. `qualityGates` ficam
+  `review/diagnostic_only` quando essa verificacao falha.
+- C4 exige criterios de desempenho material congelados no recibo pre-cutoff:
+  politica `vox-c4-material-v1`, piso de Brier skill 0.05 e razao maxima de
+  log loss 0.99 contra o baseline constante. Customizacao so pode ser mais
+  estrita; politica desconhecida, skill 0.01 ou ratio 1.0 sao rejeitados. Sao criterios
+  operacionais pre-registrados, nao significancia estatistica ou intervalo de
+  confianca.
+- Baseline `rows` e aceito como entrada, mas nao promove C2+ no contrato atual;
+  somente massas `distributions` somando `1 +/- 1e-6` alimentam as metricas de
+  probabilidade rotulada.
+- C2 ja exige MAE, KL e Wasserstein categorial materializados e dentro dos
+  limiares declarados (atualmente <= 0.15 cada). C3 nao introduz esse piso:
+  acrescenta runs/seeds materializados, estabilidade >= 0.70 e auditoria de
+  todos os subgrupos com erro <= 0.15.
 
 Artefatos Vox Science reconhecidos:
 
@@ -145,7 +182,10 @@ Valores de `methodology.readiness`:
 - `partial`: parte dos artefatos existe.
 - `ready_for_science_gate`: artefatos minimos existem, mas o gate final ainda
   nao aprovou.
-- `passed`: `harness_science_gate.json` aprovou.
+- `blocked`: existe gate, mas ele falhou ou a geracao/hash nao e confiavel.
+- `passed`: gate v2 com `passes_execution_gate=true`, geracao comum, hashes
+  canonicos e consistencia cruzada de fidelity/policy/methodology foi verificado.
+  Clientes consultam `verified_vox_claim.claim_level`, nunca o gate cru.
 
 ## Base URL para consumidores
 

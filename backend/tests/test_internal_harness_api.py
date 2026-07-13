@@ -7,6 +7,7 @@ from app.api import internal as internal_api
 from app.api import internal_bp
 from app.config import Config
 from app.services.report_agent import Report, ReportManager, ReportStatus
+from app.services.harness_evidence_bundle import _build_methodology
 
 
 def _app() -> Flask:
@@ -101,10 +102,14 @@ def test_harness_evidence_bundle_retorna_contrato_para_vox(monkeypatch):
     assert data["forecasts"][0]["probability"] == 0.68
     assert data["forecasts"][0]["uncertainty"] == 0.5
     assert data["methodology"]["contractVersion"] == "mirofish.vox_science.v1"
-    assert data["methodology"]["readiness"] == "passed"
-    assert data["methodology"]["newHumanCollection"] is False
-    assert "PEP/MGI" in data["methodology"]["publicDataAnchors"]
-    assert data["qualityGates"][0]["status"] == "passed"
+    assert data["methodology"]["readiness"] == "blocked"
+    assert data["methodology"]["calibrationMode"] == "unverified_no_calibration"
+    assert data["methodology"]["claimLevel"] is None
+    assert data["methodology"]["newHumanCollection"] is None
+    assert data["methodology"]["population"] is None
+    assert data["methodology"]["publicDataAnchors"] == []
+    assert data["methodology"]["robustness"] is None
+    assert data["qualityGates"][0]["status"] == "review"
     assert data["graph"]["nodes"][0]["id"] == "sim_vox"
     assert "publishable" in data["limitations"][0]
 
@@ -123,6 +128,53 @@ def test_harness_evidence_bundle_404_sem_relatorio(monkeypatch):
     assert response.status_code == 404
     assert data["success"] is False
     assert "sim_ausente" in data["error"]
+
+
+def test_public_methodology_never_falls_back_to_raw_unverified_calibration():
+    projection = {
+        "verified": False,
+        "verification_status": "unverified",
+        "passes_execution_gate": False,
+        "claim_level": None,
+        "calibration_mode": "unverified_no_calibration",
+        "calibration_evidence": None,
+        "new_human_collection": None,
+    }
+    raw = {
+        "methodology_manifest.json": {"population": "forged population"},
+        "baseline_registry.json": {"anchors": [{"name": "forged anchor"}]},
+        "fidelity_report.json": {"overall_score": 1.0},
+        "harness_science_gate.json": {"passes_execution_gate": True},
+    }
+
+    methodology = _build_methodology(list(raw), raw, projection)
+
+    assert methodology["mode"] == "public_data_grounded_synthetic_harness"
+    assert methodology["calibrationMode"] == "unverified_no_calibration"
+    assert methodology["authority"]["status"] == "diagnostic_only"
+    assert methodology["population"] is None
+    assert methodology["publicDataAnchors"] == []
+    assert methodology["robustness"] is None
+
+
+def test_public_methodology_distinguishes_verified_c0_c1_and_c2_plus():
+    base = {
+        "verified": True,
+        "verification_status": "verified",
+        "new_human_collection": False,
+    }
+    cases = [
+        ({**base, "passes_execution_gate": False, "claim_level": "C0", "calibration_mode": "unverified_no_calibration", "calibration_evidence": None}, "unverified_no_calibration", "C0"),
+        ({**base, "passes_execution_gate": True, "claim_level": "C1", "calibration_mode": "synthetic_trace_only", "calibration_evidence": None}, "synthetic_trace_only", "C1"),
+        ({**base, "passes_execution_gate": True, "claim_level": "C2", "calibration_mode": "materialized_external_baseline", "calibration_evidence": {"baseline_snapshot_sha256": "a" * 64}}, "materialized_external_baseline", "C2"),
+    ]
+
+    for projection, mode, level in cases:
+        methodology = _build_methodology([], {}, projection)
+        assert methodology["mode"] == "public_data_grounded_synthetic_harness"
+        assert methodology["calibrationMode"] == mode
+        assert methodology["claimLevel"] == level
+        assert methodology["authority"]["status"] == "server_verified"
 
 
 def test_harness_runs_alias_dispara_pipeline_com_token(monkeypatch):

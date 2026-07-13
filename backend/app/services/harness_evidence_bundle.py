@@ -1,12 +1,21 @@
 """Contrato de evidencias do harness MiroFish para consumidores internos."""
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import quote, urljoin
 
 from .report_agent import Report, ReportManager, ReportStatus
+from .vox_science.authority import resolve_authorized_evidence
+from .vox_science.baseline_snapshot import SnapshotValidationError, load_baseline_snapshot
+from .vox_science.claim_evidence import load_claim_evidence
+from .vox_science.verification import (
+    verify_current_generation_anchor,
+    verify_gate_hmac,
+)
 
 
 class HarnessEvidenceBundleNotFound(ValueError):
@@ -35,6 +44,12 @@ REQUIRED_SCIENCE_ARTIFACTS = (
     "harness_science_gate.json",
 )
 
+CALIBRATION_MODES = {
+    "unverified_no_calibration",
+    "synthetic_trace_only",
+    "materialized_external_baseline",
+}
+
 
 def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str, Any]:
     """Monta o bundle estavel que sistemas internos usam como evidencia MiroFish."""
@@ -49,6 +64,10 @@ def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str
     forecast_ledger = ReportManager.load_json_artifact(report.report_id, "forecast_ledger.json") or {}
     decision_packet = ReportManager.load_json_artifact(report.report_id, "decision_packet.json") or {}
     science_payloads = _load_science_payloads(report.report_id, artifact_names)
+    verified_claim = _verified_vox_claim_projection_from_payloads(
+        report.report_id, science_payloads
+    )
+    science_verified = verified_claim["verified"] is True
 
     return {
         "id": f"mirofish_bundle_{simulation_id}",
@@ -59,8 +78,10 @@ def build_harness_evidence_bundle(simulation_id: str, base_url: str) -> Dict[str
         "evidence": _build_evidence(report, artifacts, base_url, decision_packet),
         "graph": _build_graph(report, artifact_names, decision_packet),
         "forecasts": _build_forecasts(forecast_ledger),
-        "methodology": _build_methodology(artifact_names, science_payloads),
-        "qualityGates": _build_quality_gates(science_payloads),
+        "methodology": _build_methodology(
+            artifact_names, science_payloads, verified_claim
+        ),
+        "qualityGates": _build_quality_gates(science_payloads, science_verified),
         "limitations": _build_limitations(report, artifact_names, forecast_ledger),
     }
 
@@ -81,6 +102,90 @@ def _load_science_payloads(report_id: str, artifact_names: Iterable[str]) -> Dic
             continue
         payloads[name] = ReportManager.load_json_artifact(report_id, name)
     return payloads
+
+
+def verified_vox_claim_projection(
+    report_id: str, artifact_names: Iterable[str] | None = None
+) -> Dict[str, Any]:
+    """Single server-verified claim projection; raw JSON is never authority."""
+
+    if artifact_names is not None:
+        names = list(artifact_names)
+    else:
+        names = [
+            name
+            for item in _safe_artifacts(report_id)
+            if isinstance((name := item.get("name")), str) and name
+        ]
+    payloads = _load_science_payloads(report_id, names)
+    return _verified_vox_claim_projection_from_payloads(report_id, payloads)
+
+
+def _verified_vox_claim_projection_from_payloads(
+    report_id: str, payloads: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Project only fields validated against the current host anchor."""
+
+    gate = payloads.get("harness_science_gate.json")
+    if not _valid_science_generation(payloads, report_id) or not isinstance(gate, dict):
+        return {
+            "verified": False,
+            "verification_status": "unverified",
+            "passes_execution_gate": False,
+            "claim_level": None,
+            "calibrated": False,
+            "calibration_mode": "unverified_no_calibration",
+            "calibration_evidence": None,
+            "new_human_collection": None,
+            "prospective_validation": None,
+            "max_external_language": None,
+            "generation_id": None,
+            "blockers": ["science_generation_authenticity_unverified"],
+        }
+    claim_level = gate.get("claim_level")
+    passes_execution = gate.get("passes_execution_gate") is True
+    calibrated = passes_execution and claim_level in {"C2", "C3", "C4"}
+    calibration_mode = (
+        "materialized_external_baseline"
+        if calibrated
+        else "synthetic_trace_only"
+        if passes_execution and claim_level == "C1"
+        else "unverified_no_calibration"
+    )
+    calibration_evidence = None
+    if calibrated:
+        calibration_evidence = {
+            "baseline_snapshot_sha256": gate["baseline_snapshot_sha256"],
+            "claim_evidence_sha256": gate["claim_evidence_sha256"],
+            "authority_manifest_sha256": gate["authority_manifest_sha256"],
+        }
+    prospective_validation = None
+    if claim_level == "C4":
+        raw_prospective = gate.get("prospective_validation")
+        if isinstance(raw_prospective, dict):
+            prospective_validation = {
+                "status": raw_prospective.get("status"),
+                "heldout_count": raw_prospective.get("heldout_count"),
+                "metrics": raw_prospective.get("metrics"),
+                "per_id_scoring": raw_prospective.get("per_id_scoring"),
+            }
+    return {
+        "verified": True,
+        "verification_status": "verified",
+        "passes_execution_gate": passes_execution,
+        "claim_level": claim_level,
+        "calibrated": calibrated,
+        "calibration_mode": calibration_mode,
+        "calibration_evidence": calibration_evidence,
+        "new_human_collection": False,
+        "prospective_validation": prospective_validation,
+        "max_external_language": str(
+            gate.get("max_external_language")
+            or "simulacao sintetica exploratoria com rastreabilidade metodologica"
+        ),
+        "generation_id": gate.get("generation_id"),
+        "blockers": [str(item) for item in gate.get("blockers", [])],
+    }
 
 
 def _bundle_title(report: Report) -> str:
@@ -210,32 +315,44 @@ def _build_forecasts(forecast_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _build_methodology(
     artifact_names: List[str],
     science_payloads: Dict[str, Any],
+    verified_claim: Dict[str, Any],
 ) -> Dict[str, Any]:
     present = [name for name in SCIENCE_ARTIFACTS if name in artifact_names]
     missing = [name for name in SCIENCE_ARTIFACTS if name not in artifact_names]
-    methodology_manifest = science_payloads.get("methodology_manifest.json") or {}
-    baseline_registry = science_payloads.get("baseline_registry.json") or {}
-    fidelity_report = science_payloads.get("fidelity_report.json") or {}
+    science_verified = verified_claim.get("verified") is True
+    calibration_mode = str(
+        verified_claim.get("calibration_mode") or "unverified_no_calibration"
+    )
+    if calibration_mode not in CALIBRATION_MODES:
+        calibration_mode = "unverified_no_calibration"
 
     return {
         "contractVersion": "mirofish.vox_science.v1",
         "mode": "public_data_grounded_synthetic_harness",
-        "calibrationMode": "public_data_and_existing_assets",
-        "newHumanCollection": False,
-        "readiness": _science_readiness(science_payloads, present),
+        "verificationStatus": verified_claim.get("verification_status", "unverified"),
+        "claimLevel": verified_claim.get("claim_level") if science_verified else None,
+        "passesExecutionGate": verified_claim.get("passes_execution_gate") is True,
+        "calibrationMode": calibration_mode,
+        "calibrationEvidence": verified_claim.get("calibration_evidence"),
+        "authority": {
+            "status": "server_verified" if science_verified else "diagnostic_only",
+            "verified": science_verified,
+            "claimLevel": verified_claim.get("claim_level") if science_verified else None,
+            "passesExecutionGate": verified_claim.get("passes_execution_gate") is True,
+        },
+        "newHumanCollection": verified_claim.get("new_human_collection"),
+        "readiness": _science_readiness(science_payloads, present, science_verified),
         "availableArtifacts": present,
         "recommendedMissingArtifacts": missing,
-        "population": _first_present(
-            methodology_manifest.get("population"),
-            methodology_manifest.get("target_population"),
-            baseline_registry.get("population"),
-        ),
-        "publicDataAnchors": _public_data_anchor_names(baseline_registry),
-        "robustness": _robustness_summary(fidelity_report),
+        "population": None,
+        "publicDataAnchors": [],
+        "robustness": None,
     }
 
 
-def _build_quality_gates(science_payloads: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _build_quality_gates(
+    science_payloads: Dict[str, Any], science_verified: bool
+) -> List[Dict[str, Any]]:
     gates = []
     for name in (
         "harness_science_gate.json",
@@ -245,26 +362,249 @@ def _build_quality_gates(science_payloads: Dict[str, Any]) -> List[Dict[str, Any
         "claim_policy_audit.json",
     ):
         payload = science_payloads.get(name)
+        if not science_verified:
+            status = "review"
+        elif name == "harness_science_gate.json":
+            status = (
+                "passed"
+                if isinstance(payload, dict)
+                and payload.get("passes_execution_gate") is True
+                else "blocked"
+            )
+        else:
+            status = _gate_status(payload)
         gates.append(
             {
                 "id": _artifact_tag(name),
                 "artifact": name,
-                "status": _gate_status(payload),
+                "status": status,
+                "authority": "server_verified" if science_verified else "diagnostic_only",
                 "description": SCIENCE_ARTIFACTS[name],
             }
         )
     return gates
 
 
-def _science_readiness(science_payloads: Dict[str, Any], present: List[str]) -> str:
+def _science_readiness(
+    science_payloads: Dict[str, Any], present: List[str], science_verified: bool
+) -> str:
     science_gate = science_payloads.get("harness_science_gate.json")
-    if _artifact_gate_passes(science_gate):
-        return "passed"
+    if science_verified:
+        return (
+            "passed"
+            if isinstance(science_gate, dict)
+            and science_gate.get("passes_execution_gate") is True
+            else "blocked"
+        )
+    if isinstance(science_gate, dict):
+        return "blocked"
     if all(name in present for name in REQUIRED_SCIENCE_ARTIFACTS):
         return "ready_for_science_gate"
     if present:
         return "partial"
     return "legacy"
+
+
+def _valid_science_generation(
+    science_payloads: Dict[str, Any], report_id: str | None = None
+) -> bool:
+    """Verify host authenticity, currentness, bindings and materialized authority."""
+
+    gate = science_payloads.get("harness_science_gate.json")
+    if not isinstance(gate, dict):
+        return False
+    if (
+        gate.get("schema") != "mirofish.vox.harness_science_gate.v2"
+        or not isinstance(gate.get("passes_execution_gate"), bool)
+        or gate.get("new_human_collection") is not False
+        or not isinstance(gate.get("generation_id"), str)
+        or not gate.get("generation_id")
+        or not isinstance(gate.get("artifact_hashes"), dict)
+    ):
+        return False
+    expected_report_id = report_id or gate.get("report_id")
+    if (
+        not isinstance(expected_report_id, str)
+        or not expected_report_id
+        or gate.get("report_id") != expected_report_id
+        or not verify_gate_hmac(gate)
+        or not verify_current_generation_anchor(expected_report_id, gate)
+    ):
+        return False
+    generation_id = gate["generation_id"]
+    hashes = gate["artifact_hashes"]
+    expected_names = set(SCIENCE_ARTIFACTS) - {"harness_science_gate.json"}
+    if set(hashes) != expected_names:
+        return False
+    for name in expected_names:
+        payload = science_payloads.get(name)
+        expected_hash = hashes.get(name)
+        if (
+            not isinstance(payload, dict)
+            or payload.get("generation_id") != generation_id
+            or not isinstance(expected_hash, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", expected_hash)
+        ):
+            return False
+        try:
+            canonical = json.dumps(
+                payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            ).encode("utf-8")
+        except (TypeError, ValueError):
+            return False
+        if hashlib.sha256(canonical).hexdigest() != expected_hash:
+            return False
+    fidelity = science_payloads.get("fidelity_report.json")
+    claim_policy = science_payloads.get("claim_policy_audit.json")
+    methodology = science_payloads.get("methodology_manifest.json")
+    model = science_payloads.get("model_run_registry.json")
+    if (
+        not isinstance(fidelity, dict)
+        or not isinstance(claim_policy, dict)
+        or not isinstance(methodology, dict)
+        or not isinstance(model, dict)
+    ):
+        return False
+    if (
+        gate.get("simulation_id") != model.get("simulation_id")
+        or gate.get("report_id") != model.get("report_id")
+        or gate.get("run_id") != model.get("run_id")
+        or gate.get("config_sha256") != model.get("config_sha256")
+        or gate.get("input_sha256") != model.get("prompt_registry_hash")
+        or methodology.get("report_id") != gate.get("report_id")
+        or methodology.get("simulation_id") != gate.get("simulation_id")
+    ):
+        return False
+    passes_execution = gate.get("passes_execution_gate") is True
+    if fidelity.get("passes_execution_gate") is not passes_execution:
+        return False
+    eligibility = fidelity.get("claim_eligibility")
+    if not isinstance(eligibility, dict):
+        return False
+    policy_blockers = claim_policy.get("blocked_claims")
+    passes_policy = claim_policy.get("passes_claim_policy")
+    if (
+        not isinstance(policy_blockers, list)
+        or not isinstance(passes_policy, bool)
+        or claim_policy.get("passes_gate") is not passes_policy
+        or passes_policy is bool(policy_blockers)
+    ):
+        return False
+    fidelity_ceiling = next(
+        (level for level in ("C4", "C3", "C2") if eligibility.get(level) is True),
+        "C1",
+    )
+    expected_claim = (
+        "C0"
+        if not passes_execution
+        else "C1"
+        if not passes_policy
+        else fidelity_ceiling
+    )
+    if (
+        gate.get("claim_level") != expected_claim
+        or claim_policy.get("claim_level") != expected_claim
+        or methodology.get("claim_target") != expected_claim
+        or gate.get("max_external_language") != _claim_language(expected_claim)
+        or claim_policy.get("allowed_language") != [_claim_language(expected_claim)]
+    ):
+        return False
+    if expected_claim in {"C2", "C3", "C4"}:
+        binding = fidelity.get("evidence_binding")
+        calibration = fidelity.get("calibration_evidence")
+        if (
+            not isinstance(binding, dict)
+            or not isinstance(calibration, dict)
+            or calibration.get("status") != "measured"
+            or any(
+                not isinstance(binding.get(key), str)
+                or not re.fullmatch(r"[0-9a-f]{64}", binding[key])
+                for key in (
+                    "baseline_snapshot_sha256",
+                    "sample_sha256",
+                    "claim_evidence_sha256",
+                    "authority_manifest_sha256",
+                )
+            )
+        ):
+            return False
+        if expected_claim == "C4":
+            prospective = fidelity.get("prospective_evidence")
+            if (
+                gate.get("prospective_validation") != prospective
+                or not isinstance(prospective, dict)
+                or prospective.get("status") != "measured"
+                or not isinstance(prospective.get("per_id_scoring"), dict)
+                or prospective["per_id_scoring"].get("algorithm")
+                != "multiclass_brier_log_loss_per_id.v1"
+                or prospective["per_id_scoring"].get("passes_thresholds") is not True
+            ):
+                return False
+        required_top_level = {
+            "baseline_snapshot_sha256",
+            "claim_evidence_sha256",
+            "authority_manifest_sha256",
+        }
+        if any(gate.get(name) != binding.get(name) for name in required_top_level):
+            return False
+        if (
+            gate.get("baseline_snapshot_path") != binding.get("baseline_snapshot_path")
+            or gate.get("claim_evidence_path") != binding.get("claim_evidence_path")
+        ):
+            return False
+        try:
+            authority = resolve_authorized_evidence(
+                baseline_path=str(gate["baseline_snapshot_path"]),
+                claim_evidence_path=str(gate["claim_evidence_path"]),
+            )
+            if (
+                authority.baseline_sha256 != gate["baseline_snapshot_sha256"]
+                or authority.claim_evidence_sha256 != gate["claim_evidence_sha256"]
+                or authority.authority_manifest_sha256 != gate["authority_manifest_sha256"]
+            ):
+                return False
+            snapshot_summary = calibration.get("snapshot")
+            if not isinstance(snapshot_summary, dict):
+                return False
+            snapshot = load_baseline_snapshot(
+                relative_path=authority.baseline_path,
+                trusted_root=authority.trusted_root,
+                expected_sha256=authority.baseline_sha256,
+                target_variable=snapshot_summary.get("variable_id"),
+            )
+            evidence = load_claim_evidence(
+                relative_path=authority.claim_evidence_path,
+                trusted_root=authority.trusted_root,
+                expected_sha256=authority.claim_evidence_sha256,
+                authority_manifest_sha256=authority.authority_manifest_sha256,
+                baseline_snapshot=snapshot,
+                expected_report_id=expected_report_id,
+                expected_simulation_id=str(gate["simulation_id"]),
+                expected_run_id=str(gate["run_id"]),
+                expected_config_sha256=str(gate["config_sha256"]),
+                expected_input_sha256=str(gate["input_sha256"]),
+                authorized_stability_runs=authority.stability_runs,
+                authorized_preregistered_forecasts=authority.preregistered_forecasts,
+            )
+            if evidence.sha256 != gate["claim_evidence_sha256"]:
+                return False
+        except (KeyError, SnapshotValidationError, TypeError, ValueError):
+            return False
+    return True
+
+
+def _claim_language(level: str) -> str:
+    return {
+        "C0": "mapa qualitativo de sinais e friccoes sinteticas",
+        "C1": "simulacao sintetica exploratoria com rastreabilidade metodologica",
+        "C2": "simulacao sintetica calibrada por dados publicos e robustez auditada",
+        "C3": "estimativa sintetica calibrada por baseline publico comparavel",
+        "C4": "previsao operacional monitoravel com cenario base e tese adversaria",
+    }.get(level, "simulacao sintetica exploratoria com rastreabilidade metodologica")
 
 
 def _artifact_gate_passes(payload: Any) -> bool:
@@ -353,7 +693,10 @@ def _primary_claim(report: Report) -> str:
 def _report_confidence(report: Report, decision_packet: Optional[Dict[str, Any]] = None) -> float:
     if isinstance(decision_packet, dict):
         try:
-            conviction = float(decision_packet.get("conviction_operational"))
+            conviction_raw = decision_packet.get("conviction_operational")
+            if conviction_raw is None:
+                raise ValueError("conviction_missing")
+            conviction = float(conviction_raw)
             if 0 <= conviction <= 1:
                 return round(conviction, 4)
         except (TypeError, ValueError):

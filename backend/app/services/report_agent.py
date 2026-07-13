@@ -10,6 +10,7 @@ Funcionalidades:
 """
 
 import os
+import hashlib
 import json
 import time
 import re
@@ -2662,8 +2663,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                     assembled_content=assembled_content,
                     model_name=Config.LLM_AGENT_MODEL,
                 )
-                for artifact_name, payload in vox_artifacts.items():
-                    ReportManager.save_json_artifact(report_id, artifact_name, payload)
+                ReportManager.save_json_artifact_bundle(report_id, vox_artifacts)
                 science_gate = vox_artifacts.get("harness_science_gate.json", {})
                 if report.quality_gate is None:
                     report.quality_gate = {}
@@ -2676,6 +2676,56 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 ReportManager.save_json_artifact(report_id, "system_gate.json", report.quality_gate)
             except Exception as vox_err:
                 logger.warning(f"Nao foi possivel gerar artefatos Vox Science: {vox_err}")
+                # Overwrite any stale authoritative gate. Consumers must never
+                # reuse a C2+ result from an earlier generation after failure.
+                failure_generated_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+                failure_gate = {
+                        "schema": "mirofish.vox.harness_science_gate.v2",
+                        "generated_at": failure_generated_at,
+                        "generation_id": hashlib.sha256(
+                            f"{report_id}:{self.simulation_id}:{failure_generated_at}:C0".encode("utf-8")
+                        ).hexdigest(),
+                        "report_id": report_id,
+                        "simulation_id": self.simulation_id,
+                        "run_id": None,
+                        "config_sha256": None,
+                        "input_sha256": None,
+                        "baseline_snapshot_path": None,
+                        "baseline_snapshot_sha256": None,
+                        "claim_evidence_path": None,
+                        "claim_evidence_sha256": None,
+                        "authority_manifest_sha256": None,
+                        "passes_execution_gate": False,
+                        "passes_gate": False,
+                        "claim_level": "C0",
+                        "max_external_language": "mapa qualitativo de sinais e friccoes sinteticas",
+                        "blockers": ["vox_artifact_generation_failed"],
+                        "claim_blockers": ["stale_science_artifacts_rejected"],
+                        "warnings": [],
+                        "artifact_hashes": {},
+                        "signature_algorithm": "hmac-sha256",
+                        "hmac_sha256": None,
+                    }
+                from .vox_science.verification import sign_gate
+
+                signed_failure_gate = sign_gate(failure_gate)
+                if signed_failure_gate:
+                    try:
+                        ReportManager.save_json_artifact_bundle(
+                            report_id,
+                            {"harness_science_gate.json": failure_gate},
+                        )
+                    except Exception as anchor_err:
+                        logger.warning(
+                            f"Falha ao ancorar gate Vox C0; gate local permanece fail-closed: {anchor_err}"
+                        )
+                        ReportManager.save_json_artifact(
+                            report_id, "harness_science_gate.json", failure_gate
+                        )
+                else:
+                    ReportManager.save_json_artifact(
+                        report_id, "harness_science_gate.json", failure_gate
+                    )
 
             report.markdown_content = assembled_content
             report.status = ReportStatus.COMPLETED
@@ -3210,14 +3260,71 @@ class ReportManager:
 
     @classmethod
     def save_json_artifact(cls, report_id: str, filename: str, payload: Dict[str, Any]) -> None:
-        """Salva artefato JSON auxiliar dentro da pasta do relatorio."""
+        """Salva um artefato por troca atomica e rejeita NaN/Infinity."""
         cls._ensure_report_folder(report_id)
         safe_name = os.path.basename(filename)
         if not safe_name.endswith(".json"):
             safe_name += ".json"
         path = os.path.join(cls._get_report_folder(report_id), safe_name)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+        temporary = f"{path}.tmp-{os.getpid()}-{time.time_ns()}"
+        try:
+            with open(temporary, "x", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2, allow_nan=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.remove(temporary)
+
+    @classmethod
+    def save_json_artifact_bundle(
+        cls,
+        report_id: str,
+        payloads: Mapping[str, Dict[str, Any]],
+    ) -> None:
+        """Stage a generation, then promote its authoritative gate last."""
+
+        cls._ensure_report_folder(report_id)
+        gate_payload = payloads.get("harness_science_gate.json")
+        signed_vox_gate = False
+        if isinstance(gate_payload, Mapping) and gate_payload.get("schema") == "mirofish.vox.harness_science_gate.v2":
+            from .vox_science.verification import verify_gate_hmac
+
+            signed_vox_gate = verify_gate_hmac(gate_payload)
+            if gate_payload.get("claim_level") in {"C2", "C3", "C4"} and not signed_vox_gate:
+                raise ValueError("calibrated_vox_gate_requires_host_hmac")
+        folder = cls._get_report_folder(report_id)
+        staged: Dict[str, str] = {}
+        try:
+            for filename, payload in payloads.items():
+                safe_name = os.path.basename(filename)
+                if not safe_name.endswith(".json"):
+                    safe_name += ".json"
+                if safe_name in staged:
+                    raise ValueError("duplicate_artifact_name")
+                target = os.path.join(folder, safe_name)
+                temporary = f"{target}.tmp-{os.getpid()}-{time.time_ns()}"
+                with open(temporary, "x", encoding="utf-8") as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2, allow_nan=False)
+                    f.flush()
+                    os.fsync(f.fileno())
+                staged[safe_name] = temporary
+            promotion_order = [
+                name for name in staged if name != "harness_science_gate.json"
+            ]
+            if "harness_science_gate.json" in staged:
+                promotion_order.append("harness_science_gate.json")
+            for safe_name in promotion_order:
+                os.replace(staged.pop(safe_name), os.path.join(folder, safe_name))
+            if signed_vox_gate and isinstance(gate_payload, Mapping):
+                from .vox_science.verification import write_current_generation_anchor
+
+                write_current_generation_anchor(report_id, gate_payload)
+        finally:
+            for temporary in staged.values():
+                if os.path.exists(temporary):
+                    os.remove(temporary)
 
     @classmethod
     def load_json_artifact(cls, report_id: str, filename: str) -> Optional[Dict[str, Any]]:
