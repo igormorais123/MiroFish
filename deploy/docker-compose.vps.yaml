@@ -53,6 +53,8 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        VITE_BASE: ${VITE_BASE:-/mirofish/}
     container_name: mirofish-inteia
     restart: always
     depends_on:
