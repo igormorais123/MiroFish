@@ -83,6 +83,7 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 - A API pública em `https://inteia.com.br/mirofish/api/...` é encaminhada pelo mesmo Nginx para o Flask em `127.0.0.1:5001/api/...`.
 - O healthcheck público correto é `https://inteia.com.br/mirofish/health/public`.
 - O trecho canônico de Nginx fica em `deploy/nginx/inteia.com.br.mirofish.conf` e deve ser incluído no bloco HTTPS de `inteia.com.br`.
+- A configuração canônica do subdomínio técnico fica em `deploy/nginx/mirofish.inteia.com.br.conf`; a raiz redireciona para a URL pública e apenas API/health permanecem como ponte.
 - O build Docker recebe `VITE_BASE=/mirofish/` para que assets e rotas do SPA funcionem sob o subcaminho público.
 - A Vercel continua registrada como plataforma histórica/alternativa do frontend, mas não é o salto DNS atual do domínio público.
 
