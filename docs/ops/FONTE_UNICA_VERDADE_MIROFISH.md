@@ -76,6 +76,16 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 - A ponte `https://mirofish.inteia.com.br/api/...` continua ativa porque `vercel.json` usa esse destino para a API pública sob `/mirofish/api/...`.
 - As portas Docker do MiroFish devem ficar presas ao localhost da VPS: `127.0.0.1:4000`, `127.0.0.1:5001` e `127.0.0.1:8003`.
 
+## Estado operacional atualizado em 2026-07-15
+
+- `inteia.com.br` e `mirofish.inteia.com.br` resolvem para a VPS principal `2.25.174.138`.
+- O produto público em `https://inteia.com.br/mirofish/` é servido pelo Nginx da VPS a partir do frontend do container oficial em `127.0.0.1:4000`.
+- A API pública em `https://inteia.com.br/mirofish/api/...` é encaminhada pelo mesmo Nginx para o Flask em `127.0.0.1:5001/api/...`.
+- O healthcheck público correto é `https://inteia.com.br/mirofish/health/public`.
+- O trecho canônico de Nginx fica em `deploy/nginx/inteia.com.br.mirofish.conf` e deve ser incluído no bloco HTTPS de `inteia.com.br`.
+- O build Docker recebe `VITE_BASE=/mirofish/` para que assets e rotas do SPA funcionem sob o subcaminho público.
+- A Vercel continua registrada como plataforma histórica/alternativa do frontend, mas não é o salto DNS atual do domínio público.
+
 ## Política de merge entre instâncias
 
 Quando Igor estiver usando Claude Code no PC e Codex em outra instância:
