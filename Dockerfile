@@ -71,7 +71,7 @@ set -e
 cd /app/backend
 uv run --python python3.11 gunicorn \
   --bind "0.0.0.0:${FLASK_PORT:-5001}" \
-  --workers "${GUNICORN_WORKERS:-2}" \
+  --workers "${GUNICORN_WORKERS:-1}" \
   --threads "${GUNICORN_THREADS:-4}" \
   --timeout "${GUNICORN_TIMEOUT:-300}" \
   --access-logfile - \
