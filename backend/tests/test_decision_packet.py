@@ -49,6 +49,8 @@ def test_decision_packet_gera_probabilidades_deterministicas_com_soma_100():
     assert packet["red_team"]["opposing_thesis"]
     assert packet["red_team"]["reversal_triggers"]
     assert packet["structured_metrics"]["red_team_pressure_percent"] == packet["red_team"]["pressure_percent"]
+    assert packet["structured_metrics"]["convergence_reversal_threshold_percent"] == 62
+    assert packet["structured_metrics"]["convergence_recommended_next_runs"] == packet["convergence"]["recommended_next_runs"]
 
 
 def test_decision_packet_prompt_expoe_percentuais_oficiais():

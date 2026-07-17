@@ -33,12 +33,15 @@ _METRIC_CATEGORY_TERMS = {
     "nodes": ("node", "nodes", "no", "nos", "entidade", "entidades", "entity", "entities"),
     "relationships": ("edge", "edges", "relation", "relations", "relacao", "relacoes", "relationship", "relationships", "aresta", "arestas"),
     "facts": ("fact", "facts", "fato", "fatos", "edge", "edges", "relation", "relations", "relationship", "relationships"),
-    "rounds": ("round", "rounds", "rodada", "rodadas"),
+    "rounds": ("round", "rounds", "run", "runs", "rodada", "rodadas", "reforco"),
     "hours": ("hour", "hours", "hora", "horas"),
     "minutes": ("minute", "minutes", "minuto", "minutos"),
     "actions": ("action", "actions", "acao", "acoes"),
     "agents": ("agent", "agents", "agente", "agentes", "profile", "profiles", "perfil", "perfis"),
-    "probability": ("probability", "probabilidade", "chance", "percentual", "cenario", "cenarios", "base", "otimista", "contrario", "risco", "riscos", "confianca", "conviccao"),
+    "texts": ("text", "texts", "texto", "textos", "generated"),
+    "convergence": ("convergence", "convergencia", "score"),
+    "evidence": ("evidence", "evidencia", "lacuna", "backing"),
+    "probability": ("probability", "probabilidade", "chance", "percentual", "cenario", "cenarios", "base", "otimista", "contrario", "risco", "riscos", "confianca", "conviccao", "conviction", "reversal", "reversao", "threshold"),
 }
 
 _PREDICTIVE_NUMERIC_CONTEXT_RE = re.compile(

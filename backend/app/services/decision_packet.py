@@ -115,6 +115,8 @@ def build_decision_packet(
         "execution_risk_probability_percent": execution_risk_percent,
         "evidence_risk_probability_percent": evidence_risk_percent,
         "convergence_score_percent": convergence["score_percent"],
+        "convergence_reversal_threshold_percent": 62,
+        "convergence_recommended_next_runs": convergence["recommended_next_runs"],
         "red_team_pressure_percent": red_team["pressure_percent"],
         "emergent_interactive_actions_estimate": emergent_interactions,
         "dynamic_create_posts_estimate": dynamic_posts,
