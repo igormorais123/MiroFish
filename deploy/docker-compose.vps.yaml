@@ -41,6 +41,9 @@ services:
     volumes:
       - ./graphiti_patches/ingest.py:/app/graph_service/routers/ingest.py:ro
       - ./graphiti_patches/zep_graphiti.py:/app/graph_service/zep_graphiti.py:ro
+    networks:
+      - default
+      - inteia-ai
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/healthcheck"]
       interval: 15s
@@ -65,6 +68,9 @@ services:
       - "127.0.0.1:5001:5001"
     volumes:
       - ${MIROFISH_UPLOADS_DIR:-/opt/mirofish/backend/uploads}:/app/backend/uploads
+    networks:
+      - default
+      - inteia-ai
     environment:
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
@@ -97,3 +103,9 @@ services:
 volumes:
   neo4j_data:
   neo4j_logs:
+
+networks:
+  default:
+  inteia-ai:
+    name: inteia-ai
+    external: true
