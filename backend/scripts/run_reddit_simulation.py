@@ -127,7 +127,7 @@ try:
     )
 except ImportError as e:
     print(f"Erro: dependencia ausente {e}")
-    print("Instale primeiro: pip install oasis-ai camel-ai")
+    print("Instale primeiro: pip install camel-oasis==0.2.5 camel-ai==0.2.78")
     sys.exit(1)
 
 
@@ -766,4 +766,3 @@ if __name__ == "__main__":
         pass
     finally:
         print("Processo de simulacao encerrado")
-
