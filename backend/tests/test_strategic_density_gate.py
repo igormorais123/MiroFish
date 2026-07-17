@@ -43,6 +43,40 @@ def test_keyword_only_report_fails_density_gate():
     assert "conteudo_substantivo_insuficiente" in result["issues"]
 
 
+def test_relatorio_substantivo_com_listas_e_diagrama_nao_sofre_falso_bloqueio():
+    strategy = """
+    Tese vencedora: implantar a ciclovia com consulta publica e mitigacao verificavel.
+    Tese adversaria: a consulta pode ser apenas formal e nao alterar o projeto.
+    Cortar e evitar anuncios irreversiveis antes da escuta publica.
+    Pedido seguro agora: publicar cronograma, desenho e criterios de revisao.
+    Pedido perigoso agora: iniciar a obra sem resolver acesso e carga e descarga.
+    Matriz 15/30/60: em 15 dias reunir evidencias; em 30 dias revisar documentos; em 60 dias decidir.
+    Documentos e evidencias: mapa, atas, comprovantes de fluxo e registros de impacto.
+    Perguntas provaveis do decisor: qual prova demonstra que a consulta muda a decisao?
+    Gatilhos de reversao: se surgir impacto grave ou desenho tecnico superior, reavaliar.
+    Ganho sobre o obvio: muda a decisao ao condicionar a obra a criterios auditaveis.
+    """
+    explanations = "\n".join(
+        f"A evidencia {index} explica de forma substantiva o risco operacional e a consequencia para a decisao publica."
+        for index in range(50)
+    )
+    short_labels = "\n".join(f"- Risco {index}" for index in range(20))
+    diagram = """
+    ```mermaid
+    flowchart LR
+      A[Consulta] --> B[Revisao]
+      B --> C[Decisao]
+    ```
+    """
+
+    result = StrategicDensityGate().evaluate(
+        strategy + explanations + short_labels + diagram
+    )
+
+    assert result["passes_gate"] is True
+    assert result["substantive_score"] >= 0.65
+
+
 def test_actionable_report_with_alternative_vocabulary_passes_density_gate():
     report = """
     Estrategia recomendada: a posicao principal e uma proposta principal de ajuste operacional.
