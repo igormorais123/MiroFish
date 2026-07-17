@@ -107,7 +107,16 @@ def normalize_report_attribution(content: str, evidence_texts: Iterable[str]) ->
             continue
 
         labeled_part = label_operational_deadlines(part)
-        normalized_parts.append(_QUOTE_SPAN_RE.sub(replace_quote, labeled_part))
+        normalized_part = labeled_part
+        # Uma citacao externa pode conter outras aspas curvas. A primeira
+        # substituicao remove a externa; as passadas seguintes normalizam as
+        # internas sem tocar em citacoes comprovadas.
+        for _ in range(4):
+            updated_part = _QUOTE_SPAN_RE.sub(replace_quote, normalized_part)
+            if updated_part == normalized_part:
+                break
+            normalized_part = updated_part
+        normalized_parts.append(normalized_part)
 
     normalized_content = "".join(normalized_parts)
 

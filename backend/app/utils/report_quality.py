@@ -470,15 +470,22 @@ def extract_numeric_claims(text: str) -> list[dict]:
                 and _PREDICTIVE_NUMERIC_CONTEXT_RE.search(stripped)
             )
         )
-        for match in _NUMBER_RE.finditer(stripped):
+        # Numeracao de lista ("8. pergunta") organiza o texto e nao e uma
+        # alegacao quantitativa.
+        numeric_content = re.sub(r"^\s*\d+[.)]\s+", "", stripped)
+        for match in _NUMBER_RE.finditer(numeric_content):
             raw = match.group(0).strip()
             if raw:
+                is_operational_deadline = bool(
+                    re.search(r"\b(?:dias?|horas?|minutos?)\s*$", raw, re.IGNORECASE)
+                    and _INFERENCE_MARKER_RE.search(stripped)
+                )
                 claims.append({
                     "number": raw,
                     "line": line_no,
                     "context": stripped[:240],
                     "labeled_inference": bool(_INFERENCE_MARKER_RE.search(stripped)),
-                    "requires_metric_support": requires_metric_support,
+                    "requires_metric_support": requires_metric_support and not is_operational_deadline,
                 })
     return claims
 
