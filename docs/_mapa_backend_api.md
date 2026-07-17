@@ -68,13 +68,13 @@ CORS(app, origins=origins, allow_headers=['Content-Type', 'Authorization'], cred
 | `JSON_AS_ASCII` | `false` | Não | Flask json encoding | Baixa | Preserva acentos UTF-8 |
 | `LLM_API_KEY` | (nenhum) | **SIM** | OpenAI/OmniRoute client | CRÍTICA | Vazio = falha na validação (linha 201) |
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Não | Client base URL | Alta | Suporta OmniRoute custom gateway |
-| `LLM_MODEL_NAME` | `gpt-4o-mini` ou `haiku-tasks` | Não | Modelo padrão | Média | Resolvido via aliases (linha 195) |
+| `LLM_MODEL_NAME` | `openai/gpt-5.6-luna` | Não | Modelo padrão | Média | Resolvido via aliases (linha 195) |
 | `LLM_TIMEOUT_SECONDS` | `90` | Não | Timeout requisição LLM | Média | Segundos |
 | `LLM_MAX_RETRIES` | `8` | Não | Retry policy | Média | Exponential backoff |
 | `LLM_MODEL_ALIASES` | `{}` | Não | Model name mapping | Média | JSON ou CSV: `alias=modelo,alias2=modelo2` |
-| `LLM_AGENT_MODEL` | `haiku-tasks` | Não | Agentes simulação (barato) | Média | Usado em /simulation/prepare, /simulation/profiles |
-| `LLM_PREMIUM_MODEL` | `sonnet-tasks` | Não | Relatórios, análise complexa | Média | Usado em /report/generate |
-| `LLM_HELENA_MODEL` | `opus-tasks` | Não | Helena Strategos (máx poder) | Média | Fallback premium em decisões críticas |
+| `LLM_AGENT_MODEL` | `openai/gpt-5.6-luna` | Não | Agentes da simulação | Média | Usado em /simulation/prepare, /simulation/profiles |
+| `LLM_PREMIUM_MODEL` | `openai/gpt-5.6-luna` | Não | Relatórios e análise complexa | Média | Usado em /report/generate |
+| `LLM_HELENA_MODEL` | `openai/gpt-5.6-luna` | Não | Helena Strategos | Média | Luna é o primeiro modelo e o premium permanece como fallback |
 | `OMNIROUTE_URL` | (vazio) | Não | Gateway INTEIA interno | CRÍTICA | Priorizado sobre LLM_BASE_URL se definido |
 | `OMNIROUTE_API_KEY` | (vazio) | Não | Chave INTEIA gateway | CRÍTICA | Priorizado sobre LLM_API_KEY se definido |
 | `GRAPHITI_BASE_URL` | `http://localhost:8003` | **SIM** | Neo4j graph database API | CRÍTICA | Vazio = falha na validação (linha 204); docker-compose aponta `http://graphiti:8000` |

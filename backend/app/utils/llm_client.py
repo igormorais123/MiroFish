@@ -106,6 +106,7 @@ class _ChatChoice:
 class _ChatUsage:
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    cached_prompt_tokens: int = 0
 
 @dataclass
 class _ChatResponse:
@@ -266,9 +267,20 @@ class LLMClient:
                     choices = [_ChatChoice(message=_ChatMessage(content=text))]
 
                 usage_data = data.get("usage", {})
+                prompt_details = usage_data.get("prompt_tokens_details") or {}
+                omniroute_usage = data.get("_omniroute") or {}
+                claude_cache = omniroute_usage.get("claudePromptCacheUsage") or {}
+                cached_prompt_tokens = (
+                    prompt_details.get("cached_tokens", 0)
+                    or usage_data.get("cache_read_input_tokens", 0)
+                    or usage_data.get("cached_tokens", 0)
+                    or claude_cache.get("cacheReadTokens", 0)
+                    or 0
+                )
                 usage = _ChatUsage(
                     prompt_tokens=usage_data.get("prompt_tokens", 0) or usage_data.get("input_tokens", 0) or 0,
                     completion_tokens=usage_data.get("completion_tokens", 0) or usage_data.get("output_tokens", 0) or 0,
+                    cached_prompt_tokens=cached_prompt_tokens,
                 )
 
                 return _ChatResponse(choices=choices, usage=usage), elapsed_ms, attempt
@@ -324,6 +336,7 @@ class LLMClient:
             _tracker.track(
                 prompt_tokens=getattr(usage, 'prompt_tokens', 0) or 0,
                 completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
+                cached_prompt_tokens=getattr(usage, 'cached_prompt_tokens', 0) or 0,
                 session_id=session_id,
                 phase_id=phase_id,
             )
