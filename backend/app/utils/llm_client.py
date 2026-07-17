@@ -241,7 +241,7 @@ class LLMClient:
                 if resp.status_code != 200:
                     raise RuntimeError(f"LLM retornou status {resp.status_code}: {resp.text[:300]}")
 
-                data = resp.json()
+                data = self._decode_chat_response(resp)
 
                 # Parse OpenAI-format response
                 choices = []
@@ -297,6 +297,69 @@ class LLMClient:
                 time.sleep(base + jitter)
 
         raise last_error
+
+    @staticmethod
+    def _decode_chat_response(resp) -> Dict[str, Any]:
+        """Normaliza JSON comum e SSE retornado por gateways OpenAI-compatible.
+
+        O OmniRoute transmite respostas do provedor Codex como eventos SSE mesmo
+        quando ``stream=false``. ``requests.Response.json()`` nao reconhece esse
+        envelope, portanto agregamos os deltas em uma resposta equivalente ao
+        formato ``chat.completion`` antes do restante do cliente processa-la.
+        """
+        headers = getattr(resp, "headers", {}) or {}
+        content_type = (headers.get("content-type") or "").lower()
+        body = resp.text or ""
+        if "text/event-stream" not in content_type and not body.lstrip().startswith("data:"):
+            return resp.json()
+
+        content_parts: List[str] = []
+        role = "assistant"
+        usage: Dict[str, Any] = {}
+        finish_reason = None
+        model = None
+
+        for raw_line in body.splitlines():
+            line = raw_line.strip()
+            if not line.startswith("data:"):
+                continue
+            payload = line[5:].strip()
+            if not payload or payload == "[DONE]":
+                continue
+            try:
+                event = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+
+            model = event.get("model") or model
+            if isinstance(event.get("usage"), dict):
+                usage = event["usage"]
+            choices = event.get("choices") or []
+            if not choices:
+                continue
+            choice = choices[0] or {}
+            delta = choice.get("delta") or choice.get("message") or {}
+            if delta.get("role"):
+                role = delta["role"]
+            chunk = delta.get("content")
+            if isinstance(chunk, str):
+                content_parts.append(chunk)
+            if choice.get("finish_reason") is not None:
+                finish_reason = choice["finish_reason"]
+
+        if not content_parts and not usage:
+            raise ValueError("LLM retornou stream SSE sem conteudo reconhecivel")
+
+        return {
+            "object": "chat.completion",
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "finish_reason": finish_reason,
+                "message": {"role": role, "content": "".join(content_parts)},
+            }],
+            "usage": usage,
+        }
 
     def chat(
         self,

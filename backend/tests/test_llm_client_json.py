@@ -63,6 +63,47 @@ def test_llm_client_extrai_tokens_de_cache_openai(monkeypatch):
     assert response.usage.cached_prompt_tokens == 400
 
 
+def test_llm_client_agrega_resposta_sse_do_codex(monkeypatch):
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/event-stream; charset=utf-8"}
+        text = "\n\n".join([
+            'data: {"model":"gpt-5.5","choices":[{"index":0,"delta":{"role":"assistant","content":"O"},"finish_reason":null}]}',
+            'data: {"model":"gpt-5.5","choices":[{"index":0,"delta":{"content":"K"},"finish_reason":"stop"}],"usage":{"prompt_tokens":114,"completion_tokens":5}}',
+            'data: [DONE]',
+        ])
+
+    monkeypatch.setattr(
+        "app.utils.llm_client.http_requests.post",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    client = LLMClient(api_key="test", base_url="https://example.test/v1", model="codex/gpt-5.5")
+
+    response, _, _ = client._try_provider(
+        base_url=client.base_url,
+        api_key=client.api_key,
+        model_override=None,
+        provider_name="test",
+        model=client.model,
+        messages=[{"role": "user", "content": "teste"}],
+        stream=False,
+    )
+
+    assert response.choices[0].message.content == "OK"
+    assert response.usage.prompt_tokens == 114
+    assert response.usage.completion_tokens == 5
+
+
+def test_llm_client_rejeita_sse_sem_conteudo():
+    response = SimpleNamespace(
+        headers={"content-type": "text/event-stream"},
+        text="data: [DONE]\n\n",
+    )
+
+    with pytest.raises(ValueError, match="SSE sem conteudo"):
+        LLMClient._decode_chat_response(response)
+
+
 def test_luna_omite_temperatura_customizada(monkeypatch):
     captured = {}
     client = LLMClient(
