@@ -423,6 +423,37 @@ def test_audit_report_evidence_aceita_probabilidade_do_decision_packet():
     assert audit["numbers_supported_by_structured_metrics"] == 1
 
 
+def test_auditoria_aceita_metricas_oficiais_de_helena():
+    report = """
+    [Inferência calibrada] Convicção operacional: 81%.
+    [Fato] A simulação produziu 30 textos.
+    [Inferência calibrada] O gatilho é convergência abaixo de 62%.
+    [Fato] A convergência está em 61%, com 2 rodadas de reforço recomendadas.
+    [Inferência] A lacuna de evidência está em 32%.
+    """
+    metrics = {
+        "decision_packet": {
+            "conviction_operational_percent": 81,
+            "generated_texts_count": 30,
+            "convergence_reversal_threshold_percent": 62,
+            "convergence_score_percent": 61,
+            "convergence_recommended_next_runs": 2,
+            "evidence_risk_probability_percent": 32,
+        }
+    }
+
+    audit = audit_report_evidence(
+        report,
+        [],
+        fail_on_unsupported_numbers=True,
+        structured_metrics=metrics,
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_unsupported"] == 0
+    assert audit["numbers_supported_by_structured_metrics"] == 6
+
+
 def test_audit_report_evidence_aceita_prazo_rotulado_como_sugestao_operacional():
     audit = audit_report_evidence(
         "[Sugestao operacional] Em 48 horas, anexar a decisao e as pecas essenciais.",
