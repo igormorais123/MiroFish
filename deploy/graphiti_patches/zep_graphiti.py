@@ -184,6 +184,8 @@ def _configure_client(client: ZepGraphiti, settings) -> ZepGraphiti:
             embedding_dim=embedder_dim,
         )
     )
+    if hasattr(client, 'clients'):
+        client.clients.embedder = client.embedder
     return client
 
 

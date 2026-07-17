@@ -89,6 +89,11 @@ def _new_graphiti_client() -> ZepGraphiti:
             embedding_dim=embedder_dim,
         )
     )
+    # Graphiti 0.18 pesquisa e ingere por ``client.clients.embedder``. Manter
+    # somente o atributo legado ``client.embedder`` deixa o endpoint antigo
+    # ativo silenciosamente.
+    if hasattr(client, 'clients'):
+        client.clients.embedder = client.embedder
     return client
 
 
