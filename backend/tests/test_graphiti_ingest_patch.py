@@ -24,3 +24,12 @@ def test_worker_is_restartable_and_survives_job_failure():
     assert "if self.task is None or self.task.done():" in source
     assert "logger.exception('Graphiti message ingestion failed')" in source
     assert "self.queue.task_done()" in source
+
+
+def test_ingestion_uses_the_shared_graphiti_client_factory():
+    source = PATCH_PATH.read_text(encoding="utf-8")
+
+    factory_start = source.index("def _new_graphiti_client()")
+    factory_end = source.index("@router.post('/messages'", factory_start)
+
+    assert "return create_graphiti_client(get_settings())" in source[factory_start:factory_end]

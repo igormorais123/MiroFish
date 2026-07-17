@@ -1,17 +1,19 @@
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager, suppress
 from functools import partial
 
 from fastapi import APIRouter, FastAPI, status
-from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig  # type: ignore
 from graphiti_core.nodes import EpisodeType  # type: ignore
 from graphiti_core.utils.maintenance.graph_data_operations import clear_data  # type: ignore
 
 from graph_service.config import get_settings
 from graph_service.dto import AddEntityNodeRequest, AddMessagesRequest, Message, Result
-from graph_service.zep_graphiti import ZepGraphiti, ZepGraphitiDep
+from graph_service.zep_graphiti import (
+    ZepGraphiti,
+    ZepGraphitiDep,
+    create_graphiti_client,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -72,49 +74,10 @@ router = APIRouter(lifespan=lifespan)
 
 
 def _new_graphiti_client() -> ZepGraphiti:
-    settings = get_settings()
-    client = ZepGraphiti(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password,
-    )
-    if settings.openai_base_url is not None:
-        client.llm_client.config.base_url = settings.openai_base_url
-    if settings.openai_api_key is not None:
-        client.llm_client.config.api_key = settings.openai_api_key
-    if settings.model_name is not None:
-        client.llm_client.model = settings.model_name
-        if hasattr(client.llm_client, "small_model"):
-            client.llm_client.small_model = settings.model_name
-    # O LLM pode vir do OmniRoute/Codex enquanto embeddings ficam no Ollama
-    # local. Separar os endpoints evita exigir uma chave OpenAI paga apenas
-    # para a vetorizacao do GraphRAG.
-    embedder_base_url = os.getenv('EMBEDDER_BASE_URL') or settings.openai_base_url
-    embedder_api_key = os.getenv('EMBEDDER_API_KEY') or settings.openai_api_key
-    embedder_model = (
-        os.getenv('EMBEDDER_MODEL_NAME')
-        or settings.embedding_model_name
-        or 'nomic-embed-text'
-    )
-    try:
-        embedder_dim = int(os.getenv('EMBEDDER_DIM', '768'))
-    except ValueError:
-        embedder_dim = 768
-
-    client.embedder = OpenAIEmbedder(
-        OpenAIEmbedderConfig(
-            api_key=embedder_api_key,
-            base_url=embedder_base_url,
-            embedding_model=embedder_model,
-            embedding_dim=embedder_dim,
-        )
-    )
-    # Graphiti 0.18 pesquisa e ingere por ``client.clients.embedder``. Manter
-    # somente o atributo legado ``client.embedder`` deixa o endpoint antigo
-    # ativo silenciosamente.
-    if hasattr(client, 'clients'):
-        client.clients.embedder = client.embedder
-    return client
+    # Ingestao e consulta devem compartilhar o mesmo adaptador GPT-5/OmniRoute
+    # e o mesmo embedder local. Duplicar esta configuracao fez o POST /messages
+    # ignorar a compatibilidade de saida estruturada usada pelo /search.
+    return create_graphiti_client(get_settings())
 
 
 @router.post('/messages', status_code=status.HTTP_202_ACCEPTED)
