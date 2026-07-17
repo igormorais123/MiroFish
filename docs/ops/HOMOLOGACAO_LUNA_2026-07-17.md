@@ -38,5 +38,6 @@ O primeiro ensaio real encontrou dois problemas operacionais que não apareciam 
 
 1. O volume persistente estava sob o UID legado `197608`, enquanto o container roda como `10001:10001`. A criação de projeto falhava com `Permission denied`. A propriedade do volume foi alinhada após backup integral e inventário de permissões.
 2. `LLM_BASE_URL` apontava para `172.17.0.1`, ponte anterior do Docker. O MiroFish atual usa outra rede e não alcançava o roteador. A correção permanente usa a rede Docker privada externa `inteia-ai` e o endereço `http://omniroute-inteia:20128/v1`.
+3. O Luna rejeitou `temperature=0.3` com HTTP 400 porque aceita somente a temperatura padrão. O cliente passou a omitir `temperature` apenas para a família `gpt-5.6-luna`.
 
 O healthcheck de infraestrutura deve ser complementado por uma chamada LLM mínima, pois frontend, Flask, Graphiti e Neo4j podem estar saudáveis mesmo quando o roteador de IA está inalcançável.

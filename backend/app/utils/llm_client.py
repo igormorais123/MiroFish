@@ -313,9 +313,12 @@ class LLMClient:
         kwargs = {
             "model": model_name,
             "messages": messages,
-            "temperature": temperature,
             token_key: max_tokens,
         }
+        # GPT-5.6 Luna aceita somente a temperatura padrao do provedor.
+        # Omitir o campo preserva o default e evita HTTP 400 em chamadas JSON.
+        if "gpt-5.6-luna" not in model_name.lower():
+            kwargs["temperature"] = temperature
         if response_format:
             kwargs["response_format"] = response_format
 
