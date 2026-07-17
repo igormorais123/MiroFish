@@ -40,6 +40,22 @@ cd backend
 python -m pytest tests -q
 ```
 
+## Publicar na VPS com OmniRoute interno
+
+A rede privada compartilhada deve existir antes do `docker compose`. Ela não publica a porta do OmniRoute na internet.
+
+```bash
+docker network inspect inteia-ai >/dev/null 2>&1 || docker network create inteia-ai
+cd /opt/mirofish-git
+git fetch origin
+git pull --ff-only origin main
+docker compose --env-file .env -f deploy/docker-compose.vps.yaml up -d --build
+```
+
+O `.env` da VPS deve usar `LLM_BASE_URL=http://omniroute-inteia:20128/v1`. O container `omniroute-inteia` também precisa participar da rede `inteia-ai`; seu recriador/atualizador deve usar `--network inteia-ai`.
+
+O volume persistente de uploads precisa ser gravável pelo usuário isolado do container (`10001:10001`). Antes de corrigir propriedade, faça backup verificável; depois confirme com `docker exec mirofish-inteia test -w /app/backend/uploads/projects`.
+
 ## Commit seguro
 
 ```bash

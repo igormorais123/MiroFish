@@ -31,3 +31,12 @@ Janela observada no roteador: 2026-07-10 a 2026-07-17.
 - Referência por relatório concluído, incluindo o peso das falhas: aproximadamente US$ 0,31 técnico e US$ 1,56 operacional.
 
 A interface pública usa a faixa arredondada de US$ 0,10–0,35 de custo técnico e US$ 0,50–1,75 de valor operacional por execução observada. Essa faixa deve ser revista quando houver uma nova amostra representativa com o Luna já ativo em todas as funções.
+
+## Bloqueios encontrados no ensaio de produção
+
+O primeiro ensaio real encontrou dois problemas operacionais que não apareciam no healthcheck:
+
+1. O volume persistente estava sob o UID legado `197608`, enquanto o container roda como `10001:10001`. A criação de projeto falhava com `Permission denied`. A propriedade do volume foi alinhada após backup integral e inventário de permissões.
+2. `LLM_BASE_URL` apontava para `172.17.0.1`, ponte anterior do Docker. O MiroFish atual usa outra rede e não alcançava o roteador. A correção permanente usa a rede Docker privada externa `inteia-ai` e o endereço `http://omniroute-inteia:20128/v1`.
+
+O healthcheck de infraestrutura deve ser complementado por uma chamada LLM mínima, pois frontend, Flask, Graphiti e Neo4j podem estar saudáveis mesmo quando o roteador de IA está inalcançável.
