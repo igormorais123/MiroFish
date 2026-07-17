@@ -361,10 +361,13 @@ class StrategicDensityGate:
             else 0.0
         )
         explanatory_count_score = StrategicDensityGate._clamp(len(explanatory_segments) / 6)
+        # Listas, rotulos de tabelas e diagramas Mermaid produzem segmentos curtos
+        # legitimos. Eles reduzem densidade, mas nao podem anular milhares de palavras
+        # explicativas de um relatorio estruturado.
         short_penalty = (
-            min(0.45, len(very_short_segments) / len(segment_word_counts))
+            min(0.20, (len(very_short_segments) / len(segment_word_counts)) * 0.40)
             if segment_word_counts
-            else 0.45
+            else 0.20
         )
         score = StrategicDensityGate._clamp(
             word_score * 0.40
