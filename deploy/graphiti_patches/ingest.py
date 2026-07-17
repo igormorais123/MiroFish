@@ -1,6 +1,7 @@
 import asyncio
+import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from functools import partial
 
 from fastapi import APIRouter, FastAPI, status
@@ -13,6 +14,9 @@ from graph_service.dto import AddEntityNodeRequest, AddMessagesRequest, Message,
 from graph_service.zep_graphiti import ZepGraphiti, ZepGraphitiDep
 
 
+logger = logging.getLogger(__name__)
+
+
 class AsyncWorker:
     def __init__(self):
         self.queue = asyncio.Queue()
@@ -23,19 +27,35 @@ class AsyncWorker:
             try:
                 print(f'Got a job: (size of remaining queue: {self.queue.qsize()})')
                 job = await self.queue.get()
-                await job()
+                try:
+                    await job()
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    # Uma falha de ingestao nao pode encerrar silenciosamente o
+                    # consumidor e deixar todas as mensagens seguintes na fila.
+                    logger.exception('Graphiti message ingestion failed')
+                finally:
+                    self.queue.task_done()
             except asyncio.CancelledError:
                 break
 
     async def start(self):
-        self.task = asyncio.create_task(self.worker())
+        # Lifespans de APIRouter nao sao executados quando o router e incluido
+        # em algumas versoes do FastAPI. O endpoint tambem chama start(), entao
+        # este metodo precisa ser idempotente.
+        if self.task is None or self.task.done():
+            self.task = asyncio.create_task(self.worker())
 
     async def stop(self):
         if self.task:
             self.task.cancel()
-            await self.task
+            with suppress(asyncio.CancelledError):
+                await self.task
+            self.task = None
         while not self.queue.empty():
             self.queue.get_nowait()
+            self.queue.task_done()
 
 
 async_worker = AsyncWorker()
@@ -101,6 +121,11 @@ def _new_graphiti_client() -> ZepGraphiti:
 async def add_messages(
     request: AddMessagesRequest,
 ):
+    # O lifespan deste APIRouter nao e propagado pelo app principal da imagem
+    # Graphiti. Iniciar sob demanda garante que o 202 corresponda a trabalho
+    # efetivamente consumido, inclusive depois de uma falha anterior.
+    await async_worker.start()
+
     async def add_messages_task(m: Message):
         graphiti = _new_graphiti_client()
         try:
