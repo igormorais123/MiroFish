@@ -1,5 +1,8 @@
+import json
 import logging
 import os
+import re
+from types import SimpleNamespace
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
@@ -22,28 +25,67 @@ def _luna_reasoning_effort() -> str:
     return effort if effort in {'none', 'low', 'medium', 'high', 'xhigh'} else 'low'
 
 
+def _is_gpt5(model: str) -> bool:
+    return 'gpt-5' in model.lower()
+
+
+def _decode_json_content(content: str):
+    cleaned = (content or '').strip()
+    cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s*```$', '', cleaned)
+    return json.loads(cleaned)
+
+
+def _validate_structured_payload(data, response_model):
+    """Aceita pequenas variacoes comuns sem afrouxar o schema final."""
+    fields = getattr(response_model, 'model_fields', {}) or {}
+    if len(fields) == 1:
+        field = next(iter(fields))
+        if field == 'root':
+            return response_model.model_validate(data)
+        if isinstance(data, list):
+            data = {field: data}
+        elif isinstance(data, dict) and field not in data:
+            short_name = field.removeprefix('extracted_')
+            if short_name in data:
+                data = {**data, field: data[short_name]}
+            else:
+                list_values = [value for value in data.values() if isinstance(value, list)]
+                if len(list_values) == 1:
+                    data = {**data, field: list_values[0]}
+    return response_model.model_validate(data)
+
+
 class LunaOpenAIClient(OpenAIClient):
-    """Graphiti OpenAI client compatible with GPT-5.6 Luna."""
+    """Graphiti client compatible with GPT-5 models routed by OmniRoute."""
 
     async def _create_structured_completion(
         self, model, messages, temperature, max_tokens, response_model
     ):
-        if 'gpt-5.6-luna' not in model.lower():
+        if not _is_gpt5(model):
             return await super()._create_structured_completion(
                 model, messages, temperature, max_tokens, response_model
             )
-        return await self.client.beta.chat.completions.parse(
+        # Alguns gateways nao preservam o JSON Schema do beta.parse e o modelo
+        # pode devolver cerca Markdown ou um alias como "entities". Pedimos
+        # JSON, normalizamos somente o envelope e validamos no modelo Pydantic.
+        response = await self.client.chat.completions.create(
             model=model,
             messages=messages,
             max_completion_tokens=max_tokens,
             reasoning_effort=_luna_reasoning_effort(),
-            response_format=response_model,
+            response_format={'type': 'json_object'},
+        )
+        data = _decode_json_content(response.choices[0].message.content or '{}')
+        parsed = _validate_structured_payload(data, response_model)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(parsed=parsed, refusal=None))]
         )
 
     async def _create_completion(
         self, model, messages, temperature, max_tokens, response_model=None
     ):
-        if 'gpt-5.6-luna' not in model.lower():
+        if not _is_gpt5(model):
             return await super()._create_completion(
                 model, messages, temperature, max_tokens, response_model
             )
