@@ -119,12 +119,27 @@ def _configure_client(client: ZepGraphiti, settings) -> ZepGraphiti:
         client.llm_client.model = settings.model_name
         if hasattr(client.llm_client, "small_model"):
             client.llm_client.small_model = settings.model_name
+    # A dependencia compartilhada atende busca, inicializacao e mutacoes. Ela
+    # precisa usar o mesmo endpoint local de embeddings configurado no ingest;
+    # caso contrario /search ainda tenta vetorizar pelo provedor do LLM.
+    embedder_base_url = os.getenv('EMBEDDER_BASE_URL') or settings.openai_base_url
+    embedder_api_key = os.getenv('EMBEDDER_API_KEY') or settings.openai_api_key
+    embedder_model = (
+        os.getenv('EMBEDDER_MODEL_NAME')
+        or settings.embedding_model_name
+        or 'nomic-embed-text'
+    )
+    try:
+        embedder_dim = int(os.getenv('EMBEDDER_DIM', '768'))
+    except ValueError:
+        embedder_dim = 768
+
     client.embedder = OpenAIEmbedder(
         OpenAIEmbedderConfig(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-            embedding_model=settings.embedding_model_name or "nomic-embed-text",
-            embedding_dim=768,
+            api_key=embedder_api_key,
+            base_url=embedder_base_url,
+            embedding_model=embedder_model,
+            embedding_dim=embedder_dim,
         )
     )
     return client
