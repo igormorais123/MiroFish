@@ -60,6 +60,16 @@ def report_min_tool_calls() -> int:
         return 0
 
 
+def is_substantive_section_response(response: str) -> bool:
+    """Reconhece uma secao pronta mesmo quando o provedor omite o marcador ReACT."""
+    normalized = (response or "").strip()
+    if len(normalized) < 800:
+        return False
+    if "<tool_call>" in normalized or re.search(r"(?im)^\s*Action\s*:", normalized):
+        return False
+    return True
+
+
 class ReportLogger:
     """
     Registrador detalhado do Report Agent
@@ -711,11 +721,11 @@ FOQUE em "o que a simulacao sustenta" — os resultados simulados informam decis
 [Regras Mais Importantes - Obrigatorio seguir]
 ═══════════════════════════════════════════════════════════════
 
-1. [Obrigatorio chamar ferramentas para observar o mundo simulado]
+1. [Observar o mundo simulado com as evidencias disponiveis]
    - Voce esta observando o ensaio do futuro com uma "visao onisciente"
    - Todo o conteudo deve vir de eventos e falas/acoes dos agentes no mundo simulado
    - Proibido usar seu proprio conhecimento para escrever o conteudo do relatorio
-   - Cada secao deve chamar ferramentas pelo menos 3 vezes (maximo 5) para observar o mundo simulado, que representa o futuro
+   - Use ferramentas somente quando elas acrescentarem evidencias ausentes no contexto local; nao faca consultas artificiais
 
 2. [Obrigatorio citar falas/acoes originais dos agentes]
    - As falas e comportamentos dos agentes sao previsoes do comportamento futuro dos grupos
@@ -787,7 +797,7 @@ Esta secao analisa...
 ```
 
 ═══════════════════════════════════════════════════════════════
-[Ferramentas de busca disponiveis] (3-5 chamadas por secao)
+[Ferramentas de busca disponiveis] (0-5 chamadas por secao, conforme necessidade)
 ═══════════════════════════════════════════════════════════════
 
 {tools_description}
@@ -823,7 +833,7 @@ Estritamente proibido:
 [Requisitos de conteudo da secao]
 ═══════════════════════════════════════════════════════════════
 
-1. O conteudo deve ser baseado nos dados de simulacao recuperados pelas ferramentas
+1. O conteudo deve ser baseado nos dados da simulacao presentes no contexto local e, quando necessario, recuperados pelas ferramentas
 2. Cite amplamente textos originais para demonstrar os resultados da simulacao
 3. Use formato Markdown (mas proibido usar titulos):
    - Use **texto em negrito** para destacar pontos-chave (substituindo subtitulos)
@@ -867,8 +877,8 @@ Conteudo das secoes ja concluidas (leia atentamente para evitar repeticao):
 
 [Lembretes importantes]
 1. Leia atentamente as secoes ja concluidas acima para evitar repetir o mesmo conteudo!
-2. Antes de comecar, obrigatoriamente chame ferramentas para obter dados de simulacao
-3. Use diferentes ferramentas de forma combinada, nao use apenas uma
+2. Chame ferramentas somente se o contexto local nao trouxer evidencias suficientes
+3. Quando usar ferramentas, combine fontes apenas se isso acrescentar informacao relevante
 4. O conteudo do relatorio deve vir dos resultados de busca, nao use seu proprio conhecimento
 
 [Aviso de formato - Obrigatorio seguir]
@@ -879,8 +889,8 @@ Conteudo das secoes ja concluidas (leia atentamente para evitar repeticao):
 
 Comece agora:
 1. Primeiro pense (Thought) sobre quais informacoes esta secao precisa
-2. Depois chame ferramentas (Action) para obter dados de simulacao
-3. Apos coletar informacoes suficientes, produza o Final Answer (texto corrido puro, sem nenhum titulo)"""
+2. Se faltarem evidencias, chame ferramentas (Action) para obter dados de simulacao
+3. Com informacoes suficientes, produza o Final Answer (texto corrido puro, sem nenhum titulo)"""
 
 # ── Templates de mensagem do ciclo ReACT ──
 
@@ -2066,6 +2076,18 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 continue
 
             # ── Caso 3: Sem chamada de ferramenta e sem Final Answer ──
+            if (
+                tool_calls_count >= min_tool_calls
+                and is_substantive_section_response(response)
+            ):
+                logger.info(
+                    "Secao %s aceita sem marcador Final Answer "
+                    "(resposta substantiva; chamadas de ferramenta: %s)",
+                    section.title,
+                    tool_calls_count,
+                )
+                return response.strip(), tool_calls_count
+
             messages.append({"role": "assistant", "content": response})
 
             if tool_calls_count < min_tool_calls:
