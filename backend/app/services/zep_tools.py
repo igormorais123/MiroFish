@@ -1056,6 +1056,20 @@ Retorne somente o JSON."""
             interview_questions=custom_questions or []
         )
 
+        # Depois de um restart/deploy, o arquivo de estado pode sobreviver ao
+        # processo OASIS. Nao gaste selecao por LLM nem aguarde o IPC por 180s
+        # quando o ambiente interativo ja nao esta disponivel.
+        if not SimulationRunner.check_env_alive(simulation_id):
+            logger.warning(
+                "Ambiente OASIS indisponivel para entrevista: %s",
+                simulation_id,
+            )
+            result.summary = (
+                "Ambiente OASIS indisponivel para entrevista; "
+                "use as acoes registradas da simulacao."
+            )
+            return result
+
         # Etapa 1: carregar os perfis dos agentes
         profiles = self._load_agent_profiles(simulation_id)
 
