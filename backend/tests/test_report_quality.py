@@ -555,6 +555,20 @@ def test_report_agent_normalize_section_attribution_retorna_conteudo_e_metadados
     }
 
 
+def test_report_agent_normaliza_citacao_sem_suporte_no_resumo():
+    outline = ReportOutline(
+        title="Relatorio",
+        summary='A tese não é “ciclovia sim ou não”.',
+        sections=[],
+    )
+
+    attribution = ReportAgent._normalize_outline_attribution(outline, [])
+
+    assert extract_direct_quotes(outline.summary) == []
+    assert "[Inferencia da simulacao] ciclovia sim ou não" in outline.summary
+    assert attribution["converted_quotes_count"] == 1
+
+
 def test_report_agent_build_failed_section_content_e_claro_para_cliente():
     content = ReportAgent._build_failed_section_content("timeout interno")
 

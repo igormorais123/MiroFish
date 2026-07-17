@@ -1249,6 +1249,21 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         }
 
     @staticmethod
+    def _normalize_outline_attribution(
+        outline: ReportOutline,
+        evidence_texts: list[str],
+    ) -> Dict[str, Any]:
+        """Aplica a Regra Zero tambem ao resumo que abre o relatorio."""
+        from .report_attribution import normalize_report_attribution
+
+        result = normalize_report_attribution(outline.summary, evidence_texts)
+        outline.summary = result["content"]
+        return {
+            "converted_quotes_count": result["converted_quotes_count"],
+            "quotes": result["quotes"],
+        }
+
+    @staticmethod
     def _build_failed_section_content(error: Exception | str | None = None) -> str:
         return "Falha ao gerar esta seção. A missão deve ser reexecutada para completar esta parte."
 
@@ -2315,6 +2330,10 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 progress_callback=lambda stage, prog, msg: 
                     progress_callback(stage, prog // 5, msg) if progress_callback else None
             )
+            outline_attribution = self._normalize_outline_attribution(
+                outline,
+                evidence_texts,
+            )
             report.outline = outline
             
             # Registra log de conclusao do planejamento
@@ -2322,6 +2341,11 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             
             # Salva o sumario no arquivo
             ReportManager.save_outline(report_id, outline)
+            ReportManager.save_json_artifact(
+                report_id,
+                "outline_attribution.json",
+                outline_attribution,
+            )
             ReportManager.update_progress(
                 report_id, "planning", 15, f"Planejamento do sumario concluido, {len(outline.sections)} secoes no total",
                 completed_sections=[]
