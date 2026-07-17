@@ -2,10 +2,11 @@
 
 ## Decisão operacional
 
-- Modelo homologado no OmniRoute: `openai/gpt-5.6-luna`.
-- O modelo respondeu com HTTP 200 em chamada real mínima.
+- O caminho Luna continua preparado no código, mas a credencial OpenAI disponível no OmniRoute expirou durante o ensaio completo e o catálogo da assinatura Codex não expõe a Luna.
+- Modelo operacional estável da assinatura em 2026-07-17: `codex/gpt-5.5`, sem cobrança marginal de API além da assinatura existente.
+- Não usar o alias `codex/gpt-5.6-luna` como prova de Luna: o roteador o resolve para GPT-5.5 e a resposta identifica corretamente o modelo real.
 - `openai/gpt-5.6-luna-pro` respondeu HTTP 404 e não deve ser configurado enquanto o roteador não o disponibilizar.
-- Perfil recomendado para o MiroFish: Luna em `LLM_MODEL_NAME`, `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` e `GRAPHITI_MODEL`.
+- Perfil recomendado enquanto a Luna não estiver disponível: `codex/gpt-5.5` em `LLM_MODEL_NAME`, `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` e `GRAPHITI_MODEL`. Voltar todos para `openai/gpt-5.6-luna` somente depois de um ensaio real estável.
 
 ## Tabela de preço de referência
 
@@ -41,5 +42,8 @@ O primeiro ensaio real encontrou dois problemas operacionais que não apareciam 
 3. O Luna rejeitou `temperature=0.3` com HTTP 400 porque aceita somente a temperatura padrão. O cliente passou a omitir `temperature` apenas para a família `gpt-5.6-luna`.
 4. Em uma ontologia real, o esforço de raciocínio padrão consumiu todos os 4.096 tokens de saída sem produzir conteúdo. A chamada controlada confirmou que `reasoning_effort=low` é aceito; `minimal` não é. MiroFish e Graphiti agora usam `low` por padrão, configurável por `LUNA_REASONING_EFFORT`, reservando saída para JSON sem trocar de modelo.
 5. O cliente OpenAI interno da imagem Graphiti enviava `temperature=0` e `max_tokens`, ambos incompatíveis com a família Luna. O adaptador montado pelo deploy passa a omitir temperatura, usar `max_completion_tokens` e aplicar o esforço de raciocínio homologado.
+6. O provedor Codex pode devolver SSE mesmo com `stream=false`; o cliente unificado agora agrega os deltas, uso de tokens e término antes de entregar a resposta ao restante do sistema.
+7. Dois workers Gunicorn mantinham gerenciadores de tarefa independentes: um worker podia marcar como interrompida uma tarefa criada pelo outro. Produção usa um worker com quatro threads.
+8. O Graphiti tentava gerar embeddings no OmniRoute sem credencial OpenAI válida. LLM e embeddings foram separados; o Graphiti usa `nomic-embed-text` no Ollama local, sem custo de API.
 
 O healthcheck de infraestrutura deve ser complementado por uma chamada LLM mínima, pois frontend, Flask, Graphiti e Neo4j podem estar saudáveis mesmo quando o roteador de IA está inalcançável.

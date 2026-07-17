@@ -35,7 +35,10 @@ services:
       - MODEL_NAME=${GRAPHITI_MODEL:-gemma4:e2b}
       - SMALL_MODEL_NAME=${GRAPHITI_MODEL:-gemma4:e2b}
       - LUNA_REASONING_EFFORT=${LUNA_REASONING_EFFORT:-low}
-      - EMBEDDER_MODEL_NAME=nomic-embed-text
+      - EMBEDDER_BASE_URL=${EMBEDDER_BASE_URL:-http://ollama-inteia:11434/v1}
+      - EMBEDDER_API_KEY=${EMBEDDER_API_KEY:-ollama}
+      - EMBEDDER_MODEL_NAME=${EMBEDDER_MODEL_NAME:-nomic-embed-text}
+      - EMBEDDER_DIM=${EMBEDDER_DIM:-768}
       - PORT=8000
     ports:
       - "127.0.0.1:8003:8000"
@@ -93,8 +96,14 @@ services:
       - ZEP_MODE=${ZEP_MODE:-disabled}
       - ZEP_REQUIRED=${ZEP_REQUIRED:-false}
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-inteia-mirofish-token}
+      - SECRET_KEY=${SECRET_KEY}
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=5001
+      # O TaskManager e as tarefas em background sao compartilhados por threads,
+      # nao por processos. Um worker evita que outro marque uma tarefa viva como
+      # interrompida; as threads preservam concorrencia para health/polling.
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-1}
+      - GUNICORN_THREADS=${GUNICORN_THREADS:-4}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health/public"]
       interval: 30s
