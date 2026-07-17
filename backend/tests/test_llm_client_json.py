@@ -87,6 +87,34 @@ def test_luna_omite_temperatura_customizada(monkeypatch):
 
     assert "temperature" not in captured
     assert captured["max_completion_tokens"] == 4096
+    assert captured["reasoning_effort"] == "low"
+
+
+def test_luna_aceita_esforco_configuravel_e_rejeita_valor_invalido(monkeypatch):
+    captured = {}
+    client = LLMClient(
+        api_key="test",
+        base_url="https://example.test/v1",
+        model="openai/gpt-5.6-luna",
+    )
+
+    def fake_request(**kwargs):
+        captured.update(kwargs)
+        response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="OK"))],
+            usage=None,
+        )
+        return response, 1.0, 1
+
+    monkeypatch.setattr(client, "_request_with_retry", fake_request)
+    monkeypatch.setenv("LUNA_REASONING_EFFORT", "xhigh")
+    client.chat(messages=[{"role": "user", "content": "teste"}])
+    assert captured["reasoning_effort"] == "xhigh"
+
+    captured.clear()
+    monkeypatch.setenv("LUNA_REASONING_EFFORT", "nao-suportado")
+    client.chat(messages=[{"role": "user", "content": "teste"}])
+    assert captured["reasoning_effort"] == "low"
 
 
 def test_outro_modelo_preserva_temperatura(monkeypatch):
@@ -112,3 +140,4 @@ def test_outro_modelo_preserva_temperatura(monkeypatch):
     )
 
     assert captured["temperature"] == pytest.approx(0.3)
+    assert "reasoning_effort" not in captured

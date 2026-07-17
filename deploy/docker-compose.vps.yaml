@@ -34,6 +34,7 @@ services:
       - OPENAI_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
       - MODEL_NAME=${GRAPHITI_MODEL:-gemma4:e2b}
       - SMALL_MODEL_NAME=${GRAPHITI_MODEL:-gemma4:e2b}
+      - LUNA_REASONING_EFFORT=${LUNA_REASONING_EFFORT:-low}
       - EMBEDDER_MODEL_NAME=nomic-embed-text
       - PORT=8000
     ports:
@@ -79,6 +80,7 @@ services:
       - LLM_AGENT_MODEL=${LLM_AGENT_MODEL:-gpt-4o-mini}
       - LLM_PREMIUM_MODEL=${LLM_PREMIUM_MODEL:-gpt-4o-mini}
       - LLM_HELENA_MODEL=${LLM_HELENA_MODEL:-gpt-4o-mini}
+      - LUNA_REASONING_EFFORT=${LUNA_REASONING_EFFORT:-low}
       - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-120}
       - LLM_MAX_RETRIES=${LLM_MAX_RETRIES:-3}
       - OMNIROUTE_URL=${OMNIROUTE_URL:-}

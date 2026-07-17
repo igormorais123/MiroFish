@@ -9,6 +9,7 @@ Usa requests em vez do SDK OpenAI/httpx para compatibilidade com OmniRouter
 """
 
 import json
+import os
 import random
 import re
 import time
@@ -319,6 +320,14 @@ class LLMClient:
         # Omitir o campo preserva o default e evita HTTP 400 em chamadas JSON.
         if "gpt-5.6-luna" not in model_name.lower():
             kwargs["temperature"] = temperature
+        else:
+            # Structured prompts can spend the whole output allowance on
+            # reasoning at the provider default. "low" keeps Luna as the
+            # model while reserving enough tokens for the actual JSON/text.
+            effort = os.environ.get("LUNA_REASONING_EFFORT", "low").strip().lower()
+            if effort not in {"none", "low", "medium", "high", "xhigh"}:
+                effort = "low"
+            kwargs["reasoning_effort"] = effort
         if response_format:
             kwargs["response_format"] = response_format
 

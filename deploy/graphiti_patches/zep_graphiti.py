@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
@@ -6,13 +7,53 @@ from graphiti_core import Graphiti  # type: ignore
 from graphiti_core.edges import EntityEdge  # type: ignore
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig  # type: ignore
 from graphiti_core.errors import EdgeNotFoundError, GroupsEdgesNotFoundError, NodeNotFoundError
-from graphiti_core.llm_client import LLMClient  # type: ignore
+from graphiti_core.llm_client import LLMClient, LLMConfig  # type: ignore
+from graphiti_core.llm_client.openai_client import OpenAIClient  # type: ignore
 from graphiti_core.nodes import EntityNode, EpisodicNode  # type: ignore
 
 from graph_service.config import ZepEnvDep
 from graph_service.dto import FactResult
 
 logger = logging.getLogger(__name__)
+
+
+def _luna_reasoning_effort() -> str:
+    effort = os.environ.get('LUNA_REASONING_EFFORT', 'low').strip().lower()
+    return effort if effort in {'none', 'low', 'medium', 'high', 'xhigh'} else 'low'
+
+
+class LunaOpenAIClient(OpenAIClient):
+    """Graphiti OpenAI client compatible with GPT-5.6 Luna."""
+
+    async def _create_structured_completion(
+        self, model, messages, temperature, max_tokens, response_model
+    ):
+        if 'gpt-5.6-luna' not in model.lower():
+            return await super()._create_structured_completion(
+                model, messages, temperature, max_tokens, response_model
+            )
+        return await self.client.beta.chat.completions.parse(
+            model=model,
+            messages=messages,
+            max_completion_tokens=max_tokens,
+            reasoning_effort=_luna_reasoning_effort(),
+            response_format=response_model,
+        )
+
+    async def _create_completion(
+        self, model, messages, temperature, max_tokens, response_model=None
+    ):
+        if 'gpt-5.6-luna' not in model.lower():
+            return await super()._create_completion(
+                model, messages, temperature, max_tokens, response_model
+            )
+        return await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_completion_tokens=max_tokens,
+            reasoning_effort=_luna_reasoning_effort(),
+            response_format={'type': 'json_object'},
+        )
 
 
 class ZepGraphiti(Graphiti):
@@ -89,15 +130,29 @@ def _configure_client(client: ZepGraphiti, settings) -> ZepGraphiti:
     return client
 
 
-async def get_graphiti(settings: ZepEnvDep):
-    client = _configure_client(
+def _new_zep_graphiti(settings) -> ZepGraphiti:
+    llm_client = LunaOpenAIClient(
+        LLMConfig(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            model=settings.model_name,
+            small_model=settings.model_name,
+            max_tokens=8192,
+        )
+    )
+    return _configure_client(
         ZepGraphiti(
             uri=settings.neo4j_uri,
             user=settings.neo4j_user,
             password=settings.neo4j_password,
+            llm_client=llm_client,
         ),
         settings,
     )
+
+
+async def get_graphiti(settings: ZepEnvDep):
+    client = _new_zep_graphiti(settings)
     try:
         yield client
     finally:
@@ -105,14 +160,7 @@ async def get_graphiti(settings: ZepEnvDep):
 
 
 async def initialize_graphiti(settings: ZepEnvDep):
-    client = _configure_client(
-        ZepGraphiti(
-            uri=settings.neo4j_uri,
-            user=settings.neo4j_user,
-            password=settings.neo4j_password,
-        ),
-        settings,
-    )
+    client = _new_zep_graphiti(settings)
     try:
         await client.build_indices_and_constraints()
     finally:
