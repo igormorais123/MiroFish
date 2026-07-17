@@ -7,6 +7,7 @@ import pytest
 from app.utils.token_tracker import (
     DEFAULT_USD_BRL_EXCHANGE_RATE,
     INTEIA_MARKUP_MULTIPLIER,
+    PRICE_CACHED_INPUT_USD_PER_1M_TOKENS,
     PRICE_INPUT_USD_PER_1M_TOKENS,
     PRICE_INPUT_PER_TOKEN,
     PRICE_OUTPUT_USD_PER_1M_TOKENS,
@@ -33,18 +34,29 @@ def test_token_usage_calcula_total_corretamente():
 
 
 def test_token_usage_contrato_pricebook_literal():
-    assert PRICEBOOK_NAME == "gpt-5.5-pro-rapido-referencia"
+    assert PRICEBOOK_NAME == "openai-gpt-5.6-luna-2026-07-09"
     assert DEFAULT_USD_BRL_EXCHANGE_RATE == pytest.approx(5.80)
     assert INTEIA_MARKUP_MULTIPLIER == pytest.approx(5.0)
-    assert PRICE_INPUT_USD_PER_1M_TOKENS == pytest.approx(5.0)
-    assert PRICE_OUTPUT_USD_PER_1M_TOKENS == pytest.approx(20.0)
+    assert PRICE_INPUT_USD_PER_1M_TOKENS == pytest.approx(1.0)
+    assert PRICE_CACHED_INPUT_USD_PER_1M_TOKENS == pytest.approx(0.1)
+    assert PRICE_OUTPUT_USD_PER_1M_TOKENS == pytest.approx(6.0)
 
 
 def test_token_usage_custo_usd_calculado():
     u = TokenUsage(prompt_tokens=1_000_000, completion_tokens=500_000)
     expected = 1_000_000 * PRICE_INPUT_PER_TOKEN + 500_000 * PRICE_OUTPUT_PER_TOKEN
     assert u.cost_usd == pytest.approx(expected)
-    assert expected == pytest.approx(15.0)
+    assert expected == pytest.approx(4.0)
+
+
+def test_token_usage_aplica_preco_reduzido_ao_cache():
+    u = TokenUsage(
+        prompt_tokens=1_000_000,
+        completion_tokens=0,
+        cached_prompt_tokens=250_000,
+    )
+    assert u.billable_prompt_tokens == 750_000
+    assert u.api_reference_usd == pytest.approx(0.775)
 
 
 def test_token_usage_custo_brl_aplica_cambio():
@@ -57,6 +69,8 @@ def test_token_usage_to_dict_estrutura():
     d = u.to_dict()
     assert d["prompt_tokens"] == 100
     assert d["completion_tokens"] == 50
+    assert d["cached_prompt_tokens"] == 0
+    assert d["billable_prompt_tokens"] == 100
     assert d["total_tokens"] == 150
     assert d["total_requests"] == 3
     assert "cost_usd" in d
@@ -64,7 +78,7 @@ def test_token_usage_to_dict_estrutura():
     assert d["api_reference_usd"] == d["cost_usd"]
     assert d["api_reference_brl"] == d["cost_brl"]
     assert d["inteia_value_usd"] == pytest.approx(d["api_reference_usd"] * INTEIA_MARKUP_MULTIPLIER)
-    assert d["inteia_value_brl"] == pytest.approx(d["api_reference_brl"] * INTEIA_MARKUP_MULTIPLIER)
+    assert d["inteia_value_brl"] == pytest.approx(round(u.inteia_value_brl, 4))
     assert d["markup_multiplier"] == INTEIA_MARKUP_MULTIPLIER
     assert d["pricebook"] == PRICEBOOK_NAME
     assert d["rotulo_valor"] == "Valor operacional INTEIA"
@@ -75,9 +89,9 @@ def test_token_usage_to_dict_estrutura():
 
 def test_token_usage_valor_inteia_aplica_multiplicador_5x():
     u = TokenUsage(prompt_tokens=1_000_000, completion_tokens=1_000_000)
-    assert u.api_reference_usd == pytest.approx(25.0)
-    assert u.inteia_value_usd == pytest.approx(125.0)
-    assert u.inteia_value_brl == pytest.approx(125.0 * DEFAULT_USD_BRL_EXCHANGE_RATE)
+    assert u.api_reference_usd == pytest.approx(7.0)
+    assert u.inteia_value_usd == pytest.approx(35.0)
+    assert u.inteia_value_brl == pytest.approx(35.0 * DEFAULT_USD_BRL_EXCHANGE_RATE)
 
 
 def test_tracker_e_singleton():
@@ -169,8 +183,8 @@ def test_tracker_fases_da_missao_acumulam_e_finalizam():
     assert phase["label"] == "Preparacao da missao"
     assert phase["rotulo"] == "Preparacao da missao"
     assert phase["prompt_tokens"] == 1_000_000
-    assert phase["api_reference_usd"] == pytest.approx(5.0)
-    assert phase["inteia_value_usd"] == pytest.approx(25.0)
+    assert phase["api_reference_usd"] == pytest.approx(1.0)
+    assert phase["inteia_value_usd"] == pytest.approx(5.0)
     assert phase["markup_multiplier"] == 5.0
     assert phase["pricebook"] == PRICEBOOK_NAME
     assert phase["estado"] == "concluida"
@@ -197,3 +211,19 @@ def test_tracker_track_com_phase_id_sem_start_cria_rotulo_padrao():
     phase = t.get_session("missao_2")["phases"]["analise"]
     assert phase["label"] == "Fase analise"
     assert phase["completion_tokens"] == 20
+
+
+def test_tracker_acumula_cache_global_sessao_e_fase():
+    t = TokenTracker()
+    t.track(
+        1_000,
+        100,
+        cached_prompt_tokens=400,
+        session_id="missao_cache",
+        phase_id="analise",
+    )
+
+    assert t.get_global()["cached_prompt_tokens"] == 400
+    session = t.get_session("missao_cache")
+    assert session["cached_prompt_tokens"] == 400
+    assert session["phases"]["analise"]["cached_prompt_tokens"] == 400

@@ -110,8 +110,8 @@
 
             <div class="brand-card-footer">
               <div class="kpi">
-                <div class="kpi-value">~ US$&nbsp;5</div>
-                <div class="kpi-label">por execução típica</div>
+                <div class="kpi-value">~ US$&nbsp;0,10–0,35</div>
+                <div class="kpi-label">IA por execução observada</div>
               </div>
               <div class="kpi-divider"></div>
               <div class="kpi">
@@ -159,7 +159,7 @@
               <div class="metric-card">
                 <div class="metric-label-top">custo</div>
                 <div class="metric-value">Baixo</div>
-                <div class="metric-label">Simulações típicas em torno de US$&nbsp;5 por execução.</div>
+                <div class="metric-label">Referência técnica observada: US$&nbsp;0,10–0,35 por execução; valor operacional INTEIA: US$&nbsp;0,50–1,75.</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label-top">escala</div>

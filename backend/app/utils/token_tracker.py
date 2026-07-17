@@ -5,15 +5,17 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
-PRICEBOOK_NAME = "gpt-5.5-pro-rapido-referencia"
-PRICE_INPUT_USD_PER_1M_TOKENS = 5.00
-PRICE_OUTPUT_USD_PER_1M_TOKENS = 20.00
+PRICEBOOK_NAME = "openai-gpt-5.6-luna-2026-07-09"
+PRICE_INPUT_USD_PER_1M_TOKENS = 1.00
+PRICE_OUTPUT_USD_PER_1M_TOKENS = 6.00
+PRICE_CACHED_INPUT_USD_PER_1M_TOKENS = 0.10
 INTEIA_MARKUP_MULTIPLIER = 5.0
 DEFAULT_USD_BRL_EXCHANGE_RATE = 5.80
 
 # Compatibilidade com imports existentes: USD por token.
 PRICE_INPUT_PER_TOKEN = PRICE_INPUT_USD_PER_1M_TOKENS / 1_000_000
 PRICE_OUTPUT_PER_TOKEN = PRICE_OUTPUT_USD_PER_1M_TOKENS / 1_000_000
+PRICE_CACHED_INPUT_PER_TOKEN = PRICE_CACHED_INPUT_USD_PER_1M_TOKENS / 1_000_000
 
 
 def _round_usd(value: float) -> float:
@@ -28,6 +30,7 @@ def _round_brl(value: float) -> float:
 class TokenUsage:
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    cached_prompt_tokens: int = 0
     total_requests: int = 0
     total_errors: int = 0
     start_time: float = field(default_factory=time.time)
@@ -38,8 +41,13 @@ class TokenUsage:
         return self.prompt_tokens + self.completion_tokens
 
     @property
+    def billable_prompt_tokens(self) -> int:
+        return max(self.prompt_tokens - self.cached_prompt_tokens, 0)
+
+    @property
     def api_reference_usd(self) -> float:
-        return (self.prompt_tokens * PRICE_INPUT_PER_TOKEN +
+        return (self.billable_prompt_tokens * PRICE_INPUT_PER_TOKEN +
+                self.cached_prompt_tokens * PRICE_CACHED_INPUT_PER_TOKEN +
                 self.completion_tokens * PRICE_OUTPUT_PER_TOKEN)
 
     @property
@@ -74,15 +82,23 @@ class TokenUsage:
     def finish(self):
         self.finished_at = time.time()
 
-    def add_tokens(self, prompt_tokens: int, completion_tokens: int):
+    def add_tokens(
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        cached_prompt_tokens: int = 0,
+    ):
         self.prompt_tokens += prompt_tokens
         self.completion_tokens += completion_tokens
+        self.cached_prompt_tokens += max(min(cached_prompt_tokens, prompt_tokens), 0)
         self.total_requests += 1
 
     def to_dict(self) -> dict:
         return {
             "prompt_tokens": self.prompt_tokens,
             "completion_tokens": self.completion_tokens,
+            "cached_prompt_tokens": self.cached_prompt_tokens,
+            "billable_prompt_tokens": self.billable_prompt_tokens,
             "total_tokens": self.total_tokens,
             "total_requests": self.total_requests,
             "total_errors": self.total_errors,
@@ -94,6 +110,9 @@ class TokenUsage:
             "inteia_value_brl": _round_brl(self.inteia_value_brl),
             "markup_multiplier": INTEIA_MARKUP_MULTIPLIER,
             "pricebook": PRICEBOOK_NAME,
+            "price_input_usd_per_1m_tokens": PRICE_INPUT_USD_PER_1M_TOKENS,
+            "price_cached_input_usd_per_1m_tokens": PRICE_CACHED_INPUT_USD_PER_1M_TOKENS,
+            "price_output_usd_per_1m_tokens": PRICE_OUTPUT_USD_PER_1M_TOKENS,
             "rotulo_valor": "Valor operacional INTEIA",
             "rotulo_custo": "Custo tecnico de referencia da API",
             "estado": self.state,
@@ -143,13 +162,18 @@ class TokenTracker:
         completion_tokens: int,
         session_id: Optional[str] = None,
         phase_id: Optional[str] = None,
+        cached_prompt_tokens: int = 0,
     ):
         with self._lock:
-            self._global.add_tokens(prompt_tokens, completion_tokens)
+            self._global.add_tokens(prompt_tokens, completion_tokens, cached_prompt_tokens)
             if session_id:
                 if session_id not in self._sessions:
                     self._sessions[session_id] = TokenUsage()
-                self._sessions[session_id].add_tokens(prompt_tokens, completion_tokens)
+                self._sessions[session_id].add_tokens(
+                    prompt_tokens,
+                    completion_tokens,
+                    cached_prompt_tokens,
+                )
 
                 if phase_id:
                     phases = self._phases.setdefault(session_id, {})
@@ -158,7 +182,11 @@ class TokenTracker:
                             phase_id=phase_id,
                             label=f"Fase {phase_id}",
                         )
-                    phases[phase_id].add_tokens(prompt_tokens, completion_tokens)
+                    phases[phase_id].add_tokens(
+                        prompt_tokens,
+                        completion_tokens,
+                        cached_prompt_tokens,
+                    )
 
     def start_phase(self, session_id: str, phase_id: str, label: str):
         with self._lock:
