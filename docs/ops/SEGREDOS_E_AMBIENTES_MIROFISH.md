@@ -40,6 +40,7 @@ GitHub Secrets de repositório configurados:
 - `LLM_BASE_URL`
 - `LLM_HELENA_MODEL`
 - `LLM_MAX_RETRIES`
+- `REPORT_SECTION_WORKERS`
 - `LLM_MODEL_ALIASES`
 - `LLM_MODEL_NAME`
 - `LLM_PREMIUM_MODEL`
@@ -73,6 +74,7 @@ GitHub Environment `vps-production` configurado com segredos necessários para d
 - `LLM_BASE_URL`
 - `LLM_HELENA_MODEL`
 - `LLM_MAX_RETRIES`
+- `REPORT_SECTION_WORKERS`
 - `LLM_MODEL_ALIASES`
 - `LLM_MODEL_NAME`
 - `LLM_PREMIUM_MODEL`
@@ -104,7 +106,7 @@ Valores reais de `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPAB
 |---|---|---:|---:|---:|
 | Identidade da app | `APP_NAME`, `APP_CODE` | Sim | Só se build precisar | Sim |
 | Flask/backend | `FLASK_DEBUG`, `FLASK_HOST`, `FLASK_PORT`, `SECRET_KEY`, `CORS_ORIGINS` | Sim (`SECRET_KEY` sempre como segredo; `CORS_ORIGINS` pode ser variável não secreta) | Não para frontend estático | Sim |
-| LLM/OpenAI-compatible | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL_NAME`, `LLM_MODEL_ALIASES`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES` | Sim | Só se runtime Vercel usar LLM | Sim |
+| LLM/OpenAI-compatible | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL_NAME`, `LLM_MODEL_ALIASES`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES`, `REPORT_SECTION_WORKERS` | Sim | Só se runtime Vercel usar LLM | Sim |
 | Modelos Helena | `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` | Sim | Só se runtime Vercel usar LLM | Sim |
 | OmniRoute | `OMNIROUTE_URL`, `OMNIROUTE_API_KEY`, `OMNIROUTE_BASE_URL`, `OMNIROUTE_MODEL`, `OMNIROUTE_FAST_MODEL`, `OMNIROUTE_PREMIUM_MODEL`, `OMNIROUTE_TIMEOUT` | Pendente quando houver valor real | Pendente se usado no deploy | Sim |
 | Provedores LLM auxiliares | `CEREBRAS_API_KEY`, `CEREBRAS_URL`, `LLM_BOOST_API_KEY`, `LLM_BOOST_BASE_URL`, `LLM_BOOST_MODEL_NAME` | Pendente quando houver valor real | Não para frontend estático | Sim |

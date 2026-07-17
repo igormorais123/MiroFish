@@ -34,6 +34,19 @@ from .zep_tools import (
 logger = get_logger('mirofish.report_agent')
 
 
+def report_section_workers() -> int:
+    """Limita concorrencia de secoes ao que o provedor LLM suporta."""
+    raw_value = os.getenv("REPORT_SECTION_WORKERS", "1")
+    try:
+        return max(1, min(4, int(raw_value)))
+    except (TypeError, ValueError):
+        logger.warning(
+            "REPORT_SECTION_WORKERS invalido (%r); usando execucao serial",
+            raw_value,
+        )
+        return 1
+
+
 class ReportLogger:
     """
     Registrador detalhado do Report Agent
@@ -2362,8 +2375,9 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                     logger.info(f"Secao salva com erro: {report_id}/section_{section_num:02d}.md")
                     return idx, content, error_message
 
-            # Submete todas as secoes em paralelo
-            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as _exec:
+            # A assinatura Codex aceita uma chamada por vez. Provedores com maior
+            # capacidade podem ampliar explicitamente REPORT_SECTION_WORKERS ate 4.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=report_section_workers()) as _exec:
                 _futures = {_exec.submit(_gen_one_section, i, s): i for i, s in enumerate(outline.sections)}
                 for _fut in concurrent.futures.as_completed(_futures):
                     i, content, err = _fut.result()

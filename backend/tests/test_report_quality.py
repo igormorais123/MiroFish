@@ -34,6 +34,17 @@ def test_jaccard_disjoint_returns_zero():
     assert jaccard_similarity(a, b, ngram=5) == 0.0
 
 
+def test_report_section_workers_padrao_serial_e_limite(monkeypatch):
+    monkeypatch.delenv("REPORT_SECTION_WORKERS", raising=False)
+    assert report_agent_module.report_section_workers() == 1
+
+    monkeypatch.setenv("REPORT_SECTION_WORKERS", "8")
+    assert report_agent_module.report_section_workers() == 4
+
+    monkeypatch.setenv("REPORT_SECTION_WORKERS", "invalido")
+    assert report_agent_module.report_section_workers() == 1
+
+
 def test_jaccard_identical_returns_one():
     text = "Igor advogado Brasilia trabalha SEEDF doutorando IDP fundador INTEIA Colmeia"
     assert jaccard_similarity(text, text, ngram=5) == pytest.approx(1.0)
