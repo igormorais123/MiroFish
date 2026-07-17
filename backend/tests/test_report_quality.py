@@ -465,6 +465,30 @@ def test_audit_report_evidence_aceita_prazo_rotulado_como_sugestao_operacional()
     assert audit["numbers_labeled_inference"] == 1
 
 
+def test_auditoria_ignora_numeracao_de_lista_e_prazo_em_tabela_preditiva():
+    report = """
+    8. Qual é a pergunta do decisor?
+    10. Quando a recomendação muda?
+
+    | Cenário | Probabilidade | Gatilho |
+    |---|---:|---|
+    | Base | [Inferência calibrada] 66% | [Sugestao operacional] revisar em 30 dias |
+    """
+
+    audit = audit_report_evidence(
+        report,
+        [],
+        fail_on_unsupported_numbers=True,
+        structured_metrics={
+            "decision_packet": {"scenario_base_probability_percent": 66}
+        },
+    )
+
+    assert audit["passes_gate"] is True
+    assert audit["numbers_total"] == 2
+    assert audit["numbers_unsupported"] == 0
+
+
 def test_render_evidence_audit_block_mostra_bloqueio():
     audit = {
         "passes_gate": False,
@@ -488,6 +512,18 @@ def test_normalize_report_attribution_converte_citacao_sem_suporte_em_secao():
     assert "[Inferencia da simulacao] vamos vencer sem nenhum ajuste" in result["content"]
     assert result["converted_quotes_count"] == 1
     assert result["quotes"] == []
+
+
+def test_normalize_report_attribution_remove_aspas_aninhadas_sem_suporte():
+    content = (
+        '"A tese não é “ciclovia sim ou não”, mas '
+        '“implantação condicionada a consulta pública”."'
+    )
+
+    result = normalize_report_attribution(content, [])
+
+    assert extract_direct_quotes(result["content"]) == []
+    assert result["converted_quotes_count"] == 3
 
 
 def test_report_agent_normalize_section_attribution_retorna_conteudo_e_metadados():
