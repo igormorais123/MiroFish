@@ -91,6 +91,16 @@
       </div>
 
       <div class="action-controls">
+        <button
+          v-if="phase === 1"
+          class="action-btn stop"
+          :disabled="isStopping"
+          type="button"
+          @click="handleStopSimulation"
+        >
+          <span v-if="isStopping" class="loading-spinner-small"></span>
+          {{ isStopping ? 'Encerrando…' : 'Parar simulação' }}
+        </button>
         <div v-if="phase === 2" class="quality-gate" :class="qualityGateClass">
           <div class="quality-gate-main">
             <span class="gate-dot"></span>
@@ -1671,6 +1681,18 @@ onUnmounted(() => {
 .action-btn.primary:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(15, 39, 71, 0.18);
+}
+
+.action-btn.stop {
+  color: #8f2d24;
+  background: #fff8f6;
+  border: 1px solid #d9a39c;
+}
+
+.action-btn.stop:hover:not(:disabled) {
+  color: #fff;
+  background: #a13a30;
+  border-color: #a13a30;
 }
 
 .action-btn:disabled {
