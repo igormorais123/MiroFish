@@ -98,7 +98,7 @@ services:
       - ZEP_MODE=${ZEP_MODE:-disabled}
       - ZEP_REQUIRED=${ZEP_REQUIRED:-false}
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-inteia-mirofish-token}
-      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY obrigatoria em producao}
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=5001
       # O TaskManager e as tarefas em background sao compartilhados por threads,
