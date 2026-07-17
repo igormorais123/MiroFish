@@ -38,6 +38,17 @@ def test_report_section_workers_padrao_serial_e_limite(monkeypatch):
     monkeypatch.delenv("REPORT_SECTION_WORKERS", raising=False)
     assert report_agent_module.report_section_workers() == 1
 
+
+def test_report_min_tool_calls_padrao_zero_e_limite(monkeypatch):
+    monkeypatch.delenv("REPORT_MIN_TOOL_CALLS", raising=False)
+    assert report_agent_module.report_min_tool_calls() == 0
+
+    monkeypatch.setenv("REPORT_MIN_TOOL_CALLS", "8")
+    assert report_agent_module.report_min_tool_calls() == 3
+
+    monkeypatch.setenv("REPORT_MIN_TOOL_CALLS", "invalido")
+    assert report_agent_module.report_min_tool_calls() == 0
+
     monkeypatch.setenv("REPORT_SECTION_WORKERS", "8")
     assert report_agent_module.report_section_workers() == 4
 

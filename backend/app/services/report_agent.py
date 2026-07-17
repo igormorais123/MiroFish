@@ -47,6 +47,19 @@ def report_section_workers() -> int:
         return 1
 
 
+def report_min_tool_calls() -> int:
+    """Evita consultas artificiais quando o modelo ja produziu uma resposta valida."""
+    raw_value = os.getenv("REPORT_MIN_TOOL_CALLS", "0")
+    try:
+        return max(0, min(3, int(raw_value)))
+    except (TypeError, ValueError):
+        logger.warning(
+            "REPORT_MIN_TOOL_CALLS invalido (%r); aceitando resposta valida sem consultas obrigatorias",
+            raw_value,
+        )
+        return 0
+
+
 class ReportLogger:
     """
     Registrador detalhado do Report Agent
@@ -1867,7 +1880,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         # Ciclo ReACT
         tool_calls_count = 0
         max_iterations = 5  # Maximo de rodadas de iteracao
-        min_tool_calls = 3  # Minimo de chamadas de ferramenta
+        min_tool_calls = report_min_tool_calls()
         conflict_retries = 0  # Contagem de conflitos consecutivos entre chamada de ferramenta e Final Answer
         used_tools = set()  # Registra nomes de ferramentas ja chamadas
         all_tools = {"insight_forge", "panorama_search", "quick_search", "interview_agents"}
