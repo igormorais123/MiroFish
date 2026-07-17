@@ -39,5 +39,7 @@ O primeiro ensaio real encontrou dois problemas operacionais que não apareciam 
 1. O volume persistente estava sob o UID legado `197608`, enquanto o container roda como `10001:10001`. A criação de projeto falhava com `Permission denied`. A propriedade do volume foi alinhada após backup integral e inventário de permissões.
 2. `LLM_BASE_URL` apontava para `172.17.0.1`, ponte anterior do Docker. O MiroFish atual usa outra rede e não alcançava o roteador. A correção permanente usa a rede Docker privada externa `inteia-ai` e o endereço `http://omniroute-inteia:20128/v1`.
 3. O Luna rejeitou `temperature=0.3` com HTTP 400 porque aceita somente a temperatura padrão. O cliente passou a omitir `temperature` apenas para a família `gpt-5.6-luna`.
+4. Em uma ontologia real, o esforço de raciocínio padrão consumiu todos os 4.096 tokens de saída sem produzir conteúdo. A chamada controlada confirmou que `reasoning_effort=low` é aceito; `minimal` não é. MiroFish e Graphiti agora usam `low` por padrão, configurável por `LUNA_REASONING_EFFORT`, reservando saída para JSON sem trocar de modelo.
+5. O cliente OpenAI interno da imagem Graphiti enviava `temperature=0` e `max_tokens`, ambos incompatíveis com a família Luna. O adaptador montado pelo deploy passa a omitir temperatura, usar `max_completion_tokens` e aplicar o esforço de raciocínio homologado.
 
 O healthcheck de infraestrutura deve ser complementado por uma chamada LLM mínima, pois frontend, Flask, Graphiti e Neo4j podem estar saudáveis mesmo quando o roteador de IA está inalcançável.
