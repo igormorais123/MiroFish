@@ -1769,6 +1769,10 @@ class SimulationRunner:
         Returns:
             True indica ambiente ativo, False indica ambiente encerrado
         """
+        process = cls._processes.get(simulation_id)
+        if process is None or process.poll() is not None:
+            return False
+
         sim_dir = cls._get_run_dir(simulation_id)
         if not os.path.exists(sim_dir):
             return False
@@ -2153,4 +2157,3 @@ class SimulationRunner:
             results = results[:limit]
         
         return results
-
