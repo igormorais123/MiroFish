@@ -53,6 +53,15 @@ def _validate_structured_payload(data, response_model):
                 list_values = [value for value in data.values() if isinstance(value, list)]
                 if len(list_values) == 1:
                     data = {**data, field: list_values[0]}
+        # Alias recorrente em modelos gerais: ``entity`` no lugar do campo
+        # canônico ``name`` dos itens de ExtractedEntities.
+        nested = data.get(field) if isinstance(data, dict) else None
+        if isinstance(nested, list):
+            data[field] = [
+                ({**item, 'name': item['entity']} if isinstance(item, dict)
+                 and 'name' not in item and 'entity' in item else item)
+                for item in nested
+            ]
     return response_model.model_validate(data)
 
 
@@ -68,10 +77,20 @@ class LunaOpenAIClient(OpenAIClient):
             )
         # Alguns gateways nao preservam o JSON Schema do beta.parse e o modelo
         # pode devolver cerca Markdown ou um alias como "entities". Pedimos
-        # JSON, normalizamos somente o envelope e validamos no modelo Pydantic.
+        # JSON, fornecemos o schema real, normalizamos somente aliases seguros
+        # e validamos novamente no modelo Pydantic.
+        schema = response_model.model_json_schema()
+        schema_message = {
+            'role': 'system',
+            'content': (
+                'Return only one JSON object that validates exactly against '
+                'this JSON Schema. Keep every required property name and type: '
+                f'{json.dumps(schema, ensure_ascii=False)}'
+            ),
+        }
         response = await self.client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=[schema_message, *messages],
             max_completion_tokens=max_tokens,
             reasoning_effort=_luna_reasoning_effort(),
             response_format={'type': 'json_object'},
@@ -189,7 +208,7 @@ def _configure_client(client: ZepGraphiti, settings) -> ZepGraphiti:
     return client
 
 
-def _new_zep_graphiti(settings) -> ZepGraphiti:
+def create_graphiti_client(settings) -> ZepGraphiti:
     llm_client = LunaOpenAIClient(
         LLMConfig(
             api_key=settings.openai_api_key,
@@ -210,8 +229,12 @@ def _new_zep_graphiti(settings) -> ZepGraphiti:
     )
 
 
+# Compatibilidade com importacoes internas anteriores.
+_new_zep_graphiti = create_graphiti_client
+
+
 async def get_graphiti(settings: ZepEnvDep):
-    client = _new_zep_graphiti(settings)
+    client = create_graphiti_client(settings)
     try:
         yield client
     finally:
@@ -219,7 +242,7 @@ async def get_graphiti(settings: ZepEnvDep):
 
 
 async def initialize_graphiti(settings: ZepEnvDep):
-    client = _new_zep_graphiti(settings)
+    client = create_graphiti_client(settings)
     try:
         await client.build_indices_and_constraints()
     finally:
