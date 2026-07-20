@@ -56,6 +56,18 @@ O `.env` da VPS deve usar `LLM_BASE_URL=http://omniroute-inteia:20128/v1`. O con
 
 O volume persistente de uploads precisa ser gravável pelo usuário isolado do container (`10001:10001`). Antes de corrigir propriedade, faça backup verificável; depois confirme com `docker exec mirofish-inteia test -w /app/backend/uploads/projects`.
 
+## Provar o modelo efetivo
+
+Healthcheck e catálogo não bastam: um alias pode aceitar `codex/gpt-5.6-luna` e executar outro modelo. Depois de alterar o roteador ou o `.env`, faça uma chamada mínima pelo mesmo ambiente do MiroFish:
+
+```bash
+docker exec -w /app/backend mirofish-inteia \
+  /app/backend/.venv/bin/python scripts/check_llm_model.py \
+  --expected-model gpt-5.6-luna
+```
+
+O comando não imprime credenciais. Ele termina com erro se o modelo efetivo não for `gpt-5.6-luna` ou se a resposta não completar a prova mínima.
+
 ## Commit seguro
 
 ```bash

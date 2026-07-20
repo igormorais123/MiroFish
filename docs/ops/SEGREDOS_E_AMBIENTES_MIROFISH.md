@@ -11,6 +11,8 @@ Este arquivo define onde cada chave deve viver. Ele nunca deve conter valores re
 - Agentes devem listar apenas nomes de variáveis. Não imprimir valores de `.env` no terminal compartilhado.
 - Variáveis com `localhost`, caminhos de máquina pessoal ou tokens locais não devem ir para Vercel produção.
 - Ao adicionar uma integração externa, atualizar este arquivo, `.env.example`, GitHub Secrets e o ambiente de deploy aplicável.
+- A rota `codex/gpt-5.6-luna` usa o OAuth da assinatura ChatGPT guardado no OmniRoute. Nesse fluxo, `LLM_API_KEY` é apenas a chave do gateway privado; não é `OPENAI_API_KEY` e não autoriza cobrança de API da OpenAI.
+- `LUNA_REASONING_EFFORT=low` é configuração não secreta e preserva saída útil nas chamadas estruturadas do MiroFish e Graphiti.
 
 ## Estado aplicado
 
@@ -108,7 +110,7 @@ Valores reais de `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPAB
 |---|---|---:|---:|---:|
 | Identidade da app | `APP_NAME`, `APP_CODE` | Sim | Só se build precisar | Sim |
 | Flask/backend | `FLASK_DEBUG`, `FLASK_HOST`, `FLASK_PORT`, `SECRET_KEY`, `CORS_ORIGINS` | Sim (`SECRET_KEY` sempre como segredo; `CORS_ORIGINS` pode ser variável não secreta) | Não para frontend estático | Sim |
-| LLM/OpenAI-compatible | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL_NAME`, `LLM_MODEL_ALIASES`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES`, `REPORT_SECTION_WORKERS`, `REPORT_MIN_TOOL_CALLS` | Sim | Só se runtime Vercel usar LLM | Sim |
+| LLM/OpenAI-compatible | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL_NAME`, `LLM_MODEL_ALIASES`, `LUNA_REASONING_EFFORT`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES`, `REPORT_SECTION_WORKERS`, `REPORT_MIN_TOOL_CALLS` | Sim; `LUNA_REASONING_EFFORT` pode ser variável | Só se runtime Vercel usar LLM | Sim |
 | Modelos Helena | `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` | Sim | Só se runtime Vercel usar LLM | Sim |
 | OmniRoute | `OMNIROUTE_URL`, `OMNIROUTE_API_KEY`, `OMNIROUTE_BASE_URL`, `OMNIROUTE_MODEL`, `OMNIROUTE_FAST_MODEL`, `OMNIROUTE_PREMIUM_MODEL`, `OMNIROUTE_TIMEOUT` | Pendente quando houver valor real | Pendente se usado no deploy | Sim |
 | Provedores LLM auxiliares | `CEREBRAS_API_KEY`, `CEREBRAS_URL`, `LLM_BOOST_API_KEY`, `LLM_BOOST_BASE_URL`, `LLM_BOOST_MODEL_NAME` | Pendente quando houver valor real | Não para frontend estático | Sim |
