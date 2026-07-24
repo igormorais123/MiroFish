@@ -1,0 +1,311 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MiroFish INTEIA — Arquitetura do Sistema",
+    "subtitle": "Produção pública, centro de comando Helena, pipeline canônico e persistência auditável",
+    "output": ".planning/architecture/system-architecture.html",
+    "visual_preset": "blueprint",
+    "animation": "none",
+    "quality_profile": "standard",
+    "viewBox": [1700, 940],
+    "views": [
+      {
+        "id": "publicacao",
+        "label": "Requisição pública",
+        "focus": ["operator", "nginx", "spa", "core_api"],
+        "note": "O nginx da VPS publica SPA e API sob o prefixo /mirofish."
+      },
+      {
+        "id": "helena",
+        "label": "Coordenação Helena",
+        "focus": ["operator", "spa", "helena_api", "helena_policy", "omniroute", "audit_store", "core_api"],
+        "note": "A Helena planeja sob allowlist e delega a execução às APIs canônicas."
+      },
+      {
+        "id": "simulacao",
+        "label": "Simulação e relatório",
+        "focus": ["core_api", "app_services", "graphiti", "neo4j", "oasis", "omniroute", "audit_store"],
+        "note": "Serviços de domínio conectam grafo, agentes, simulação e relatório."
+      },
+      {
+        "id": "evidencia",
+        "label": "Evidência e segurança",
+        "focus": ["helena_policy", "helena_api", "app_services", "audit_store"],
+        "note": "Autorização, gates e persistência mantêm a cadeia de custódia."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operador",
+      "sublabel": "browser desktop ou móvel",
+      "pos": [30, 370],
+      "size": [142, 68]
+    },
+    {
+      "id": "nginx",
+      "type": "security",
+      "label": "Nginx público",
+      "sublabel": "TLS + /mirofish",
+      "tag": "VPS hermes",
+      "pos": [225, 370],
+      "size": [158, 68]
+    },
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "Vue SPA",
+      "sublabel": "5 fases + Caixa Helena",
+      "pos": [455, 190],
+      "size": [174, 70]
+    },
+    {
+      "id": "helena_api",
+      "type": "backend",
+      "label": "Helena API",
+      "sublabel": "plano · aprovação · lease",
+      "pos": [730, 90],
+      "size": [178, 70]
+    },
+    {
+      "id": "helena_policy",
+      "type": "security",
+      "label": "Política Helena",
+      "sublabel": "auth · allowlist · idempotência",
+      "tag": "fail-closed",
+      "pos": [730, 245],
+      "size": [178, 70]
+    },
+    {
+      "id": "core_api",
+      "type": "backend",
+      "label": "APIs canônicas",
+      "sublabel": "grafo · simulação · relatório",
+      "pos": [730, 470],
+      "size": [178, 70]
+    },
+    {
+      "id": "app_services",
+      "type": "backend",
+      "label": "Serviços de domínio",
+      "sublabel": "gates · perfis · relatório",
+      "pos": [1010, 470],
+      "size": [184, 70]
+    },
+    {
+      "id": "audit_store",
+      "type": "database",
+      "label": "Estado e auditoria",
+      "sublabel": "uploads + JSON atômico",
+      "pos": [1010, 705],
+      "size": [184, 70]
+    },
+    {
+      "id": "omniroute",
+      "type": "cloud",
+      "label": "OmniRoute / LLM",
+      "sublabel": "planejamento e geração",
+      "pos": [1040, 91],
+      "size": [170, 68]
+    },
+    {
+      "id": "graphiti",
+      "type": "backend",
+      "label": "Graphiti",
+      "sublabel": "memória temporal",
+      "pos": [1310, 280],
+      "size": [150, 68]
+    },
+    {
+      "id": "neo4j",
+      "type": "database",
+      "label": "Neo4j",
+      "sublabel": "grafo persistente",
+      "pos": [1510, 280],
+      "size": [150, 68]
+    },
+    {
+      "id": "oasis",
+      "type": "backend",
+      "label": "OASIS",
+      "sublabel": "simulação social",
+      "pos": [1310, 520],
+      "size": [150, 68]
+    },
+    {
+      "id": "quality_gate",
+      "type": "security",
+      "label": "Gate de evidência",
+      "sublabel": "estrutura · citações · números",
+      "pos": [1310, 706],
+      "size": [174, 68]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Borda pública da VPS",
+      "wraps": ["nginx"],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "Container mirofish-inteia",
+      "wraps": ["spa", "helena_api", "helena_policy", "core_api", "app_services", "audit_store"],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "Rede privada inteia-ai",
+      "wraps": ["omniroute", "graphiti", "neo4j", "oasis", "quality_gate"],
+      "pad": 24
+    }
+  ],
+  "connections": [
+    {
+      "id": "public-request",
+      "from": "operator",
+      "to": "nginx",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "serve-spa",
+      "from": "nginx",
+      "to": "spa",
+      "label": "HTML + assets",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "proxy-api",
+      "from": "nginx",
+      "to": "core_api",
+      "label": "/mirofish/api/*",
+      "variant": "emphasis",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "helena-ui",
+      "from": "spa",
+      "to": "helena_api",
+      "label": "comando + contexto",
+      "variant": "security",
+      "route": "orthogonal-h"
+    },
+    {
+      "id": "enforce-policy",
+      "from": "helena_api",
+      "to": "helena_policy",
+      "label": "validar",
+      "variant": "security",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "plan-llm",
+      "from": "helena_api",
+      "to": "omniroute",
+      "label": "plano JSON",
+      "variant": "dashed",
+      "route": "orthogonal-h"
+    },
+    {
+      "id": "execute-canonical",
+      "from": "spa",
+      "to": "core_api",
+      "label": "ticket + ações permitidas",
+      "variant": "emphasis",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "domain-work",
+      "from": "core_api",
+      "to": "app_services",
+      "label": "orquestrar fase",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist-state",
+      "from": "app_services",
+      "to": "audit_store",
+      "label": "estado + artefatos",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "graph-memory",
+      "from": "app_services",
+      "to": "graphiti",
+      "label": "entidades + memória",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "graph-storage",
+      "from": "graphiti",
+      "to": "neo4j",
+      "label": "Cypher",
+      "variant": "dashed"
+    },
+    {
+      "id": "run-oasis",
+      "from": "app_services",
+      "to": "oasis",
+      "label": "perfis + cenário",
+      "route": "orthogonal-h"
+    },
+    {
+      "id": "llm-generation",
+      "from": "app_services",
+      "to": "omniroute",
+      "label": "inferência",
+      "variant": "dashed",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "check-evidence",
+      "from": "app_services",
+      "to": "quality_gate",
+      "label": "claims + trace",
+      "variant": "security",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "gate-artifacts",
+      "from": "quality_gate",
+      "to": "audit_store",
+      "label": "manifesto + auditoria",
+      "variant": "dashed",
+      "route": "orthogonal-h"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Superfície pública única",
+      "items": [
+        "Frontend e API usam https://inteia.com.br/mirofish",
+        "Portas internas não são URLs de produto",
+        "Vercel permanece alternativa histórica"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Helena sob controle",
+      "items": [
+        "Token interno nunca entra no bundle ou armazenamento local",
+        "Mutação exige confirmação e ticket de uso único",
+        "Nenhum shell, arquivo livre ou HTTP arbitrário"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Entrega auditável",
+      "items": [
+        "Simulação, trace e fontes atravessam gates",
+        "Estados e eventos são persistidos atomicamente",
+        "Backup e rollback antecedem cada cutover"
+      ]
+    }
+  ]
+}

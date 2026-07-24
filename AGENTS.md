@@ -7,7 +7,9 @@
 1. Repo oficial: `https://github.com/igormorais123/MiroFish` (remote `origin`).
 2. Branch estável: `main`. **Nunca trabalhe direto em `main`.** Sempre branch nomeada → PR.
 3. Frontend: Vue 3 + Vite em `frontend/`. Backend: Flask Python em `backend/`.
-4. Deploy frontend: Vercel projeto `mirofish-inteia`, auto-deploy em push pra `main`. Site público: `https://inteia.com.br/mirofish`.
+4. Deploy público: VPS `hermes`, checkout `/opt/mirofish-git`, container
+   `mirofish-inteia`. Vercel é alternativa histórica. Site:
+   `https://inteia.com.br/mirofish/`.
 5. Idioma com Igor: português brasileiro. Código/identifiers: inglês.
 6. NÃO commitar: `.env`, secrets, `node_modules/`, `dist/`, `frontend/dist/`, `backend/uploads/`, logs vivos, `.vercel/`.
 7. Conventional Commits em português: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `ci:`.

@@ -1,6 +1,6 @@
 # GPT da Pasta — MiroFish INTEIA
 
-Atualizado em: 2026-05-18
+Atualizado em: 2026-07-24
 Escopo: inventário de ativos, pesquisa sintética, código, documentação, artefatos e trilha operacional desta pasta.
 Pasta analisada: `C:\Users\IgorPC\.claude\projects\Mirofish INTEIA`
 
@@ -12,11 +12,13 @@ Ordem recomendada:
 
 1. Ler `CLAUDE.md` e `AGENTS.md` para regras de trabalho, branch e PR.
 2. Ler este arquivo para entender o inventário completo e a história do ativo.
-3. Abrir `docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html` para navegar pelo mapa mental SVG.
-4. Ler `docs/MAPA_SISTEMA.md` para arquitetura macro.
-5. Ler `docs/_mapa_frontend.md`, `docs/_mapa_backend_api.md` e `docs/_mapa_backend_services.md` para detalhe técnico.
-6. Ler `.planning/STATE.md` e `docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md` para estado operacional.
-7. Só depois editar código ou documentação.
+3. Abrir `.planning/architecture/system-architecture.html` para a arquitetura viva.
+4. Abrir `.planning/architecture/helena-control-plane.html` para o control plane.
+5. Consultar `graphify-out/graph.html` para relações no checkout atual.
+6. Ler `docs/MAPA_SISTEMA.md` para arquitetura macro.
+7. Ler `docs/_mapa_frontend.md`, `docs/_mapa_backend_api.md` e `docs/_mapa_backend_services.md` para detalhe técnico.
+8. Ler `.planning/STATE.md` e `docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md` para estado operacional.
+9. Só depois editar código ou documentação.
 
 Regra prática estilo wiki/Karpathy: primeiro entenda o loop de produto, depois os artefatos, depois os serviços, depois os testes. Não comece por arquivo isolado.
 
@@ -38,10 +40,14 @@ O ativo combina:
 
 Estado observado no código atual:
 
-- branch criada para este mapa: `codex/mapa-ativos-ia`;
 - fonte oficial: `https://github.com/igormorais123/MiroFish`;
-- site público: `https://inteia.com.br/mirofish`;
+- produção: VPS `hermes`, checkout `/opt/mirofish-git`;
+- site público: `https://inteia.com.br/mirofish/`;
 - API pública correta: `https://inteia.com.br/mirofish/api/...`;
+- centro de comando Helena publicado pelo PR `#99`, commit
+  `07306e711509772038b381176781ce80edacdfa0`;
+- Graphify atual: 3.955 nós, 8.443 relações e 159 comunidades;
+- backend: 390 testes; frontend Helena: 8 testes no snapshot de publicação;
 - inventário-base antes destes artefatos de mapa: 522 arquivos rastreados pelo Git;
 - artefatos novos deste trabalho: +2 (`docs/GPT_DA_PASTA_MIROFISH_INTEIA.md` e `docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html`);
 - total esperado após versionar estes mapas: 524 arquivos rastreados;
@@ -559,7 +565,8 @@ Limites assumidos:
 
 - este mapa cobre todo o conteúdo por índice, síntese, domínio, trilha e referência; ele não transcreve integralmente os 107 documentos, porque isso tornaria o artefato pior para estudo por IA;
 - arquivos ignorados com risco de segredo, como `.env`, `backend/uploads`, logs, `.vercel`, `node_modules` e `backend/.venv`, foram mapeados por existência e política, não por conteúdo;
-- números de mapas técnicos antigos foram preservados, mas sinalizados como possivelmente defasados quando divergem do código atual;
+- números de mapas técnicos antigos são históricos; o Graphify e os mapas
+  Archify são as referências estruturais atuais;
 - o HTML é estático e abre direto no navegador, sem servidor, build ou dependência externa.
 
 Melhorias futuras para este mapa:

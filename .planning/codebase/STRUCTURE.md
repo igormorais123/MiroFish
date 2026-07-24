@@ -1,7 +1,23 @@
 # Codebase Structure
 
 **Analysis Date:** 2026-04-13
-**Last update:** 2026-05-04
+**Last update:** 2026-07-24
+
+## Atualização 2026-07-24
+
+Arquivos centrais acrescentados pelo centro de comando:
+
+- `frontend/src/components/HelenaCommandCenter.vue`;
+- `frontend/src/services/helenaExecutor.js`;
+- `frontend/tests/helenaExecutor.test.js`;
+- `backend/app/api/helena.py`;
+- `backend/app/services/helena_control.py`;
+- `backend/app/utils/internal_auth.py`;
+- `backend/tests/test_helena_control_api.py`;
+- `docs/ops/HELENA_CONTROL_PLANE.md`.
+
+Mapas gerados e fontes editáveis ficam em `graphify-out/` e
+`.planning/architecture/`. Não editar manualmente os HTMLs gerados.
 
 ## Atualizacao 2026-05-04
 
@@ -233,7 +249,7 @@ mirofish-inteia/
 - `backend/app/services/social_bootstrap.py` - Deterministic social interaction bootstrap
 
 **Testing:**
-- `backend/tests/` - Test suite, 70 tests passing on 2026-05-04
+- `backend/tests/` - Test suite, 390 tests passing on 2026-07-24
 
 ## Naming Conventions
 
@@ -316,4 +332,4 @@ mirofish-inteia/
 
 ---
 
-*Structure map updated: 2026-05-04*
+*Structure map updated: 2026-07-24*

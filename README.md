@@ -63,7 +63,7 @@ Relatório analítico → Conversa com agentes → Insights
 | **Anti-viés** | — | Devil's advocate em ~20% dos perfis + diversidade intra-grupo |
 | **Helena cenários** | Análise narrativa | Tabela obrigatória de 3 cenários probabilísticos (Base/Otimista/Contrário, soma=100%) |
 | **Centro de comando Helena** | — | Caixa global com contexto de fase, plano prévio, aprovação de uso único e auditoria |
-| **Testes** | — | Suite pytest com 70 testes em contratos críticos |
+| **Testes** | — | 390 testes backend e 8 testes focados do executor Helena validados na publicação de 2026-07-24 |
 
 ### Centro de comando Helena
 
@@ -74,6 +74,8 @@ o processo exigem confirmação explícita e ficam registradas em auditoria.
 
 Configuração, ferramentas permitidas, limites e roteiro de homologação estão em
 [`docs/ops/HELENA_CONTROL_PLANE.md`](docs/ops/HELENA_CONTROL_PLANE.md).
+O estado efetivamente publicado, os hashes, o rollback e as evidências estão em
+[`docs/ops/PUBLICACAO_HELENA_2026-07-24.md`](docs/ops/PUBLICACAO_HELENA_2026-07-24.md).
 
 ### Aplicações
 
@@ -161,19 +163,29 @@ cp .env.example .env
 docker compose up -d
 ```
 
-O compose expõe as portas `3000` (frontend) e `5001` (API) por padrão.
+Em desenvolvimento, consulte o `docker-compose.yml` vigente antes de expor
+portas. Em produção, nenhuma porta de aplicação é endereço público: o acesso é
+feito exclusivamente pelo nginx em `https://inteia.com.br/mirofish/`.
 
 ### Deploy em VPS
 
-O fork inclui configuração para deploy em VPS com nginx como reverse proxy:
+O deploy público canônico está na VPS `hermes`, no checkout
+`/opt/mirofish-git`, com frontend e backend no container `mirofish-inteia`.
+Toda publicação deve partir de `main`, criar backup e imagem de rollback e
+terminar com smoke tests públicos:
 
 ```bash
-# Build e deploy
-docker compose -f docker-compose.yml up -d --build
-
-# Verificar
-curl http://seu-ip:4000/api/health
+cd /opt/mirofish-git
+git fetch origin
+git pull --ff-only origin main
+docker compose build mirofish
+docker compose up -d mirofish
+curl -fsS https://inteia.com.br/mirofish/api/health
+curl -fsS https://inteia.com.br/mirofish/api/helena/status
 ```
+
+Use o procedimento completo, com rollback, em
+[`docs/ops/COMANDOS_SEGUROS_MIROFISH.md`](docs/ops/COMANDOS_SEGUROS_MIROFISH.md).
 
 ## Enriquecimento Apify
 
@@ -240,6 +252,11 @@ Requer conta Apify com token em `APIFY_TOKEN`. O Mirofish prossegue normalmente 
 | [Estado Atual](.planning/STATE.md) | Status real da implementação, validações e pendências |
 | [Roadmap Atual](.planning/ROADMAP.md) | Próximas fases após o gate estrutural |
 | [Mapa de Documentação](.planning/DOCUMENTATION_MAP.md) | Onde ficam planos, mapas técnicos, memória e arquivos históricos |
+| [Mapa Arquitetural do Sistema](.planning/architecture/system-architecture.html) | Topologia navegável do produto, Helena, serviços e produção |
+| [Mapa Arquitetural da Helena](.planning/architecture/helena-control-plane.html) | Fluxo detalhado do centro de comando e seus controles |
+| [Grafo Estrutural](graphify-out/graph.html) | Grafo navegável gerado pelo Graphify a partir do repositório |
+| [Operação da Helena](docs/ops/HELENA_CONTROL_PLANE.md) | Contrato de ferramentas, autorização, auditoria e limites |
+| [Publicação da Helena](docs/ops/PUBLICACAO_HELENA_2026-07-24.md) | Evidências de deploy, testes e rollback de 2026-07-24 |
 | [Plano Consultoria Simulada](.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md) | Implementação estrutural da promessa INTEIA de simular, verificar e entregar |
 | [Mapas Técnicos](.planning/codebase/STRUCTURE.md) | Estrutura, arquitetura, integrações, testes e riscos do código |
 | [GPT da Pasta](docs/GPT_DA_PASTA_MIROFISH_INTEIA.md) | Índice consolidado de ativos, documentos, mapas Mermaid e leitura para IA |

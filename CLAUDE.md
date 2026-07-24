@@ -9,8 +9,8 @@
 - Branch estável: **`main`** (deploy de produção sai daqui)
 - Site público: **https://inteia.com.br/mirofish**
 - API pública: `https://inteia.com.br/mirofish/api/...` (NUNCA `inteia.com.br/api/...`)
-- Plataforma de deploy frontend: **Vercel** — projeto `mirofish-inteia`. Detalhes em [`docs/ops/VERCEL_DEPLOY.md`](docs/ops/VERCEL_DEPLOY.md).
-- Hospedagem backend: VPS, container `mirofish` em `/opt/mirofish/`. Detalhes em [`docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md`](docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md).
+- Deploy público canônico: **VPS `hermes`**, checkout `/opt/mirofish-git`, container saudável `mirofish-inteia`. Frontend e API são publicados juntos atrás do nginx. Detalhes em [`docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md`](docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md).
+- Vercel: plataforma histórica/alternativa do frontend, sem autoridade sobre o domínio público atual. Consulte [`docs/ops/VERCEL_DEPLOY.md`](docs/ops/VERCEL_DEPLOY.md) apenas para operar essa alternativa.
 
 ## 2. Regra Zero — fonte única de verdade
 
@@ -101,19 +101,19 @@ Igor roda 2+ instâncias IA simultaneamente. Para evitar conflito:
 - `git push --force` em `main` (NUNCA)
 - `git reset --hard origin/main` se houver trabalho local não commitado
 - `git push --force-with-lease` em branch que outra instância pode estar usando
-- `vercel --prod` direto sem aprovação do Igor (deploy de produção é via merge em `main`)
+- `vercel --prod` direto sem aprovação do Igor (Vercel não é o deploy público canônico)
 - editar `vercel.json`, `.github/workflows/*`, `Dockerfile`, `deploy/` sem PR + review
 - commitar `.env`, secrets, tokens, `node_modules/`, `dist/`, `frontend/dist/`, `backend/uploads/`, logs vivos
-- editar `/opt/mirofish/` direto na VPS sem fazer commit/PR no GitHub depois
+- editar `/opt/mirofish-git/` direto na VPS sem antes fazer commit/PR no GitHub
 
 ## 9. Stack rápida
 
 - Frontend: **Vue 3 + Vite**, em `frontend/`. Hero/views em `frontend/src/views/`. Tema "paper mode" (fundo creme `#f5f2ea`, paleta dourada `#c9952a`).
 - Backend: **Python (Flask)**, em `backend/`. Tests em `backend/tests/`.
-- Build: `vercel.json` na raiz manda Vercel rodar `npm install && cd frontend && npm install` e `npm run build`, output em `frontend/dist`.
+- Build: Docker multi-stage compila `frontend/dist` e empacota frontend + backend Flask na mesma imagem. `vercel.json` permanece somente para a alternativa estática.
 - Deploy:
-  - Frontend → Vercel (auto-deploy em push pra `main`)
-  - Backend → VPS manual (ver `docs/ops/`)
+  - Produção pública → VPS `hermes`, checkout `/opt/mirofish-git`, Docker Compose.
+  - Vercel → alternativa estática, sem tokens server-side e sem domínio canônico.
 
 ## 10. Referências obrigatórias
 
@@ -121,7 +121,9 @@ Antes de mexer em algo grande, leia também:
 
 - [`docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md`](docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md) — política operacional (rotas, VPS, ordem de reconciliação)
 - [`docs/ops/COMANDOS_SEGUROS_MIROFISH.md`](docs/ops/COMANDOS_SEGUROS_MIROFISH.md) — comandos prontos pra copiar
-- [`docs/ops/VERCEL_DEPLOY.md`](docs/ops/VERCEL_DEPLOY.md) — config Vercel, project ID, env vars
+- [`docs/ops/PUBLICACAO_HELENA_2026-07-24.md`](docs/ops/PUBLICACAO_HELENA_2026-07-24.md) — registro verificável da publicação do centro de comando
+- [`docs/ops/HELENA_CONTROL_PLANE.md`](docs/ops/HELENA_CONTROL_PLANE.md) — contrato, segurança e operação da Helena
+- [`docs/ops/VERCEL_DEPLOY.md`](docs/ops/VERCEL_DEPLOY.md) — alternativa histórica de frontend
 - [`docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md`](docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md) — nomes de variáveis, cofres e política de segredos
 - [`docs/ops/CENTRALIZACAO_GITHUB_2026-05-06.md`](docs/ops/CENTRALIZACAO_GITHUB_2026-05-06.md) — PRs abertas, estado Vercel confirmado e ordem segura de merge
 - [`README.md`](README.md) — visão de produto
@@ -138,5 +140,5 @@ Pergunte ao Igor antes de:
 - mudar comportamento de produção (URLs, endpoints, schema)
 - adicionar dependência nova
 - mudar branch policy ou CI
-- consumir crédito Vercel/API com volume alto
+- consumir crédito Vercel/LLM/API com volume alto
 - deletar arquivo, branch ou PR de outra instância

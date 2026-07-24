@@ -14,6 +14,20 @@ execução.
 O atalho `Alt+H` abre o painel. No celular, ele é exibido como uma folha inferior;
 no desktop, como painel lateral flutuante.
 
+## Estado publicado
+
+Em 2026-07-24, o centro de comando foi publicado pelo PR `#99`, commit
+`07306e711509772038b381176781ce80edacdfa0`. A produção foi observada saudável,
+com `available=true` e versão `1.0` no status público. Hash da imagem, backup,
+rollback e evidências de teste estão no
+[registro da publicação](PUBLICACAO_HELENA_2026-07-24.md).
+
+Mapas navegáveis:
+
+- [arquitetura completa do MiroFish](../../.planning/architecture/system-architecture.html);
+- [arquitetura específica da Helena](../../.planning/architecture/helena-control-plane.html);
+- [grafo estrutural gerado do repositório](../../graphify-out/graph.html).
+
 ## Fluxo operacional
 
 1. O operador abre o painel e informa o mesmo `INTERNAL_API_TOKEN` configurado
@@ -87,8 +101,20 @@ determinístico restrito. `rules` força esse modo restrito para homologação
 local.
 
 O endpoint público `GET /api/helena/status` informa somente disponibilidade e
-limites. Os demais endpoints exigem `X-Internal-Token`; o segredo não é enviado
+versão. Os demais endpoints exigem `X-Internal-Token`; o segredo não é enviado
 em query string nem armazenado no navegador.
+
+| Método e rota | Função | Autenticação |
+|---|---|---|
+| `GET /api/helena/status` | disponibilidade e versão não sensíveis | pública |
+| `POST /api/helena/session` | valida token e informa capacidades | token interno |
+| `POST /api/helena/context` | resolve e revalida o contexto | token interno |
+| `POST /api/helena/commands/plan` | produz plano e, quando necessário, aprovação de uso único | token interno |
+| `POST /api/helena/commands/:id/execute` | abre o lease e emite ticket | token interno |
+| `POST /api/helena/commands/:id/complete` | encerra e audita a execução | token interno |
+| `POST /api/helena/commands/:id/cancel` | cancela operação ativa | token interno |
+| `GET /api/helena/commands/:id` | consulta um registro saneado | token interno |
+| `GET /api/helena/commands` | lista o histórico saneado | token interno |
 
 ## Limites operacionais
 

@@ -1,60 +1,67 @@
 # STATE — MiroFish INTEIA
 
-Atualizado em: 2026-05-19
+Atualizado em: 2026-07-24
 
-## Current
+## Estado atual
 
-- **Milestone:** v1.3 — Consultoria por Simulação Auditável
-- **Status:** P0 + Fase 03 (Vox Academic Hardening) implementados e validados localmente.
-- **Servidores locais verificados:** backend `http://127.0.0.1:5001/health` 200 e frontend `http://127.0.0.1:5173` 200.
-- **Posicionamento travado:** **exploratório auditado** (C0–C2). C3–C4 bloqueados sem painel humano. Roadmap Tier S contingente em `docs/superpowers/plans/2026-05-19-mirofish-roadmap-coleta-humana-futura.md`.
+- **Milestone:** v1.4 — Coordenação segura pela Helena.
+- **Produção:** `https://inteia.com.br/mirofish/`, servida pela VPS `hermes`.
+- **Código publicado:** PR `#99`, commit
+  `07306e711509772038b381176781ce80edacdfa0`.
+- **Runtime:** `mirofish-inteia` observado `running/healthy`, zero reinícios.
+- **Helena:** status público `available=true`, versão `1.0`.
+- **Posicionamento científico:** exploratório auditado (C0–C2); C3–C4 seguem
+  bloqueados sem painel humano.
 
-## O que mudou nesta fase
+## Entregue
 
-1. Relatório deixou de ser apenas geração textual e passou a depender de gate sistemico.
-2. O backend bloqueia relatório sem simulação concluida, material-base, grafo, config, perfis, run_state, diversidade mínima, trace OASIS e auditoria de citacoes.
-3. A interface da etapa 3 consulta a qualidade da simulação e bloqueia a geração quando o sistema reprova.
-4. A interface da etapa 4 exibe cadeia de custodia, artefatos e motivos de bloqueio.
-5. Relatórios antigos sem `quality_gate` e `evidence_audit` são classificados como `legacy_unverified`, não publicaveis.
-6. O runner OASIS ganhou pulso social inicial configuravel, com comentários, curtidas, rejeicoes, reposts e citacoes persistidas.
-7. Perfis OASIS ganharam contrato comportamental para atuar como participantes sociais, não apenas observadores.
-8. O sistema separa modo `client` de `demo/smoke`: diagnostico técnico pode rodar, mas nunca recebe status publicavel.
-9. Auditoria de evidências passou a cobrir números: percentuais, probabilidades e contagens precisam estar no corpus ou marcados como inferencia/simulacao/calibracao.
+1. Caixa Helena global nas cinco fases, acessível por `Alt+H` e responsiva.
+2. Contexto de rota e identificadores canônicos revalidados no servidor.
+3. Planejamento por allowlist, sem shell, escrita arbitrária ou HTTP livre.
+4. Confirmação humana para mutações, tokens de uso único, TTL e idempotência.
+5. Executor no navegador reutilizando exclusivamente as APIs das fases.
+6. Auditoria atômica e redigida em `backend/uploads/helena_commands/`.
+7. Bloqueio de comandos equivalentes e reconciliação de operações abandonadas.
+8. Gate estrutural, evidência, diversidade social e governança cliente/demo
+   preservados sem regressão.
+9. Backup e imagem de rollback criados antes do cutover.
 
-## Novos arquivos principais
+## Evidência de validação
 
-- `.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md`
-- `.planning/DOCUMENTATION_MAP.md`
-- `backend/app/services/report_system_gate.py`
-- `backend/app/services/delivery_governance.py`
-- `backend/app/services/social_bootstrap.py`
-- `backend/tests/test_delivery_governance.py`
-- `backend/tests/test_report_manager_artifacts.py`
-- `backend/tests/test_report_quality.py`
-- `backend/tests/test_simulation_data_reader.py`
-- `backend/tests/test_simulation_manager.py`
-- `backend/tests/test_social_bootstrap.py`
+- backend completo: `390 passed`;
+- backend focado Helena: `15 passed`;
+- frontend Helena: `8 passed`;
+- build frontend, `compileall`, `pip-audit` e `npm audit --audit-level=high`
+  aprovados;
+- seis rotas críticas verificadas em desktop e móvel;
+- contrato público, autenticação, plano de leitura, aprovação, execução,
+  cancelamento e histórico exercitados;
+- health público e status Helena responderam corretamente após o deploy.
 
-## Decisões registradas
+O registro detalhado está em
+[`docs/ops/PUBLICACAO_HELENA_2026-07-24.md`](../docs/ops/PUBLICACAO_HELENA_2026-07-24.md).
 
-- Um relatório cliente só pode ser `publishable` se passar gate estrutural e auditoria de evidência.
-- Citacao direta precisa existir literalmente no corpus local; traducao ou parafrase deve ser marcada como inferencia/simulacao.
-- Volume de ações não basta: Distinct-2, entropia de agentes, entropia de tipos de ação e trace OASIS entram como criterio.
-- Simulação antiga sem gate deve ser tratada como legado técnico, não entrega cliente.
-- Smoke/demo existe como diagnostico técnico, separado de modo cliente e bloqueado como `diagnostic_only`.
-- Número em relatório cliente e claim auditavel; se não aparece no corpus local, precisa estar rotulado como inferencia calibrada ou o relatório e bloqueado.
+## Decisões vigentes
 
-## Pendencias reais
+- `main` e `/opt/mirofish-git` são as únicas fontes do deploy.
+- Vercel é alternativa histórica, não a produção canônica.
+- A Helena não aprova o próprio plano e não executa mutações sem humano.
+- O token interno nunca vai para bundle, query string ou persistência do browser.
+- Relatório cliente só é `publishable` após gates estrutural e de evidência.
+- Demo/smoke permanece `diagnostic_only`.
 
-1. Rodar uma nova simulação real longa com LLM ativo e verificar se atravessa o gate até relatório publicavel.
-2. Criar preset de baixa atividade que gere diagnostico técnico sem fingir opiniao pública.
-5. Continuar testes de API e frontend, hoje ainda sem suite automatizada de componentes.
+## Pendências reais
 
-## Roadmap Evolution
+1. Executar uma simulação cliente longa, com fontes reais e LLM ativo, até um
+   relatório `publishable`.
+2. Observar métricas operacionais e feedback de uso da Helena antes de ampliar
+   sua allowlist.
+3. Corrigir a infraestrutura externa de GitHub Actions, cuja execução falhou
+   antes de produzir steps/logs; os testes locais e de produção foram aprovados.
 
-## Histórico relevante
+## Mapas vivos
 
-- v1.0: sistema funcional.
-- v1.1: relatório premium, graph_id, API de custos.
-- v1.2: correções de pipeline, PT-BR, segurança básica, persistencia e QC inicial.
-- v1.3: gate estrutural, governanca cliente/demo, auditoria de evidências/citacoes/numeros, diversidade social, cadeia de custodia e pulso OASIS.
+- [Arquitetura do sistema](architecture/system-architecture.html).
+- [Arquitetura da Helena](architecture/helena-control-plane.html).
+- [Grafo estrutural](../graphify-out/graph.html).
+- [Mapa da documentação](DOCUMENTATION_MAP.md).

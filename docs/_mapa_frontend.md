@@ -1,5 +1,23 @@
 # FRONTEND — Mapa profundo do MiroFish INTEIA
 
+**Última atualização:** 2026-07-24
+
+## F0. Centro de comando Helena
+
+- `App.vue` monta uma única instância global de
+  `components/HelenaCommandCenter.vue`, além de `InteiaBackground` e
+  `router-view`.
+- `api/helena.js` implementa sessão, contexto, plano, execução, conclusão,
+  cancelamento e histórico com `X-Internal-Token`.
+- `services/helenaDependencies.js` adapta os clientes existentes das cinco
+  fases.
+- `services/helenaExecutor.js` executa somente as ferramentas da allowlist,
+  preserva ordem, acompanha tarefas e evita repetir preparação ou relatório.
+- `tests/helenaExecutor.test.js` cobre 8 contratos críticos.
+
+O painel abre por `Alt+H`, usa lateral no desktop e folha inferior no móvel. O
+token fica apenas na memória da aba.
+
 ## F1. Stack e versões
 
 | Pacote | Versão | Propósito |
@@ -24,6 +42,7 @@
 ### `App.vue`
 - Layout raiz com componente global `<InteiaBackground />` (canvas neural + grain)
 - `<router-view />` renderiza componentes de rota abaixo do background
+- `<HelenaCommandCenter />` permanece disponível em todas as rotas
 - Z-index separado para manter conteúdo acima do background
 
 ### `router/index.js` — Tabela de rotas
@@ -694,4 +713,3 @@ sequenceDiagram
 - Exata configuração de Mermaid.js (versão 11.14.0 — carregamento, tema?)
 - Vite dev server proxy config (não encontrado em vite.config.js)
 - Detalhes de FormData processing em `prepareSimulation` (files, querystring, headers?)
-

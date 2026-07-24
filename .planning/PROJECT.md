@@ -1,54 +1,63 @@
 # MiroFish INTEIA
 
-Atualizado em: 2026-05-04
+Atualizado em: 2026-07-24
 
-## Visao
+## Visão
 
-Sistema de simulacao social multiagente para cenarios politicos, midiaticos, juridico-institucionais, reputacionais e de mercado. O produto combina grafo de conhecimento, perfis sinteticos, OASIS em Twitter/Reddit, enriquecimento factual e Helena Strategos para produzir relatorios de inteligencia com trilha de evidencia.
+Sistema de simulação social multiagente para cenários políticos, midiáticos,
+jurídico-institucionais, reputacionais e de mercado. Combina grafo de
+conhecimento, perfis sintéticos, OASIS, enriquecimento factual, gate de
+evidência e Helena Strategos para produzir análises com cadeia de custódia.
 
 ## Tese atual
 
-O MiroFish INTEIA nao deve entregar "relatorio bonito" se a simulacao nao sustentou a conclusao. A promessa da consultoria por simulacao foi transformada em contrato operacional:
+O produto não entrega relatório publicável se a simulação e as fontes não
+sustentarem a conclusão. O contrato operacional exige material-base, grafo,
+configuração, perfis, simulação concluída, diversidade mínima, trace social,
+auditoria de citações e separação entre fato, simulação e inferência.
 
-1. briefing e material-base obrigatorios;
-2. grafo, perfis e configuracao persistidos;
-3. simulacao OASIS concluida e auditavel;
-4. diversidade minima semantica, comportamental e de agentes;
-5. trace OASIS com interacao social real;
-6. auditoria literal de citacoes diretas;
-7. relatorio separado por fato, simulacao, inferencia e campo necessario.
+O centro de comando Helena coordena esse processo por linguagem natural sem
+substituir as cinco fases, sem acesso a shell ou HTTP livre e sem aprovar as
+próprias ações mutantes.
 
 ## Stack
 
-- **Frontend:** Vue.js 3 + Vite
-- **Backend:** Flask/Python
-- **Grafo/memoria:** Graphiti + Zep/Neo4j, com fallback local de evidencias
-- **Simulacao:** OASIS multi-plataforma (Twitter + Reddit)
-- **Relatorio:** ReportAgent + Helena Strategos + gate sistemico
-- **LLM routing:** OmniRoute/OpenAI-compatible
-- **Deploy:** Docker/nginx em VPS, com execucao local suportada
+- **Frontend:** Vue 3 + Vite.
+- **Backend:** Flask/Python.
+- **Grafo e memória de domínio:** Graphiti + Neo4j/Zep.
+- **Simulação:** OASIS em Twitter e Reddit.
+- **Relatório:** ReportAgent + Helena Strategos + gate sistêmico.
+- **LLM routing:** OmniRoute/OpenAI-compatible.
+- **Produção:** Docker Compose + nginx na VPS `hermes`.
+- **Mapas do repositório:** Graphify e Archify.
 
-## Componentes criticos
+## Componentes críticos
 
-- `backend/app/services/report_system_gate.py` — gate estrutural antes/depois do relatorio.
-- `backend/app/utils/report_quality.py` — auditoria de citacoes e qualidade textual.
-- `backend/app/services/simulation_data_reader.py` — metricas de diversidade e trace OASIS.
-- `backend/app/services/social_bootstrap.py` — pulso social inicial deterministico.
-- `backend/scripts/run_parallel_simulation.py` — execucao OASIS com interacoes persistidas.
-- `frontend/src/components/Step3Simulation.vue` — bloqueio visual antes do relatorio.
-- `frontend/src/components/Step4Report.vue` — cadeia de custodia do relatorio.
+- `frontend/src/components/HelenaCommandCenter.vue` — caixa global e aprovação.
+- `frontend/src/services/helenaExecutor.js` — execução das APIs canônicas.
+- `backend/app/api/helena.py` — contrato HTTP do control plane.
+- `backend/app/services/helena_control.py` — plano, leases e auditoria.
+- `backend/app/utils/internal_auth.py` — autenticação fail-closed.
+- `backend/app/services/report_system_gate.py` — gate estrutural de relatório.
+- `backend/app/utils/report_quality.py` — auditoria textual e numérica.
+- `backend/app/services/simulation_data_reader.py` — diversidade e trace OASIS.
 
-## Infraestrutura conhecida
+## Infraestrutura canônica
 
-- Frontend local validado: `http://localhost:5173`
-- Backend local validado: `http://localhost:5001`
-- VPS historico: `kvm4` / `72.62.108.24`
-- Containers historicos: `mirofish-inteia`, `zep-graphiti`, `zep-neo4j`, `omniroute-inteia`
+- Público: `https://inteia.com.br/mirofish/`.
+- API: `https://inteia.com.br/mirofish/api/...`.
+- VPS: `hermes`, checkout `/opt/mirofish-git`.
+- Container: `mirofish-inteia`.
+- Serviços internos: `mirofish-graphiti`, `mirofish-neo4j`,
+  `omniroute-inteia`.
+- Vercel: alternativa histórica, sem autoridade sobre o domínio público.
 
 ## Milestone atual
 
-**v1.3 — Consultoria por Simulacao Auditavel**
+**v1.4 — Coordenação segura pela Helena**
 
-Status: P0 estrutural implementado e validado localmente em 2026-05-04.
-
-Proxima validacao de produto: executar uma simulacao nova, longa o suficiente, com LLM ativo, e verificar se atravessa o gate ate um relatorio publicavel.
+Status: centro de comando publicado em produção em 2026-07-24 pelo PR `#99`,
+commit `07306e711509772038b381176781ce80edacdfa0`. Testes automatizados,
+contratos públicos, seis rotas em desktop/móvel, health, backup e rollback
+foram validados. A próxima validação de produto continua sendo uma simulação
+cliente longa com fontes reais e LLM ativo até um relatório publicável.
