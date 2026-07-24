@@ -105,11 +105,12 @@ def create_app(config_class=Config):
         return response
     
     # Blueprints
-    from .api import graph_bp, simulation_bp, report_bp, internal_bp
+    from .api import graph_bp, simulation_bp, report_bp, internal_bp, helena_bp
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
     app.register_blueprint(internal_bp, url_prefix='/api/internal/v1')
+    app.register_blueprint(helena_bp, url_prefix='/api/helena')
     
     def _public_health_payload():
         return {
@@ -167,4 +168,3 @@ def create_app(config_class=Config):
         logger.info(f"{Config.APP_NAME} backend pronto (frontend={'on' if _has_frontend else 'off'})")
     
     return app
-

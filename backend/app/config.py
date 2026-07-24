@@ -144,6 +144,15 @@ class Config:
     # Auth entre servicos
     INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN', '')
 
+    # Console operacional Helena. Continua fail-closed quando o token interno
+    # nao esta configurado, mesmo que a interface esteja habilitada.
+    HELENA_CONTROL_ENABLED = _env_flag('HELENA_CONTROL_ENABLED', True)
+    HELENA_COMMAND_MAX_LENGTH = int(os.environ.get('HELENA_COMMAND_MAX_LENGTH', '4000'))
+    HELENA_PLAN_TTL_SECONDS = int(os.environ.get('HELENA_PLAN_TTL_SECONDS', '600'))
+    HELENA_APPROVAL_TTL_SECONDS = int(os.environ.get('HELENA_APPROVAL_TTL_SECONDS', '600'))
+    HELENA_EXECUTION_TTL_SECONDS = int(os.environ.get('HELENA_EXECUTION_TTL_SECONDS', '7200'))
+    HELENA_PLANNER_MODE = os.environ.get('HELENA_PLANNER_MODE', 'auto').strip().lower()
+
     # Upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '../uploads')
