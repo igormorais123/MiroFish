@@ -359,7 +359,12 @@ def _prompt_registry(
         "schema_migration": "v1_to_v2_structured_biography",
         "questions": questions,
     }
-    payload["prompt_hash"] = _canonical_sha256(payload)
+    # O hash identifica o contrato e o conteúdo dos prompts. Metadados de
+    # emissão variáveis tornavam o mesmo registro não determinístico quando
+    # duas construções atravessavam a virada de segundo.
+    payload["prompt_hash"] = _canonical_sha256({
+        key: value for key, value in payload.items() if key != "generated_at"
+    })
     payload["git_commit_sha"] = _git_head_sha()
     payload["osf_preregistration_url"] = None
     return payload

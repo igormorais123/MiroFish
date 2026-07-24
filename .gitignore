@@ -91,3 +91,8 @@ analysis_outputs/
 graph_platforms/
 
 .vercel
+
+# Caches locais dos mapas estruturais (os artefatos finais são versionados)
+graphify-out/cache/
+graphify-out/20??-??-??/
+.graphify_python

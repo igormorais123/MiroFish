@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Centro de Comando Helena",
+    "subtitle": "Planejamento, aprovação humana, execução canônica e auditoria sem acesso arbitrário ao host",
+    "output": ".planning/architecture/helena-control-plane.html",
+    "visual_preset": "blueprint",
+    "animation": "trace",
+    "quality_profile": "standard",
+    "viewBox": [1620, 840],
+    "views": [
+      {
+        "id": "planejamento",
+        "label": "Planejar com segurança",
+        "focus": ["operator", "command_ui", "helena_api", "planner", "policy", "llm"],
+        "note": "O pedido vira um plano validado pela allowlist antes de qualquer ação."
+      },
+      {
+        "id": "execucao",
+        "label": "Aprovar e executar",
+        "focus": ["command_ui", "helena_api", "policy", "executor", "phase_apis", "phase_services"],
+        "note": "Mudanças exigem confirmação humana e usam somente APIs canônicas."
+      },
+      {
+        "id": "evidencia",
+        "label": "Auditar o processo",
+        "focus": ["helena_api", "auth", "audit_store", "command_ui"],
+        "note": "Tokens ficam fora da resposta pública e cada transição gera evidência saneada."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operador",
+      "sublabel": "pedido + confirmação",
+      "pos": [34, 346],
+      "size": [126, 66]
+    },
+    {
+      "id": "command_ui",
+      "type": "frontend",
+      "label": "Caixa Helena",
+      "sublabel": "Vue global · Alt+H",
+      "tag": "token só em memória",
+      "pos": [220, 346],
+      "size": [154, 66]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Autenticação interna",
+      "sublabel": "fail-closed + rate limit",
+      "pos": [455, 104],
+      "size": [166, 66]
+    },
+    {
+      "id": "helena_api",
+      "type": "backend",
+      "label": "Helena API",
+      "sublabel": "sessão · plano · execução",
+      "pos": [455, 346],
+      "size": [166, 66]
+    },
+    {
+      "id": "planner",
+      "type": "backend",
+      "label": "Planejador",
+      "sublabel": "LLM + regras seguras",
+      "pos": [696, 216],
+      "size": [154, 66]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Política de execução",
+      "sublabel": "allowlist + uso único",
+      "tag": "aprovação humana",
+      "pos": [696, 476],
+      "size": [154, 66]
+    },
+    {
+      "id": "llm",
+      "type": "cloud",
+      "label": "OmniRoute / LLM",
+      "sublabel": "JSON de plano",
+      "pos": [930, 62],
+      "size": [148, 64]
+    },
+    {
+      "id": "audit_store",
+      "type": "database",
+      "label": "Trilha de auditoria",
+      "sublabel": "JSON atômico saneado",
+      "pos": [930, 626],
+      "size": [158, 66]
+    },
+    {
+      "id": "executor",
+      "type": "frontend",
+      "label": "Executor Helena",
+      "sublabel": "orquestração no navegador",
+      "pos": [930, 346],
+      "size": [158, 66]
+    },
+    {
+      "id": "phase_apis",
+      "type": "backend",
+      "label": "APIs das 5 fases",
+      "sublabel": "projeto · simulação · relatório",
+      "pos": [1170, 346],
+      "size": [166, 66]
+    },
+    {
+      "id": "phase_services",
+      "type": "backend",
+      "label": "Serviços MiroFish",
+      "sublabel": "grafo · OASIS · Helena",
+      "pos": [1390, 346],
+      "size": [156, 66]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Navegador do operador",
+      "wraps": ["command_ui", "executor"],
+      "pad": 22
+    },
+    {
+      "kind": "security-group",
+      "label": "Plano de controle autenticado",
+      "wraps": ["auth", "helena_api", "planner", "policy", "audit_store"],
+      "pad": 26
+    },
+    {
+      "kind": "region",
+      "label": "Pipeline MiroFish existente",
+      "wraps": ["phase_apis", "phase_services"],
+      "pad": 22
+    }
+  ],
+  "connections": [
+    {
+      "id": "submit-command",
+      "from": "operator",
+      "to": "command_ui",
+      "label": "comando",
+      "variant": "emphasis"
+    },
+    {
+      "id": "plan-request",
+      "from": "command_ui",
+      "to": "helena_api",
+      "label": "plano + progresso",
+      "variant": "security",
+      "labelAt": [415, 430]
+    },
+    {
+      "id": "authenticate",
+      "from": "helena_api",
+      "to": "auth",
+      "label": "X-Internal-Token",
+      "variant": "security",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "make-plan",
+      "from": "helena_api",
+      "to": "planner",
+      "label": "planejar",
+      "route": "orthogonal-h"
+    },
+    {
+      "id": "llm-plan",
+      "from": "planner",
+      "to": "llm",
+      "label": "plano JSON",
+      "variant": "dashed",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "validate-plan",
+      "from": "planner",
+      "to": "policy",
+      "label": "validar",
+      "variant": "security",
+      "route": "orthogonal-v"
+    },
+    {
+      "id": "issue-ticket",
+      "from": "policy",
+      "to": "executor",
+      "label": "ticket de uso único",
+      "variant": "security",
+      "route": "orthogonal-h"
+    },
+    {
+      "id": "canonical-calls",
+      "from": "executor",
+      "to": "phase_apis",
+      "label": "ações permitidas",
+      "variant": "emphasis",
+      "labelAt": [1129, 430]
+    },
+    {
+      "id": "phase-work",
+      "from": "phase_apis",
+      "to": "phase_services",
+      "label": "fluxo existente",
+      "variant": "emphasis",
+      "labelAt": [1363, 430]
+    },
+    {
+      "id": "audit-events",
+      "from": "helena_api",
+      "to": "audit_store",
+      "label": "estado + evidência",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [[538, 590], [900, 590], [900, 659]],
+      "labelAt": [720, 580]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Sem acesso irrestrito",
+      "items": [
+        "Nenhuma ferramenta de shell, arquivo livre ou HTTP arbitrário",
+        "Identificadores e vínculos são revalidados no backend",
+        "O executor reutiliza as APIs canônicas das cinco fases"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Mutação sob controle",
+      "items": [
+        "Ações mutantes mostram impacto antes de executar",
+        "Aprovação e ticket expiram e só podem ser usados uma vez",
+        "Comandos equivalentes ativos são deduplicados"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Evidência auditável",
+      "items": [
+        "Estados e resultados são gravados atomicamente",
+        "Segredos e hashes internos não aparecem na API pública",
+        "Cancelamento e falha permanecem distintos de conclusão"
+      ]
+    }
+  ]
+}

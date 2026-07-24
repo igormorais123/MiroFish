@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.services.vox_science import VOX_SCIENCE_FILENAMES, build_vox_science_artifacts
+from app.services.vox_science import artifacts as vox_artifacts
 
 
 def _gate(passes: bool = True) -> dict:
@@ -231,7 +232,9 @@ def test_R4_prompt_registry_inclui_sha256_e_git_sha():
     assert git_sha is None or (isinstance(git_sha, str) and len(git_sha) == 40)
 
 
-def test_R4_prompt_hash_determinismo():
+def test_R4_prompt_hash_determinismo(monkeypatch):
+    timestamps = iter(("2026-07-24T00:00:00Z", "2026-07-24T00:00:01Z"))
+    monkeypatch.setattr(vox_artifacts, "_now_iso", lambda: next(timestamps))
     h1 = _build()["prompt_registry.json"]["prompt_hash"]
     h2 = _build()["prompt_registry.json"]["prompt_hash"]
     assert h1 == h2

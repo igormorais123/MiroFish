@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "test:helena": "node --test tests/helenaExecutor.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.14.0",
+    "axios": "^1.18.1",
     "d3": "^7.9.0",
     "mermaid": "^11.15.0",
     "vue": "^3.5.24",

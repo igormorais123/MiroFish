@@ -62,7 +62,18 @@ Relatório analítico → Conversa com agentes → Insights
 | **Governança cliente/demo** | — | Modo `client` é estrito e publicável só com gate completo; `demo/smoke` fica sempre como `diagnostic_only` |
 | **Anti-viés** | — | Devil's advocate em ~20% dos perfis + diversidade intra-grupo |
 | **Helena cenários** | Análise narrativa | Tabela obrigatória de 3 cenários probabilísticos (Base/Otimista/Contrário, soma=100%) |
+| **Centro de comando Helena** | — | Caixa global com contexto de fase, plano prévio, aprovação de uso único e auditoria |
 | **Testes** | — | Suite pytest com 70 testes em contratos críticos |
+
+### Centro de comando Helena
+
+Use `Alt+H` em qualquer fase para abrir a caixa global. A Helena pode inspecionar
+o estado atual, continuar um processo existente ou coordenar uma análise
+completa usando exclusivamente as APIs canônicas do MiroFish. Ações que alteram
+o processo exigem confirmação explícita e ficam registradas em auditoria.
+
+Configuração, ferramentas permitidas, limites e roteiro de homologação estão em
+[`docs/ops/HELENA_CONTROL_PLANE.md`](docs/ops/HELENA_CONTROL_PLANE.md).
 
 ### Aplicações
 

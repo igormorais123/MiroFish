@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import threading
 import traceback
-from functools import wraps
 
 from flask import jsonify, request
 
@@ -22,16 +21,14 @@ from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner
 from ..services.text_processor import TextProcessor
 from ..utils.logger import get_logger
+from ..utils.internal_auth import require_internal_token, unauthorized_response
 from ..utils.token_tracker import TokenTracker
 
 logger = get_logger('mirofish.api.internal')
 
 
 def _unauthorized_response():
-    return jsonify({
-        "success": False,
-        "error": "Nao autorizado para a API interna",
-    }), 401
+    return unauthorized_response()
 
 
 def _build_project_text(payload: dict) -> tuple[str, list[dict]]:
@@ -227,23 +224,6 @@ def _finalize_project_from_payload(project, payload: dict, final_text: str, mate
     project.status = ProjectStatus.ONTOLOGY_GENERATED
     ProjectManager.save_project(project)
     return project
-
-
-def require_internal_token(view_func):
-    """Valida o token interno enviado pela INTEIA."""
-    @wraps(view_func)
-    def wrapper(*args, **kwargs):
-        expected_token = Config.INTERNAL_API_TOKEN.strip()
-        if not expected_token:
-            logger.warning("INTERNAL_API_TOKEN nao configurado; acesso interno bloqueado")
-            return _unauthorized_response()
-
-        provided_token = request.headers.get('X-Internal-Token', '').strip()
-        if provided_token != expected_token:
-            logger.warning("Tentativa de acesso interno com token invalido")
-            return _unauthorized_response()
-        return view_func(*args, **kwargs)
-    return wrapper
 
 
 @internal_bp.route('/health', methods=['GET'])
