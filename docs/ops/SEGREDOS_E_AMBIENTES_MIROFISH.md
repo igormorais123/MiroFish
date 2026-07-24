@@ -1,6 +1,6 @@
 # Segredos e ambientes — MiroFish INTEIA
 
-Data de referência: 2026-05-06
+Data-base: 2026-05-06. Última atualização: 2026-07-24.
 
 Este arquivo define onde cada chave deve viver. Ele nunca deve conter valores reais.
 
@@ -20,7 +20,7 @@ Fontes usadas sem expor valores:
 
 - `.env` local deste workspace, para o primeiro espelho de variáveis já usadas pelos testes e scripts.
 - Variáveis de ambiente locais do operador, quando já existiam no cofre da sessão.
-- `.env` vivo da VPS em `/opt/mirofish`, apenas por SSH e sem imprimir valores.
+- `.env` vivo da VPS em `/opt/mirofish-git`, apenas por SSH e sem imprimir valores.
 
 GitHub Secrets de repositório configurados:
 
@@ -100,6 +100,11 @@ GitHub Environments existentes:
 
 Vercel Environment Variables ficam restritas a configuracao publica de build. Em 2026-05-06 foi configurado apenas `VITE_BASE=/mirofish/` em Production, porque o site publico oficial roda no subcaminho `/mirofish`. O projeto Vercel atual e frontend estatico; chaves de LLM, OmniRoute, Zep, Supabase service role, Apify e tokens internos nao devem ir para bundle de cliente. Colocar em Vercel somente quando houver runtime server-side que realmente precise delas.
 
+Desde 2026-07-15, o site público canônico é servido pela VPS. O build Docker
+também recebe `VITE_BASE=/mirofish/`; essa variável é pública. A Vercel permanece
+alternativa histórica e não deve receber `INTERNAL_API_TOKEN` nem qualquer
+segredo da Helena.
+
 Valores reais de `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` nao foram encontrados nos ambientes vivos consultados. Permanecem pendentes ate existir projeto/token real.
 
 ## Matriz de ambientes
@@ -116,10 +121,16 @@ Valores reais de `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPAB
 | Zep legado | `ZEP_BASE_URL`, `ZEP_API_KEY`, `ZEP_MODE`, `ZEP_REQUIRED` | Sim, quando existir no ambiente vivo | Não para frontend estático | Sim |
 | Neo4j | `NEO4J_PASSWORD` | Sim | Não para frontend estático | Sim |
 | Auth interna | `INTERNAL_API_TOKEN` | Sim | Só se proxy/runtime precisar | Sim; consumidores internos devem guardar o mesmo valor como `MIROFISH_INTERNAL_TOKEN` ou equivalente |
+| Controle Helena | `HELENA_CONTROL_ENABLED`, `HELENA_COMMAND_MAX_LENGTH`, `HELENA_PLAN_TTL_SECONDS`, `HELENA_APPROVAL_TTL_SECONDS`, `HELENA_EXECUTION_TTL_SECONDS`, `HELENA_PLANNER_MODE` | Não são segredos; documentar defaults | Não para frontend estático | Sim |
 | Apify | `APIFY_API_TOKEN`, `APIFY_ENRICH_TIMEOUT_SECONDS`, `COLMEIA_SCRIPTS_PATH` | Pendente quando houver token real | Não para frontend estático | Sim |
 | Supabase | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Pendente quando houver projeto/valores reais | Só publicar `SUPABASE_URL`/anon quando necessário; nunca `SERVICE_ROLE` no cliente | Sim |
 | Dados locais | `MIROFISH_DATA_DIR` | Opcional | Não | Sim |
-| Build publico Vercel | `VITE_BASE` | Nao e segredo | Sim, Production = `/mirofish/` | Nao |
+| Base pública do build | `VITE_BASE` | Não é segredo | Alternativa: `/mirofish/` | VPS/Docker: `/mirofish/` |
+
+`INTERNAL_API_TOKEN` é obrigatório para todos os endpoints Helena exceto
+`GET /api/helena/status`. Ele deve existir apenas no backend e na memória da aba
+autenticada; nunca use prefixo `VITE_`, query string, `localStorage`, log ou
+artefato versionado para esse valor.
 
 ## Comandos seguros
 

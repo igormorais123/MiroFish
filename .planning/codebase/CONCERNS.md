@@ -1,7 +1,20 @@
 # Codebase Concerns
 
 **Analysis Date:** 2026-04-13
-**Last update:** 2026-05-04
+**Last update:** 2026-07-24
+
+## Atualização 2026-07-24
+
+- O risco de controle Helena sem token foi mitigado: rotas mutantes e de
+  histórico falham fechadas, usam comparação resistente a timing, rate limit,
+  aprovação de uso único, TTL e idempotência.
+- O modelo dos endpoints históricos das fases não foi ampliado por essa
+  mitigação e continua sendo uma superfície separada a endurecer.
+- A suíte cresceu para 390 testes backend e 8 testes frontend focados na Helena.
+  Permanecem lacunas em componentes frontend não relacionados e em cenários
+  longos com provedores reais.
+- GitHub Actions falhou por infraestrutura externa antes de produzir steps/logs
+  na publicação; testes locais e smoke/visual de produção passaram.
 
 ## Mitigacoes aplicadas em 2026-05-04
 
@@ -11,7 +24,8 @@
 - Relatorios antigos sem evidencia: mitigados por classificacao `legacy_unverified`.
 - Falta de visibilidade do gate: mitigada pela etapa 3 e cadeia de custodia na etapa 4.
 - Dependencia do LLM escolher interacoes espontaneamente: reduzida pelo pulso social inicial configuravel.
-- Baixa cobertura de contratos criticos: reduzida para 70 testes backend passando.
+- Baixa cobertura de contratos críticos: reduzida para 390 testes backend e 8
+  testes frontend focados na Helena.
 
 Risco residual importante: ainda falta rodada real longa com LLM ativo para confirmar que o conjunto contrato comportamental + pulso OASIS + gate gera relatorio publicavel em caso novo.
 
@@ -69,14 +83,13 @@ Risco residual importante: ainda falta rodada real longa com LLM ativo para conf
 
 ## Security Considerations
 
-**INTERNAL_API_TOKEN Not Required:**
-- Risk: If INTERNAL_API_TOKEN is not set, internal endpoints are completely open
-- Files: `backend/app/api/internal.py` (lines 232-235)
-- Current mitigation: Logs warning if token not configured, but doesn't block access
-- Recommendations: 
-  - Require INTERNAL_API_TOKEN to be non-empty (raise on startup if missing in production)
-  - Generate random default token on first startup if none provided
-  - Add rate limiting on internal endpoints
+**Autenticação interna heterogênea:**
+- Mitigado para Helena: sem `INTERNAL_API_TOKEN`, o control plane fica
+  indisponível; as rotas protegidas nunca abrem por fallback.
+- Escopo residual: revisar separadamente `/api/internal/v1` e endpoints
+  históricos das fases, sem presumir que o hardening da Helena os protege.
+- Não gerar token aleatório silencioso: produção deve receber segredo estável
+  pelo cofre e falhar de forma observável quando ausente.
 
 **Request Data Not Validated:**
 - Risk: Query parameters like `limit`, `offset`, `from_line` not validated for reasonable ranges
@@ -262,8 +275,10 @@ Risco residual importante: ainda falta rodada real longa com LLM ativo para conf
 
 ## Test Coverage Gaps
 
-**API Endpoints Not Tested:**
-- What's not tested: All endpoints in `simulation.py`, `report.py`, `graph.py`, `internal.py`
+**Cobertura de endpoints ainda incompleta:**
+- Coberto: contrato Helena, autorização, idempotência, eventos e fechamento.
+- Ainda parcial: combinações de erro e integração completa em `simulation.py`,
+  `report.py`, `graph.py` e `internal.py`.
 - Files: `backend/app/api/` (entire module)
 - Risk: Regressions in happy path and error handling paths go undetected
 - Priority: **High** - affects all user-facing functionality
@@ -294,12 +309,14 @@ Risco residual importante: ainda falta rodada real longa com LLM ativo para conf
 - Risk: Zombie processes or incomplete cleanup on termination
 - Priority: **High** - can exhaust system resources
 
-**Frontend API Integration Not Tested:**
-- What's not tested: API interceptors, retry logic, error handling
+**Integração frontend parcialmente testada:**
+- Coberto: executor Helena, incluindo sequência, falhas e cancelamento.
+- Ainda não coberto globalmente: todos os interceptors, retries e componentes
+  das fases históricas.
 - Files: `frontend/src/api/` (all modules)
 - Risk: Frontend error handling masks backend issues; retry logic may cause duplicate operations
 - Priority: **Medium** - affects UX reliability
 
 ---
 
-*Concerns audit updated: 2026-05-04*
+*Concerns audit updated: 2026-07-24*

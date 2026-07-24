@@ -1,7 +1,17 @@
 # Technology Stack
 
 **Analysis Date:** 2026-04-13
-**Last update:** 2026-05-04
+**Last update:** 2026-07-24
+
+## Atualização 2026-07-24
+
+- Produção: Docker Compose e nginx na VPS `hermes`, com SPA e Flask no container
+  `mirofish-inteia`.
+- Control plane: Vue `HelenaCommandCenter`, executor JavaScript, blueprint Flask
+  e orquestrador Python com persistência JSON atômica.
+- Qualidade estrutural: Graphify para o grafo do repositório e Archify para
+  diagramas arquiteturais validados.
+- Snapshot: 390 testes backend e 8 testes frontend Helena aprovados.
 
 ## Languages
 
@@ -35,7 +45,7 @@
 **Testing:**
 - pytest 8.0.0+ - Python test runner
 - pytest-asyncio 0.23.0+ - Async test support
-- Current backend suite: 70 tests passing on 2026-05-04
+- Current backend suite: 390 tests passing on 2026-07-24
 
 **Build/Dev:**
 - @vitejs/plugin-vue 6.0.1 - Vue SFC compilation in Vite
@@ -97,4 +107,4 @@
 
 ---
 
-*Stack map updated: 2026-05-04*
+*Stack map updated: 2026-07-24*

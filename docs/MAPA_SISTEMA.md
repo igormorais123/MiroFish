@@ -1,7 +1,20 @@
 # Mapa do Sistema MiroFish INTEIA — GPS para IAs
 
 > Documento de orientação técnica para instâncias de IA (Claude Code, Codex, Cursor, Copilot).
-> Atualizado 2026-05-19. Use em paralelo com `CLAUDE.md`.
+> Atualizado 2026-07-24. Use em paralelo com `CLAUDE.md`.
+
+## Atualização viva — produção e centro de comando
+
+- Produção canônica: nginx na VPS `hermes`, checkout `/opt/mirofish-git`,
+  container `mirofish-inteia`; Vercel é alternativa histórica.
+- A caixa Helena é global nas cinco fases e coordena o processo por uma
+  allowlist, aprovação humana, idempotência e auditoria.
+- Fontes visuais atuais:
+  [arquitetura completa](../.planning/architecture/system-architecture.html),
+  [control plane Helena](../.planning/architecture/helena-control-plane.html) e
+  [grafo Graphify](../graphify-out/graph.html).
+- Estado verificável da publicação:
+  [`ops/PUBLICACAO_HELENA_2026-07-24.md`](ops/PUBLICACAO_HELENA_2026-07-24.md).
 
 ## Endurecimento metodológico (Fase 03 — Vox Academic Hardening)
 
@@ -43,9 +56,14 @@ Este documento é a visão macro. Quando precisar do detalhe arquivo-por-arquivo
 | [`_mapa_backend_services.md`](_mapa_backend_services.md) | 38 services agrupados por domínio, 11 utils, 4 sequenceDiagrams de fluxos completos |
 | [`GPT_DA_PASTA_MIROFISH_INTEIA.md`](GPT_DA_PASTA_MIROFISH_INTEIA.md) | Índice consolidado de ativos, documentos, artefatos, mapas Mermaid e trilha de leitura para IA |
 | [`MIROFISH_INTEIA_MAPA_MENTAL_IA.html`](MIROFISH_INTEIA_MAPA_MENTAL_IA.html) | Mapa mental visual em HTML/SVG navegável, com zoom, busca e trilhas de estudo |
-| [`AUDITORIA_MAPA_IA_2026-05-18.md`](AUDITORIA_MAPA_IA_2026-05-18.md) | Auditoria dos mapas IA criados nesta rodada, com achados, correções e limites |
+| [`AUDITORIA_MAPA_IA_2026-05-18.md`](AUDITORIA_MAPA_IA_2026-05-18.md) | Auditoria histórica dos mapas IA de maio |
+| [`../.planning/architecture/system-architecture.html`](../.planning/architecture/system-architecture.html) | Arquitetura viva de produção, Helena, domínio e dependências |
+| [`../.planning/architecture/helena-control-plane.html`](../.planning/architecture/helena-control-plane.html) | Autenticação, planejamento, execução e auditoria Helena |
+| [`../graphify-out/graph.html`](../graphify-out/graph.html) | Grafo estrutural interativo do checkout atual |
 
-Os mapas técnicos cobrem **100% dos 70 arquivos de código** do recorte original e foram gerados lendo os arquivos reais (não inferindo). O `GPT_DA_PASTA_MIROFISH_INTEIA.md` amplia esse recorte para documentação, artefatos, histórico e leitura por IA.
+Os números de 70 arquivos pertencem ao recorte histórico de maio. Para a
+estrutura atual, use o Graphify: o snapshot de 2026-07-24 contém 3.955 nós,
+8.443 relações e 159 comunidades.
 
 ---
 
@@ -57,18 +75,23 @@ C4Context
     
     Person(user, "Usuário", "Analista político, pesquisador")
     
-    Container(vercel, "Vercel (Frontend SPA)", "Vue 3 + Vite")
+    Container(edge, "Nginx na VPS", "TLS + /mirofish")
+    Container(spa, "Frontend SPA", "Vue 3 + Vite")
     Container(api, "Backend Flask", "Python + Blueprints")
+    Container(helena, "Centro de comando Helena", "Plano + aprovação + auditoria")
     Container(graphiti, "Graphiti", "Grafo temporal")
     Container(llm, "LLM Gateway", "OmniRoute/OpenAI")
     Container(zep, "Zep", "Entity memory")
     
-    user -->|Acessa via HTTPS| vercel
-    vercel -->|API REST /api/*| api
+    user -->|Acessa via HTTPS| edge
+    edge -->|HTML + assets| spa
+    edge -->|API REST /mirofish/api/*| api
+    spa -->|comando + contexto| helena
+    helena -->|ações permitidas| api
     api -->|build/query| graphiti
     api -->|prompt/completion| llm
     api -->|entity/memory| zep
-    api -->|Serve index.html| vercel
+    api -->|estado + evidência| helena
 ```
 
 ---
@@ -561,4 +584,5 @@ curl -X POST "${LLM_BASE_URL}/v1/models" \
 
 ---
 
-*Documento gerado 2026-05-11 por Claude Code. Atualizar quando: novo service, rota crítica, ou mudança de fluxo principal.*
+*Documento gerado em 2026-05-11 e atualizado em 2026-07-24. Atualizar quando:
+novo serviço, rota crítica, deploy ou mudança de fluxo principal.*

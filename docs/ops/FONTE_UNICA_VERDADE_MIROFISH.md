@@ -1,13 +1,14 @@
 # MiroFish — Fonte única de verdade e reconciliação operacional
 
-Data: 2026-05-06
+Data-base: 2026-05-06. Última atualização operacional: 2026-07-24.
 Responsável operacional: Hermes / INTEIA
 
 ## Regra principal
 
 O repositório `igormorais123/MiroFish` é a fonte única de verdade para código, documentação, deploy e configuração não secreta.
 
-Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/PR neste repositório.
+Nunca aplicar patch direto em `/opt/mirofish-git` ou no container de produção. A
+mudança deve nascer em branch, passar por PR e chegar à VPS a partir de `main`.
 
 ## Mapa oficial
 
@@ -24,7 +25,7 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 ### Rotas erradas ou legadas
 - `https://inteia.com.br/api/...` não é API do MiroFish.
 - `https://mirofish.inteia.com.br/` não é link de produto. A raiz redireciona para `https://inteia.com.br/mirofish/`.
-- `https://mirofish.inteia.com.br/api/...` é apenas ponte tecnica usada pelo roteamento da Vercel.
+- `https://mirofish.inteia.com.br/api/...` é apenas ponte técnica legada; não é a URL canônica.
 - Não abrir o produto por IP direto, porta `4000`, porta `5001` ou porta `8003`.
 
 ### VPS atual observada
@@ -87,6 +88,28 @@ Nunca aplicar patch direto em `/opt/mirofish` sem depois transformar em commit/P
 - O build Docker recebe `VITE_BASE=/mirofish/` para que assets e rotas do SPA funcionem sob o subcaminho público.
 - A Vercel continua registrada como plataforma histórica/alternativa do frontend, mas não é o salto DNS atual do domínio público.
 
+## Estado operacional atualizado em 2026-07-24 — Helena
+
+- O PR `#99` publicou o centro de comando Helena no commit
+  `07306e711509772038b381176781ce80edacdfa0`.
+- O checkout `/opt/mirofish-git` e `origin/main` foram confirmados nesse mesmo
+  commit depois da publicação.
+- O container `mirofish-inteia` foi observado como `running/healthy`, sem
+  reinícios, usando a imagem
+  `sha256:b7d6b8f552ce28c90613511a2cf7948130a3cd66f2a9464aeb328d152c27a497`.
+- O health público respondeu `ok`; `GET /mirofish/api/helena/status` informou
+  `available=true` e versão `1.0`.
+- O backup verificável está em
+  `/opt/backups/mirofish-helena/20260724T072013Z`; a imagem anterior foi marcada
+  como `mirofish-inteia:rollback-20260724T072013Z`.
+- O contrato, a evidência completa e o rollback estão em
+  [`HELENA_CONTROL_PLANE.md`](HELENA_CONTROL_PLANE.md) e
+  [`PUBLICACAO_HELENA_2026-07-24.md`](PUBLICACAO_HELENA_2026-07-24.md).
+- Os mapas vigentes são o
+  [mapa do sistema](../../.planning/architecture/system-architecture.html), o
+  [mapa da Helena](../../.planning/architecture/helena-control-plane.html) e o
+  [grafo estrutural](../../graphify-out/graph.html).
+
 ## Política de merge entre instâncias
 
 Quando Igor estiver usando Claude Code no PC e Codex em outra instância:
@@ -145,11 +168,12 @@ Nunca commitar:
 A casa só está arrumada quando:
 
 - GitHub contém o código final.
-- Vercel faz deploy do GitHub.
-- VPS roda código derivado do GitHub.
+- VPS roda frontend e backend derivados de `main`.
+- Vercel, quando usada, permanece alternativa isolada e não recebe segredos server-side.
 - `/opt/mirofish-git` é repositório Git limpo e fonte do deploy.
 - Diretórios legados estão marcados como obsoletos e sem compose executável.
 - API pública correta responde 200 em `/mirofish/api/...`.
 - Build frontend passa.
 - Testes backend passam ou falhas ficam documentadas.
+- Health, status Helena e fluxos públicos críticos são verificados após deploy.
 - Ninguém precisa lembrar comando de cabeça: tudo fica documentado aqui.

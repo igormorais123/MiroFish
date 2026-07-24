@@ -1,7 +1,21 @@
 # Architecture
 
 **Analysis Date:** 2026-04-13
-**Last update:** 2026-05-04
+**Last update:** 2026-07-24
+
+## Atualização 2026-07-24 — Helena e produção
+
+O frontend monta `HelenaCommandCenter.vue` uma única vez em `App.vue`. O
+`helenaExecutor.js` traduz o plano autorizado em chamadas às APIs canônicas de
+grafo, simulação, relatório e interação. O blueprint `helena.py` valida
+contexto, allowlist, autorização, idempotência e auditoria por meio de
+`helena_control.py`.
+
+Em produção, nginx publica SPA e `/mirofish/api/*` a partir do container
+`mirofish-inteia` na VPS. Graphiti, Neo4j, OASIS e OmniRoute permanecem na rede
+interna. Veja o [mapa completo](../architecture/system-architecture.html), o
+[mapa do control plane](../architecture/helena-control-plane.html) e o
+[grafo gerado](../../graphify-out/graph.html).
 
 ## Atualizacao 2026-05-04
 
@@ -254,8 +268,10 @@ O pipeline ganhou uma camada explicita de governanca: relatorio cliente so e ent
 - Report delivery: hard gate plus delivery governance, quote audit and numeric audit in `report_system_gate.py`, `delivery_governance.py` and `report_quality.py`
 
 **Authentication:**
-- Approach: None for user-facing API (open access)
-- Service-to-service: `INTERNAL_API_TOKEN` for `/api/internal/v1` endpoints
+- Endpoints históricos das fases: mantêm o modelo de acesso existente.
+- Helena: `GET /api/helena/status` é público e mínimo; as demais rotas exigem
+  `INTERNAL_API_TOKEN` em `X-Internal-Token` e falham fechadas.
+- Service-to-service: `INTERNAL_API_TOKEN` também protege `/api/internal/v1`.
 - CORS: Origin-based filtering (configurable via `CORS_ORIGINS`)
 
 **Performance:**
@@ -267,4 +283,4 @@ O pipeline ganhou uma camada explicita de governanca: relatorio cliente so e ent
 
 ---
 
-*Architecture map updated: 2026-05-04*
+*Architecture map updated: 2026-07-24*

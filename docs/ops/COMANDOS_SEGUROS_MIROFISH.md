@@ -42,19 +42,44 @@ python -m pytest tests -q
 
 ## Publicar na VPS com OmniRoute interno
 
-A rede privada compartilhada deve existir antes do `docker compose`. Ela não publica a porta do OmniRoute na internet.
+A rede privada compartilhada deve existir antes do `docker compose`. Ela não
+publica a porta do OmniRoute na internet. Confirme primeiro que o commit a
+publicar já está em `origin/main`.
 
 ```bash
 docker network inspect inteia-ai >/dev/null 2>&1 || docker network create inteia-ai
 cd /opt/mirofish-git
 git fetch origin
 git pull --ff-only origin main
-docker compose --env-file .env -f deploy/docker-compose.vps.yaml up -d --build
+
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "/opt/backups/mirofish/${STAMP}"
+cp -a .env deploy/docker-compose.vps.yaml "/opt/backups/mirofish/${STAMP}/"
+docker inspect mirofish-inteia >"/opt/backups/mirofish/${STAMP}/container-inspect.json"
+docker tag "$(docker inspect mirofish-inteia --format '{{.Image}}')" \
+  "mirofish-inteia:rollback-${STAMP}"
+
+docker compose --env-file .env -f deploy/docker-compose.vps.yaml build mirofish
+docker compose --env-file .env -f deploy/docker-compose.vps.yaml up -d mirofish
+docker inspect mirofish-inteia --format '{{.State.Status}}/{{.State.Health.Status}} restarts={{.RestartCount}}'
+curl -fsS https://inteia.com.br/mirofish/health/public
+curl -fsS https://inteia.com.br/mirofish/api/helena/status
 ```
 
 O `.env` da VPS deve usar `LLM_BASE_URL=http://omniroute-inteia:20128/v1`. O container `omniroute-inteia` também precisa participar da rede `inteia-ai`; seu recriador/atualizador deve usar `--network inteia-ai`.
 
-O volume persistente de uploads precisa ser gravável pelo usuário isolado do container (`10001:10001`). Antes de corrigir propriedade, faça backup verificável; depois confirme com `docker exec mirofish-inteia test -w /app/backend/uploads/projects`.
+O volume persistente de uploads precisa ser gravável pelo usuário isolado do
+container (`10001:10001`). Antes de corrigir propriedade, faça backup
+verificável; depois confirme com
+`docker exec mirofish-inteia test -w /app/backend/uploads/projects`.
+
+Não imprima o `INTERNAL_API_TOKEN`. Para testar uma rota autenticada da Helena,
+carregue o valor no ambiente da sessão e envie apenas o cabeçalho:
+
+```bash
+curl -fsS -H "X-Internal-Token: ${INTERNAL_API_TOKEN}" \
+  "https://inteia.com.br/mirofish/api/helena/commands?limit=1"
+```
 
 ## Commit seguro
 
@@ -81,4 +106,5 @@ Use sempre `/mirofish/api/...` no ambiente público.
 
 Não use `https://mirofish.inteia.com.br/` como link do produto. A raiz desse subdomínio redireciona para `https://inteia.com.br/mirofish/`.
 
-`https://mirofish.inteia.com.br/api/...` existe apenas como ponte técnica para a Vercel. Não use IP direto nem portas `4000`, `5001` ou `8003`.
+`https://mirofish.inteia.com.br/api/...` é ponte técnica legada. Não use IP
+direto nem portas `4000`, `5001` ou `8003`.

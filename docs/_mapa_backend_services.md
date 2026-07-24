@@ -1,10 +1,27 @@
 # Mapa Detalhado: Camada Services + Utils do Backend MiroFish INTEIA
 
-**Última atualização:** 2026-05-11  
-**Escopo:** 38 serviços + 11 utilitários  
+**Última atualização:** 2026-07-24
+**Escopo-base:** 38 serviços + 11 utilitários, acrescidos do control plane Helena
 **Propósito:** Referência arquitetural para navegação, entendimento de fluxos e identificação de pontos de edição
 
 ---
+
+## S-1. Control plane Helena
+
+`backend/app/services/helena_control.py` concentra:
+
+- políticas das ferramentas permitidas;
+- resolução canônica de projeto, simulação e relatório;
+- planejador LLM com fallback determinístico restrito;
+- store JSON atômico em `backend/uploads/helena_commands/`;
+- TTL de plano, aprovação e execução;
+- tokens/tickets de uso único, idempotência e bloqueio de equivalentes;
+- reconciliação de leases abandonados e redação de segredos.
+
+`backend/app/utils/internal_auth.py` protege as rotas, e
+`backend/app/utils/rate_limit.py` limita sessão, plano e transições. A execução
+funcional ocorre no browser por `frontend/src/services/helenaExecutor.js`,
+reutilizando as APIs das fases.
 
 ## S0. Diagrama de Domínios e Dependências (Mermaid)
 
@@ -573,4 +590,4 @@ sequenceDiagram
 
 ---
 
-**Fim do Mapa — Última revisão 2026-05-11**
+**Fim do Mapa — Última revisão 2026-07-24**

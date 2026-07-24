@@ -1,7 +1,17 @@
 # External Integrations
 
 **Analysis Date:** 2026-04-13
-**Last update:** 2026-05-04
+**Last update:** 2026-07-24
+
+## Atualização 2026-07-24
+
+- Produção canônica: nginx da VPS `hermes` publica frontend e API do container
+  `mirofish-inteia`; Vercel é alternativa histórica.
+- Helena usa `LLM_HELENA_MODEL` para planejar e cai para regras determinísticas
+  restritas quando o modo `auto` não produz plano válido.
+- O browser nunca chama OmniRoute, Graphiti ou OASIS livremente; o executor usa
+  apenas as APIs canônicas do MiroFish.
+- O audit store da Helena fica em `backend/uploads/helena_commands/`.
 
 ## APIs & External Services
 
@@ -111,7 +121,7 @@
 **Required env vars:**
 - `LLM_API_KEY` or `OMNIROUTE_API_KEY` - LLM authentication (mandatory)
 - `GRAPHITI_BASE_URL` - Graph memory service URL (mandatory)
-- `INTERNAL_API_TOKEN` - Internal service communication (recommended)
+- `INTERNAL_API_TOKEN` - obrigatório para o control plane Helena, exceto status
 
 **Optional env vars:**
 - `LLM_BASE_URL` - Default: `https://api.openai.com/v1`
@@ -155,4 +165,4 @@
 
 ---
 
-*Integration map updated: 2026-05-04*
+*Integration map updated: 2026-07-24*

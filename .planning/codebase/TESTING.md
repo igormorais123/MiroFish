@@ -1,9 +1,21 @@
 # Testing Patterns
 
 **Analysis Date:** 2026-04-13
-**Last update:** 2026-05-04
+**Last update:** 2026-07-24
 
 ## Current Validation Snapshot
+
+2026-07-24:
+
+- Backend completo: `390 passed`.
+- Backend focado Helena: `15 passed`.
+- Frontend `npm run test:helena`: `8 passed`.
+- Build frontend, `compileall`, `pip-audit` e `npm audit --audit-level=high`
+  aprovados.
+- Contrato público e autenticado da Helena exercitado em produção.
+- Seis rotas críticas verificadas em desktop e móvel, sem overflow horizontal.
+
+O snapshot abaixo permanece como histórico da fase do gate.
 
 2026-05-04:
 
@@ -183,7 +195,9 @@ open htmlcov/index.html  # macOS
 start htmlcov/index.html  # Windows
 ```
 
-**Current State:** 70 backend tests pass locally; no enforced coverage threshold or frontend unit test suite yet.
+**Current State:** 390 testes backend e 8 testes frontend focados na Helena
+passaram em 2026-07-24. Ainda não existe threshold global obrigatório de
+cobertura nem suíte de componentes para todo o frontend.
 
 ## Test Types
 
@@ -300,4 +314,4 @@ pytest                   # Run tests
 
 ---
 
-*Testing map updated: 2026-05-04*
+*Testing map updated: 2026-07-24*

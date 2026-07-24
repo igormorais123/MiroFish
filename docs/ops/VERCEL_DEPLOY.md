@@ -1,6 +1,11 @@
-# Vercel — Deploy do frontend MiroFish INTEIA
+# Vercel — alternativa histórica do frontend MiroFish INTEIA
 
-> Documento operacional para qualquer agente IA ou humano que precise mexer em deploy.
+> Estado em 2026-07-24: Vercel não serve o domínio público canônico. O produto
+> `https://inteia.com.br/mirofish/` é servido pelo nginx da VPS a partir do
+> container `mirofish-inteia`. Para produção, use
+> [`FONTE_UNICA_VERDADE_MIROFISH.md`](FONTE_UNICA_VERDADE_MIROFISH.md) e
+> [`COMANDOS_SEGUROS_MIROFISH.md`](COMANDOS_SEGUROS_MIROFISH.md). Este arquivo
+> preserva somente a configuração da alternativa estática.
 
 ## Identificação do projeto
 
@@ -12,14 +17,17 @@
 | CLI context observado | `igormorais123s-projects` |
 | CLI user observado | `inteia` |
 | URL direta Vercel | https://mirofish-inteia.vercel.app |
-| Site público | https://inteia.com.br/mirofish/ |
-| Plataforma | Vercel (Hobby/Pro — verificar com Igor) |
+| Domínio público canônico | https://inteia.com.br/mirofish/ — servido pela VPS |
+| Papel atual | alternativa estática sem segredos server-side |
 
 > Esses IDs vêm de `.vercel/project.json`, gerado por `vercel link`. **`.vercel/` está no `.gitignore`** — cada máquina/instância faz seu próprio `vercel link` se precisar usar a CLI.
 
-## Roteamento do domínio público
+## Roteamento histórico do domínio público
 
-Em 2026-05-09, `https://inteia.com.br/mirofish` foi corrigido no projeto Vercel raiz `frontend` usando rotas de projeto, porque `inteia.com.br` não é alias direto do projeto `mirofish-inteia`.
+Em 2026-05-09, `https://inteia.com.br/mirofish` foi roteado pelo projeto Vercel
+raiz `frontend`. Esse estado foi substituído em 2026-07-15 pelo nginx da VPS.
+As rotas abaixo são registro histórico e não devem ser publicadas sem uma
+decisão explícita de cutover.
 
 Rotas ativas no projeto Vercel `frontend`:
 
@@ -67,23 +75,18 @@ Está em [`vercel.json`](../../vercel.json) na raiz:
 
 | Branch | Tipo de deploy | URL |
 |--------|---------------|-----|
-| `main` | **Production** | https://inteia.com.br/mirofish |
+| `main` | Produção direta da alternativa | https://mirofish-inteia.vercel.app/mirofish |
 | qualquer outra | Preview | `https://mirofish-inteia-<branch-slug>-<team>.vercel.app` |
 
-**Push pra `main` faz deploy de produção automaticamente.** Push pra qualquer outra branch (`feat/...`, `codex/...`, `chore/...`) cria um deploy de preview com URL própria — útil pra revisar antes de mergear.
+Se a integração Vercel estiver ativa, push para `main` pode atualizar apenas a
+URL direta da alternativa. Isso não publica o domínio canônico. Branches podem
+gerar previews conforme a integração instalada.
 
-## Como publicar em produção
+## Como publicar esta alternativa
 
-### Caminho preferido (todos os agentes IA devem usar este):
-
-```bash
-# 1. Sua mudança está numa branch e tem PR aberto pra main
-gh pr view <num> --web    # confirmar que CI passou e o preview deploy está OK
-gh pr merge <num> --squash --delete-branch   # ou merge no UI do GitHub
-# Vercel publica produção sozinho ao detectar push em main
-```
-
-### Caminho de hotfix (só com aprovação direta do Igor):
+Publicar ou promover Vercel é uma mudança externa separada do deploy público e
+requer autorização específica. O fluxo canônico continua sendo branch, PR,
+merge e publicação na VPS.
 
 ```bash
 # requer Vercel CLI: npm i -g vercel
@@ -111,7 +114,7 @@ vercel env pull frontend/.env.local   # baixa pra desenvolver local
 
 Se você precisar adicionar uma variável de ambiente nova, **abra PR com a documentação no `docs/ops/`** explicando o que adicionou e por quê — a variável em si vai pelo painel da Vercel, mas o registro de existir tem que estar no Git.
 
-## Rollback
+## Rollback da alternativa
 
 Pelo painel Vercel:
 1. Deployments → encontre o deploy anterior estável
@@ -121,13 +124,15 @@ Pelo Git (mais lento):
 ```bash
 git revert <sha-do-commit-quebrado>
 git push origin main
-# Vercel faz novo deploy de produção em ~2min
+# a integração Vercel, se ativa, cria um novo deploy direto
 ```
 
-## Marketplace / integrações em uso
+## Relação com a produção
 
-- (a confirmar com Igor) — domínio custom `inteia.com.br/mirofish` é roteado por DNS apontando pro Vercel ou por um proxy reverso na VPS.
-- Se o site público falhar mas o deploy Vercel direto (`mirofish-inteia.vercel.app`) funcionar, é problema de proxy/DNS, não de build.
+- o DNS atual de `inteia.com.br` aponta para a VPS principal;
+- a falha ou o sucesso de `mirofish-inteia.vercel.app` não prova o estado da produção;
+- nunca usar Vercel para contornar um incidente da VPS sem plano de cutover,
+  segurança, rollback e autorização.
 
 ## Não mexer sem permissão
 
@@ -139,8 +144,8 @@ git push origin main
 ## Checklist antes de mergear pra `main`
 
 - [ ] `cd frontend && npm run build` passa local
-- [ ] Preview deploy do Vercel (URL no PR) abre sem erro
-- [ ] Não há `console.error` nas DevTools no preview
+- [ ] Se a alternativa foi alterada, sua URL direta ou preview abre sem erro
+- [ ] Não há `console.error` nas DevTools da superfície validada
 - [ ] PR descreve **o que muda**, **por que**, **como testar**
 - [ ] Se mudou variável de ambiente: documentado + adicionada no painel Vercel
 - [ ] CI verde (GitHub Actions)
@@ -149,4 +154,5 @@ git push origin main
 
 - **Cache de preview de link** (WhatsApp/Telegram/etc) NÃO se renova com novo deploy. Use Facebook Debugger https://developers.facebook.com/tools/debug/ depois de mudar `og:image`.
 - **`og:image`** apontando pra `https://inteia.com.br/mirofish/inteia_mirror.png` (definido em `frontend/index.html`). Se mudar, atualizar também o cache via Debugger.
-- Se `https://mirofish-inteia.vercel.app/mirofish` estiver atualizado mas `https://inteia.com.br/mirofish` mostrar bundle antigo, conferir as rotas do projeto Vercel `frontend` antes de mexer em DNS ou rebuild.
+- Se a URL Vercel estiver atualizada e a produção não, isso é esperado: são
+  superfícies independentes. Diagnostique o checkout, container e nginx da VPS.

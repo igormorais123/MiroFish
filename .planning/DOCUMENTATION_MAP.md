@@ -1,84 +1,69 @@
-# Documentation Map — MiroFish INTEIA
+# Mapa de documentação — MiroFish INTEIA
 
-Atualizado em: 2026-05-04
+Atualizado em: 2026-07-24
 
-## Como usar
+## Ordem de leitura
 
-Este mapa evita duplicacao e documento fora de lugar. Para retomadas futuras:
+1. `README.md` — produto e operação básica.
+2. `CLAUDE.md` / `AGENTS.md` — regras de trabalho.
+3. `.planning/STATE.md` — estado efetivo e pendências.
+4. `docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md` — produção canônica.
+5. `docs/ops/HELENA_CONTROL_PLANE.md` — contrato do centro de comando.
+6. `.planning/ROADMAP.md` — próximos marcos.
+7. mapas estruturais e documentos de código abaixo.
 
-1. leia `README.md` para visao publica;
-2. leia `.planning/STATE.md` para estado real;
-3. leia `.planning/ROADMAP.md` para proximas fases;
-4. leia `.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md` para a implementacao da promessa INTEIA/Mirante;
-5. leia `.planning/codebase/*` para mapas tecnicos.
+## Fontes operacionais
 
-## Raiz do projeto
-
-| Arquivo | Papel | Status |
+| Documento | Papel | Estado |
 |---|---|---|
-| `README.md` | Visao publica e operacao basica | Atualizado para v1.3 |
-| `README-EN.md` | Versao historica em ingles | Legado; nao e fonte primaria |
-| `PRD_MIROFISH_INTEIA_V2.md` | Requisitos originais do produto | Referencia |
-| `BACKLOG_TECNICO_MIROFISH_INTEIA_V2.md` | Backlog tecnico anterior | Referencia historica |
-| `PLANO_ADAPTACAO_MIROFISH_INTEIA_V2.md` | Plano original do fork INTEIA | Referencia historica |
-| `MAPEAMENTO_PT-BR.md` | Mapa de traducao PT-BR | Referencia |
-| `LENIA_MIROFISH_INTEGRACAO.md` | Ponte com sistema Lenia | Referencia |
-| `RELATORIO_HELENA_EFESTO_MIROFISH.md` | Diagnostico Helena/Efesto de 2026-04-24 | Referencia estrategica |
-| `docs/GPT_DA_PASTA_MIROFISH_INTEIA.md` | Indice consolidado de ativos, mapas Mermaid, documentos e leitura para IA | Atualizado |
-| `docs/MIROFISH_INTEIA_MAPA_MENTAL_IA.html` | Mapa mental visual em HTML/SVG navegavel para estudo por IA | Novo |
-| `docs/AUDITORIA_MAPA_IA_2026-05-18.md` | Auditoria dos mapas IA criados nesta rodada | Novo |
+| `docs/ops/FONTE_UNICA_VERDADE_MIROFISH.md` | URLs, VPS, checkout e regra de publicação | Canônico |
+| `docs/ops/COMANDOS_SEGUROS_MIROFISH.md` | validação, backup, deploy e smoke | Canônico |
+| `docs/ops/SEGREDOS_E_AMBIENTES_MIROFISH.md` | nomes, cofres e fronteiras de segredo | Canônico |
+| `docs/ops/HELENA_CONTROL_PLANE.md` | ferramentas, autorização, auditoria e limites | Atual |
+| `docs/ops/PUBLICACAO_HELENA_2026-07-24.md` | commit, imagem, backup, testes e rollback | Registro imutável |
+| `docs/ops/VERCEL_DEPLOY.md` | alternativa estática sem domínio canônico | Histórico/alternativo |
+| `docs/ops/PUBLICACAO_VPS_2026-07-15.md` | cutover do domínio para a VPS | Registro histórico |
 
-## `.planning`
+## Estado e planejamento
 
-| Arquivo | Papel | Status |
+| Documento | Papel |
+|---|---|
+| `.planning/PROJECT.md` | visão, stack, componentes e infraestrutura |
+| `.planning/STATE.md` | estado vivo, evidências e pendências |
+| `.planning/ROADMAP.md` | marcos concluídos e próximos |
+| `.planning/PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md` | contrato da consultoria auditável |
+| `docs/superpowers/plans/2026-07-24-helena-control-plane-v2.md` | plano implementado da Helena |
+
+## Mapas vivos
+
+| Artefato | Origem | Uso |
 |---|---|---|
-| `PROJECT.md` | Visao atual, stack e milestone | Atualizado |
-| `STATE.md` | Estado real pos-implementacao | Atualizado |
-| `ROADMAP.md` | Proximas fases priorizadas | Atualizado |
-| `DOCUMENTATION_MAP.md` | Este mapa | Novo |
-| `PLANO_IMPLEMENTACAO_CONSULTORIA_SIMULADA_INTEIA.md` | Plano e registro da implementacao da consultoria por simulacao | Atualizado |
-| `LEARNINGS_CONSULTORIA_SIMULADA.md` | Aprendizados e decisoes da fase v1.3 | Novo |
-| `PLANO_CORRECAO_MIROFISH.md` | Diagnostico/correcao historica de pipeline | Historico |
-| `SPRINT_2026-04.md` | Sprint anterior | Historico |
-| `UPSTREAM_SYNC.md` | Sincronizacao com upstream | Referencia |
+| `.planning/architecture/system.architecture.json` | Archify, fonte editável | topologia completa |
+| `.planning/architecture/system-architecture.html` | Archify, gerado | inspeção visual do sistema |
+| `.planning/architecture/helena-control-plane.architecture.json` | Archify, fonte editável | control plane detalhado |
+| `.planning/architecture/helena-control-plane.html` | Archify, gerado | inspeção visual da Helena |
+| `graphify-out/graph.json` | Graphify, gerado | grafo estrutural serializado |
+| `graphify-out/graph.html` | Graphify, gerado | navegação interativa |
+| `graphify-out/GRAPH_REPORT.md` | Graphify, gerado | inventário e métricas do grafo |
 
-## `.planning/codebase`
+Não edite manualmente os arquivos gerados por Graphify ou os HTMLs do Archify.
+Atualize as fontes e execute novamente as ferramentas.
 
-| Arquivo | Papel | Status |
-|---|---|---|
-| `ARCHITECTURE.md` | Arquitetura e fluxo de dados | Atualizar quando mudar pipeline |
-| `STRUCTURE.md` | Mapa de pastas e arquivos centrais | Atualizar quando criar modulos |
-| `INTEGRATIONS.md` | Servicos externos e persistencia | Atualizar quando mudar APIs/env |
-| `TESTING.md` | Como validar e lacunas de teste | Atualizar a cada mudanca de suite |
-| `CONCERNS.md` | Riscos, dividas e areas frageis | Atualizar ao mitigar risco |
-| `STACK.md` | Stack tecnologica | Atualizar ao mudar runtime/dependencias |
-| `CONVENTIONS.md` | Convencoes locais | Referencia |
+## Mapas técnicos de código
 
-## Codigo central desta fase
+| Documento | Escopo |
+|---|---|
+| `.planning/codebase/ARCHITECTURE.md` | camadas, fluxos e autenticação |
+| `.planning/codebase/STRUCTURE.md` | pastas e arquivos centrais |
+| `.planning/codebase/INTEGRATIONS.md` | serviços, deploy e variáveis |
+| `.planning/codebase/TESTING.md` | suítes, comandos e lacunas |
+| `.planning/codebase/CONCERNS.md` | riscos e dívida técnica |
+| `.planning/codebase/STACK.md` | runtimes, dependências e ferramentas |
+| `.planning/codebase/CONVENTIONS.md` | convenções locais |
 
-- `backend/app/services/report_system_gate.py`: gate estrutural de relatorio.
-- `backend/app/services/delivery_governance.py`: politica cliente vs demo/smoke.
-- `backend/app/services/social_bootstrap.py`: pulso social inicial OASIS.
-- `backend/app/services/report_agent.py`: status de entrega e artefatos do relatorio.
+## Histórico
 
-## `memory`
-
-| Arquivo | Papel | Status |
-|---|---|---|
-| `MEMORY.md` | Indice de memorias persistentes | Atualizado |
-| `project_apify_integration.md` | Integracao Apify | Referencia |
-| `feedback_apify_costs.md` | Custos Apify | Referencia |
-| `reference_omniroute_apify.md` | Ponte OmniRoute/Apify | Referencia |
-| `decision_codex_oauth_5_5.md` | Decisao historica de modelo | Referencia |
-
-## `_archive`
-
-Arquivo morto de sprints, relatorios antigos e comparativos. Nao usar como fonte primaria para estado atual. Use apenas para auditoria historica ou recuperacao de contexto.
-
-## Regras de limpeza
-
-- Nao mover documentos historicos para fora de `_archive` sem motivo.
-- Nao criar plano novo quando `STATE.md`, `ROADMAP.md` ou o plano consolidado puderem receber a atualizacao.
-- Logs e caches locais nao sao documentacao; podem ser limpos se estiverem ignorados pelo Git.
-- Relatorios gerados em `backend/uploads/reports` sao artefatos runtime; nao entram no mapa de documentacao do repositorio.
-- Simulacoes em `backend/uploads/simulations` sao evidencias runtime; referenciar por `simulation_id`, nao copiar para docs.
+Documentos com data anterior preservam decisões e evidências do momento em que
+foram escritos. Quando contradisserem `STATE.md` ou a fonte operacional, trate-os
+como históricos. `_archive/`, runtime em `backend/uploads/`, logs, caches,
+backups e builds não fazem parte da documentação versionada.

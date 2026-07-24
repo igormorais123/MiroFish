@@ -1,7 +1,7 @@
 # Mapa Backend HTTP API + Models + Config + Entrypoint — MiroFish INTEIA
 
-**Versão:** 2026-05-11  
-**Status:** Completo (58 endpoints, 45+ env vars, 4 blueprints, 7 modelos, deploy Docker+Vercel)  
+**Versão:** 2026-07-24
+**Status:** Atualizado com o quinto blueprint e a produção Docker/nginx na VPS
 **Audience:** Desenvolvedores, arquitetos, SRE.
 
 ---
@@ -19,7 +19,8 @@ create_app(config_class=Config)
 │  ├─ graph_bp [/graph — 11 rotas]
 │  ├─ simulation_bp [/simulation — 18 rotas]
 │  ├─ report_bp [/report — 21 rotas]
-│  └─ internal_bp [/internal — 8 rotas]
+│  ├─ internal_bp [/internal — 8 rotas]
+│  └─ helena_bp [/helena — 9 rotas]
 ├─ Middleware:
 │  ├─ @before_request: logging [linha 79]
 │  ├─ @after_request: security headers [linha 89]
@@ -56,6 +57,25 @@ CORS(app, origins=origins, allow_headers=['Content-Type', 'Authorization'], cred
 6. Servir `frontend/dist/index.html` para todas as rotas /* não-API (SPA fallback)
 
 ---
+
+## B0. API Helena
+
+| Rota | Proteção | Papel |
+|---|---|---|
+| `GET /api/helena/status` | pública + rate limit | versão e disponibilidade |
+| `POST /api/helena/session` | token interno | autentica capacidades |
+| `POST /api/helena/context` | token interno | revalida contexto |
+| `POST /api/helena/commands/plan` | token interno | cria plano restrito |
+| `POST /api/helena/commands/:id/execute` | token interno | valida aprovação e abre lease |
+| `POST /api/helena/commands/:id/complete` | token interno | fecha com resultado ou erro |
+| `POST /api/helena/commands/:id/cancel` | token interno | cancela operação ativa |
+| `GET /api/helena/commands/:id` | token interno | consulta registro saneado |
+| `GET /api/helena/commands` | token interno | lista histórico saneado |
+
+Variáveis: `INTERNAL_API_TOKEN`, `HELENA_CONTROL_ENABLED`,
+`HELENA_COMMAND_MAX_LENGTH`, `HELENA_PLAN_TTL_SECONDS`,
+`HELENA_APPROVAL_TTL_SECONDS`, `HELENA_EXECUTION_TTL_SECONDS` e
+`HELENA_PLANNER_MODE`.
 
 ## B2. Tabela de Configuração (45+ variáveis)
 
@@ -1154,6 +1174,6 @@ Executar: `uv run python -m pytest tests/test_meu_modulo.py -v`
 
 **Fim do Mapa Completo — B1–B11**
 
-Data: 2026-05-11  
-Versão: 1.0 Completo  
+Data: 2026-07-24
+Versão: 1.1 com centro de comando
 Próxima atualização: após merge PR principal ou mudança arch significativa.
