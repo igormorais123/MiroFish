@@ -232,3 +232,23 @@ export const getSimulationHistory = (limit = 20, options = {}) => {
   })
 }
 
+
+/**
+ * Pulso operacional da simulacao em execucao (deterministico, sem LLM)
+ * @param {string} simulationId
+ * @param {number} window - tamanho da janela de acoes analisada
+ */
+export const getCopilotPulse = (simulationId, window = 120) => {
+  return service.get(`/api/simulation/${simulationId}/copilot/pulse`, {
+    params: { window }
+  })
+}
+
+/**
+ * Perguntar ao copiloto sobre a simulacao em execucao
+ * @param {string} simulationId
+ * @param {Object} payload - { question, chat_history? }
+ */
+export const askCopilot = (simulationId, payload) => {
+  return service.post(`/api/simulation/${simulationId}/copilot/ask`, payload)
+}

@@ -187,6 +187,14 @@
 
     <!-- Main Content: Dual Timeline -->
     <div class="main-content-area" ref="scrollContainer">
+      <!-- Copiloto: leitura do que esta sendo processado agora -->
+      <SimulationCopilot
+        v-if="phase >= 1 && simulationId"
+        class="copilot-slot"
+        :simulation-id="simulationId"
+        :active="phase === 1"
+      />
+
       <!-- Timeline Header -->
       <div class="timeline-header" v-if="allActions.length > 0">
         <div class="timeline-stats">
@@ -374,6 +382,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import SimulationCopilot from './SimulationCopilot.vue'
 import { 
   startSimulation, 
   stopSimulation,
@@ -1767,6 +1776,10 @@ onUnmounted(() => {
 .rendered-count {
   color: #8a8a8a;
   font-size: 10px;
+}
+
+.copilot-slot {
+  margin-bottom: 16px;
 }
 
 .platform-breakdown {
