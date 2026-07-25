@@ -2099,12 +2099,14 @@ def get_run_status(simulation_id: str):
 @simulation_bp.route('/<simulation_id>/run-status/detail', methods=['GET'])
 def get_run_status_detail(simulation_id: str):
     """
-    Obter estado detalhado (com todas as acoes)
+    Obter estado detalhado com as acoes novas desde a ultima consulta
 
-    Para exibicao em tempo real no frontend
+    Para exibicao em tempo real no frontend. O cliente devolve o cursor recebido
+    na chamada anterior e recebe apenas o que ainda nao viu.
 
     Parametros de Query:
-        platform: filtrar (twitter/reddit, opcional)
+        since_twitter, since_reddit, since_legacy: acoes ja recebidas por origem
+            (omitir na primeira chamada; o servidor devolve a cauda recente)
 
     Retorno:
         {
@@ -2114,7 +2116,7 @@ def get_run_status_detail(simulation_id: str):
                 "runner_status": "running",
                 "current_round": 5,
                 ...
-                "all_actions": [
+                "actions": [                      # somente as novas, ordem cronologica
                     {
                         "round_num": 5,
                         "timestamp": "2025-12-01T10:30:00",
@@ -2125,17 +2127,28 @@ def get_run_status_detail(simulation_id: str):
                         "action_args": {"content": "..."},
                         "result": null,
                         "success": true
-                    },
-                    ...
+                    }
                 ],
-                "twitter_actions": [...],  # Todas as acoes do Twitter
-                "reddit_actions": [...]    # Todas as acoes do Reddit
+                "cursor": {"twitter": 120, "reddit": 98},   # devolver na proxima chamada
+                "actions_total": 218
             }
         }
     """
     try:
         run_state = SimulationRunner.get_run_state(simulation_id)
-        platform_filter = request.args.get('platform')
+
+        cursor = {}
+        for key in ("twitter", "reddit", "legacy"):
+            raw_value = request.args.get(f"since_{key}")
+            if raw_value is None:
+                continue
+            try:
+                cursor[key] = max(0, int(raw_value))
+            except (TypeError, ValueError):
+                return jsonify({
+                    "success": False,
+                    "error": f"Parametro since_{key} invalido: {raw_value}"
+                }), 400
 
         if not run_state:
             return jsonify({
@@ -2143,45 +2156,19 @@ def get_run_status_detail(simulation_id: str):
                 "data": {
                     "simulation_id": simulation_id,
                     "runner_status": "idle",
-                    "all_actions": [],
-                    "twitter_actions": [],
-                    "reddit_actions": []
+                    "actions": [],
+                    "cursor": cursor,
+                    "actions_total": 0,
                 }
             })
 
-        # Obtem lista completa de acoes
-        all_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform=platform_filter
-        )
+        delta = SimulationRunner.get_actions_delta(simulation_id, cursor=cursor)
 
-        # Obtem acoes por plataforma
-        twitter_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform="twitter"
-        ) if not platform_filter or platform_filter == "twitter" else []
-
-        reddit_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform="reddit"
-        ) if not platform_filter or platform_filter == "reddit" else []
-
-        # Obtem acoes da rodada atual
-        current_round = run_state.current_round
-        recent_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform=platform_filter,
-            round_num=current_round
-        ) if current_round > 0 else []
-
-        # Obtem informacoes basicas
         result = run_state.to_dict()
-        result["all_actions"] = [a.to_dict() for a in all_actions]
-        result["twitter_actions"] = [a.to_dict() for a in twitter_actions]
-        result["reddit_actions"] = [a.to_dict() for a in reddit_actions]
+        result["actions"] = [action.to_dict() for action in delta["actions"]]
+        result["cursor"] = delta["cursor"]
+        result["actions_total"] = delta["total"]
         result["rounds_count"] = max(len(run_state.rounds), int(run_state.current_round or 0))
-        # recent_actions exibe apenas a rodada mais recente
-        result["recent_actions"] = [a.to_dict() for a in recent_actions]
 
         return jsonify({
             "success": True,

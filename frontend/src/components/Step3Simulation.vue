@@ -190,7 +190,10 @@
       <!-- Timeline Header -->
       <div class="timeline-header" v-if="allActions.length > 0">
         <div class="timeline-stats">
-          <span class="total-count">TOTAL DE EVENTOS: <span class="mono">{{ allActions.length }}</span></span>
+          <span class="total-count">TOTAL DE EVENTOS: <span class="mono">{{ totalEventsCount }}</span></span>
+          <span class="rendered-count" v-if="totalEventsCount > allActions.length">
+            exibindo as <span class="mono">{{ allActions.length }}</span> mais recentes
+          </span>
           <span class="platform-breakdown">
             <span class="breakdown-item twitter">
               <svg class="mini-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
@@ -421,8 +424,14 @@ const powerPersonaCatalogError = ref(null)
 const powerPersonaCatalogLoaded = ref(false)
 const powerCatalogLoaded = ref(false)
 const missionSelectionLoadedFor = ref(null)
-const allActions = ref([]) // todas as ações acumuladas incrementalmente
+// Teto de ações mantidas na timeline. Uma run longa produz dezenas de milhares
+// de ações; renderizar todas trava a aba sem acrescentar informação.
+const MAX_RENDERED_ACTIONS = 300
+
+const allActions = ref([]) // ações recentes acumuladas incrementalmente
 const actionIds = ref(new Set()) // ids de ações para deduplicação
+const actionsCursor = ref(null) // cursor do servidor: só o delta trafega
+const totalActionsSeen = ref(0) // total real na run, incluindo o que saiu do buffer
 const scrollContainer = ref(null)
 
 // Computed
@@ -431,13 +440,17 @@ const chronologicalActions = computed(() => {
   return allActions.value
 })
 
-// Contagem de ações por plataforma
+// Contagem por plataforma vem do servidor: o buffer local só guarda as recentes.
 const twitterActionsCount = computed(() => {
-  return allActions.value.filter(a => a.platform === 'twitter').length
+  return runStatus.value.twitter_actions_count ?? allActions.value.filter(a => a.platform === 'twitter').length
 })
 
 const redditActionsCount = computed(() => {
-  return allActions.value.filter(a => a.platform === 'reddit').length
+  return runStatus.value.reddit_actions_count ?? allActions.value.filter(a => a.platform === 'reddit').length
+})
+
+const totalEventsCount = computed(() => {
+  return totalActionsSeen.value || allActions.value.length
 })
 
 const reportGate = computed(() => {
@@ -741,6 +754,9 @@ const resetAllState = () => {
   runStatus.value = {}
   allActions.value = []
   actionIds.value = new Set()
+  // Sem zerar o cursor, o servidor entenderia que o histórico antigo já foi entregue.
+  actionsCursor.value = null
+  totalActionsSeen.value = 0
   selectedPowerIdSet.value = new Set()
   selectedPowerPersonaIdSet.value = new Set()
   missionSelectionLoadedFor.value = null
@@ -1010,34 +1026,44 @@ const fetchRunStatusDetail = async () => {
   if (!props.simulationId) return
   
   try {
-    const res = await getRunStatusDetail(props.simulationId)
-    
+    // O servidor devolve apenas o que ainda não recebemos, em ordem cronológica.
+    const res = await getRunStatusDetail(props.simulationId, actionsCursor.value)
+
     if (res.success && res.data) {
-      // Usar all_actions para obter a lista completa de ações
-      const serverActions = res.data.all_actions || []
-      
-      // Adicionar novas ações incrementalmente (deduplicando)
-      let newActionsAdded = 0
+      const serverActions = res.data.actions || []
+
       serverActions.forEach(action => {
         // Gerar ID unico
         const actionId = action.id || `${action.timestamp}-${action.platform}-${action.agent_id}-${action.action_type}`
-        
+
         if (!actionIds.value.has(actionId)) {
           actionIds.value.add(actionId)
           allActions.value.push({
             ...action,
             _uniqueId: actionId
           })
-          newActionsAdded++
         }
       })
-      
+
+      if (res.data.cursor) actionsCursor.value = res.data.cursor
+      if (Number.isFinite(res.data.actions_total)) totalActionsSeen.value = res.data.actions_total
+
+      if (serverActions.length > 0) trimTimelineBuffer()
+
       // Nao rolar automaticamente, permitir que o usuário navegue livremente na timeline
       // Novas ações sao adicionadas no final
     }
   } catch (err) {
     console.warn('Falha ao obter status detalhado:', err)
   }
+}
+
+// Descarta o começo da timeline mantendo as ações mais recentes visíveis.
+const trimTimelineBuffer = () => {
+  if (allActions.value.length <= MAX_RENDERED_ACTIONS) return
+  const kept = allActions.value.slice(-MAX_RENDERED_ACTIONS)
+  allActions.value = kept
+  actionIds.value = new Set(kept.map(action => action._uniqueId))
 }
 
 // Traduzir nomes UPPER_SNAKE_CASE de relações/agentes
@@ -1736,6 +1762,11 @@ onUnmounted(() => {
 .total-count {
   font-weight: 600;
   color: #0f2747;
+}
+
+.rendered-count {
+  color: #8a8a8a;
+  font-size: 10px;
 }
 
 .platform-breakdown {
