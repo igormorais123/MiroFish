@@ -63,6 +63,7 @@ ROTAS_PADRAO: Dict[str, Tuple[str, str]] = {
     "haiku-tasks": (LUNA, "low"),      # acao de agente na simulacao
     "sonnet-tasks": (LUNA, "medium"),  # relatorio, ontologia, analise
     "opus-tasks": (SOL, "high"),       # Helena decidindo operacao
+    "helena-premium": (SOL, "high"),
 }
 
 
