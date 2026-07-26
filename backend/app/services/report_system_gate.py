@@ -275,6 +275,19 @@ def evaluate_report_system_gate(
                 "total_nodes": graph_nodes,
                 "total_edges": graph_edges,
             }
+            # O gate conferia apenas que o graph_id existia. Um grafo com zero
+            # nos passava, e o relatorio saia sustentado por nada — foi o que
+            # aconteceu no caso Vale Trading, onde as quatro ferramentas de
+            # consulta falharam juntas por lerem de um grafo vazio.
+            if graph_nodes <= 0:
+                issues.append(
+                    "Grafo sem nos: as ferramentas de consulta nao teriam do que ler "
+                    f"(graph_id={effective_graph_id})"
+                )
+            elif graph_edges <= 0:
+                issues.append(
+                    f"Grafo com {graph_nodes} nos e nenhuma relacao: nao ha estrutura a analisar"
+                )
         except Exception as exc:
             warnings.append(f"Estatisticas do grafo indisponiveis para auditoria numerica: {exc}")
             artifacts["graph_statistics"] = {
