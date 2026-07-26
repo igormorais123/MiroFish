@@ -34,6 +34,24 @@ def test_pedacos_se_sobrepoem_para_nao_partir_entidade():
     assert pedacos[1][0] < primeiro_fim
 
 
+def test_corte_respeita_fronteira_de_sentenca():
+    """Cortar no meio da frase parte a entidade e estraga o trecho de prova."""
+    frase = "O credito-premio de IPI foi reconhecido. "
+    texto = frase * (lee.CHUNK_SIZE // len(frase) + 4)
+    inicio, trecho = lee.split_into_chunks(texto)[0]
+
+    assert trecho.endswith(". ")
+
+
+def test_offset_aponta_para_o_texto_original():
+    """A posicao tem que sobreviver ao corte, senao nao ha pincite possivel."""
+    texto = ("frase de enchimento. " * 900) + "MARCADOR_UNICO aparece aqui."
+    pedacos = lee.split_into_chunks(texto)
+
+    for offset, trecho in pedacos:
+        assert texto[offset:offset + len(trecho)] == trecho
+
+
 def test_texto_curto_continua_em_um_pedaco():
     assert lee.split_into_chunks("texto curto") == [(0, "texto curto")]
 

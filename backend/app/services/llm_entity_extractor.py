@@ -29,26 +29,51 @@ MAX_CHUNKS = int(os.environ.get('ENTITY_MAX_CHUNKS', '120'))
 EXCERPT_RADIUS = 220
 
 
+# Fronteiras onde cortar sem partir uma frase no meio, na mesma ordem de
+# preferencia usada por utils.file_parser.split_text_into_chunks.
+FRONTEIRAS = ('.\n', '!\n', '?\n', '\n\n', '. ', '! ', '? ')
+
+
 def split_into_chunks(text: str) -> List[Tuple[int, str]]:
-    """Divide o texto em pedacos sobrepostos, devolvendo (offset, trecho)."""
+    """
+    Divide o texto em pedacos sobrepostos, devolvendo (offset, trecho).
+
+    Existe `utils.file_parser.split_text_into_chunks`, mas ela devolve apenas
+    as strings e aplica strip em cada bloco — o que descarta a posicao no texto
+    original. Sem essa posicao nao ha como dizer de onde a entidade saiu, que e
+    o ponto da proveniencia. A quebra por fronteira de sentenca vem de la.
+    """
     if not text:
         return []
     if len(text) <= CHUNK_SIZE:
         return [(0, text)]
 
-    passo = max(CHUNK_SIZE - CHUNK_OVERLAP, 1)
     pedacos: List[Tuple[int, str]] = []
-    for inicio in range(0, len(text), passo):
-        trecho = text[inicio:inicio + CHUNK_SIZE]
-        if not trecho.strip():
-            continue
-        pedacos.append((inicio, trecho))
+    inicio = 0
+    while inicio < len(text):
+        fim = min(inicio + CHUNK_SIZE, len(text))
+        if fim < len(text):
+            janela = text[inicio:fim]
+            for sep in FRONTEIRAS:
+                corte = janela.rfind(sep)
+                # Exige que o corte esteja adiantado no bloco, senao o pedaco
+                # sai curto demais e o numero de chamadas explode.
+                if corte > CHUNK_SIZE * 0.3:
+                    fim = inicio + corte + len(sep)
+                    break
+
+        trecho = text[inicio:fim]
+        if trecho.strip():
+            pedacos.append((inicio, trecho))
         if len(pedacos) >= MAX_CHUNKS:
             logger.warning(
-                "Corpus excede %d pedacos; extraindo apenas os primeiros %d de %d caracteres",
-                MAX_CHUNKS, MAX_CHUNKS * passo, len(text),
+                "Corpus excede %d pedacos; %d de %d caracteres ficaram de fora",
+                MAX_CHUNKS, len(text) - fim, len(text),
             )
             break
+        if fim >= len(text):
+            break
+        inicio = max(fim - CHUNK_OVERLAP, inicio + 1)
     return pedacos
 
 
