@@ -27,9 +27,16 @@ logger = get_logger('mirofish.simulation_copilot')
 # Janela de acoes considerada "agora" para ritmo e distribuicao.
 RECENT_WINDOW = 120
 
-# Uma simulacao viva escreve acoes continuamente; passar disso sem nenhuma
-# acao nova, com o runner marcado como rodando, indica processo travado.
-STALL_SECONDS = 180
+# Sem nenhuma acao nova por mais que isso, com o runner marcado como rodando,
+# o processo travou.
+#
+# As acoes nao chegam espacadas: a rodada inteira e gravada de uma vez (mediana
+# de intervalo 0s) e entre rodadas ha uma pausa longa enquanto o modelo processa
+# a rodada seguinte. O limiar precisa ficar acima dessa pausa, nao acima do
+# intervalo medio. Medido em execucao real de 96 rodadas (sim_8bd24ddb56d1,
+# 2026-07-26): maior intervalo entre acoes 284s, p99 186s. 600s deixa margem de
+# ~2x sobre o pior caso observado sem perder um travamento de verdade.
+STALL_SECONDS = 600
 
 # Acima disso, a populacao convergiu para um comportamento so e a simulacao
 # deixou de produzir variacao util.
@@ -51,10 +58,25 @@ def _parse_timestamp(value: str) -> Optional[datetime]:
 
 
 def _seconds_between(older: Optional[datetime], newer: Optional[datetime]) -> Optional[float]:
+    """Delta em segundos, podendo ser negativo. Quem chama decide o que fazer."""
     if older is None or newer is None:
         return None
-    delta = (newer - older).total_seconds()
-    return delta if delta >= 0 else None
+    return (newer - older).total_seconds()
+
+
+def _seconds_since(moment: Optional[datetime]) -> Optional[float]:
+    """
+    Ha quanto tempo isso aconteceu, do ponto de vista do relogio local.
+
+    Um delta negativo significa que o timestamp gravado esta a frente do
+    relogio de quem le (fuso divergente entre quem escreve o log e quem o le,
+    ou desvio de relogio). Nesse caso o evento acabou de acontecer: devolver
+    None faria o detector de simulacao travada parar de funcionar em silencio.
+    """
+    delta = _seconds_between(moment, datetime.now())
+    if delta is None:
+        return None
+    return max(0.0, delta)
 
 
 def _actions_per_minute(actions: List[AgentAction]) -> Optional[float]:
@@ -66,7 +88,7 @@ def _actions_per_minute(actions: List[AgentAction]) -> Optional[float]:
     last = _parse_timestamp(actions[-1].timestamp)
     elapsed = _seconds_between(first, last)
 
-    if not elapsed:
+    if not elapsed or elapsed <= 0:
         return None
 
     return round(len(actions) / (elapsed / 60), 2)
@@ -173,7 +195,7 @@ def build_pulse(simulation_id: str, window: int = RECENT_WINDOW) -> Dict[str, An
     total_actions = delta["total"]
 
     last_action_at = _parse_timestamp(recent[-1].timestamp) if recent else None
-    seconds_since_last_action = _seconds_between(last_action_at, datetime.now())
+    seconds_since_last_action = _seconds_since(last_action_at)
 
     current_round = int(getattr(run_state, "current_round", 0) or 0)
     total_rounds = int(getattr(run_state, "total_rounds", 0) or 0)

@@ -105,6 +105,23 @@ def test_alerta_de_simulacao_travada(sim):
     assert "travou" in pulse["headline"]
 
 
+def test_timestamp_a_frente_do_relogio_nao_apaga_a_metrica(sim):
+    """
+    Quem escreve o log e quem le podem estar em fusos diferentes (backend em
+    UTC, leitor em UTC-3). Tratar o delta negativo como ausencia de dado
+    desligava o detector de travamento em silencio.
+    """
+    sim_id, run_dir, _ = sim
+    twitter_log = str(run_dir / "twitter" / "actions.jsonl")
+
+    _write_action(twitter_log, 12, 1, timestamp=datetime.now() + timedelta(hours=3))
+
+    pulse = build_pulse(sim_id)
+
+    assert pulse["activity"]["seconds_since_last_action"] == 0
+    assert not any(a["code"] == "stalled" for a in pulse["alerts"])
+
+
 def test_alerta_de_taxa_de_falha(sim):
     sim_id, run_dir, _ = sim
     twitter_log = str(run_dir / "twitter" / "actions.jsonl")
