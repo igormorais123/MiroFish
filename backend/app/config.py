@@ -131,6 +131,9 @@ class Config:
     LLM_PREMIUM_MODEL = os.environ.get('LLM_PREMIUM_MODEL', 'sonnet-tasks')
     # Modelo Helena Strategos — maximo poder analitico (opus-4.6, gpt-5.4-thinking, gemini-4.1)
     LLM_HELENA_MODEL = os.environ.get('LLM_HELENA_MODEL', 'opus-tasks')
+    # Helena decide operacao real e roda poucas vezes: vale pagar raciocinio alto.
+    # O resto do sistema segue no esforco global (LUNA_REASONING_EFFORT).
+    LLM_HELENA_REASONING_EFFORT = os.environ.get('LLM_HELENA_REASONING_EFFORT', 'high').strip().lower()
 
     # Gateway interno INTEIA / OmniRoute
     OMNIROUTE_URL = os.environ.get('OMNIROUTE_URL', '')
@@ -152,6 +155,10 @@ class Config:
     HELENA_APPROVAL_TTL_SECONDS = int(os.environ.get('HELENA_APPROVAL_TTL_SECONDS', '600'))
     HELENA_EXECUTION_TTL_SECONDS = int(os.environ.get('HELENA_EXECUTION_TTL_SECONDS', '7200'))
     HELENA_PLANNER_MODE = os.environ.get('HELENA_PLANNER_MODE', 'auto').strip().lower()
+    # Com raciocinio alto o modelo consome a cota de saida antes de escrever o
+    # plano. O teto precisa cobrir raciocinio + JSON, senao a Helena cai no
+    # plano de fallback sem nunca ter falhado de verdade.
+    HELENA_PLAN_MAX_TOKENS = int(os.environ.get('HELENA_PLAN_MAX_TOKENS', '8000'))
 
     # Upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB

@@ -606,7 +606,10 @@ class HelenaPlanner:
             "Para continuar todo um projeto use continue_analysis. Para uma nova analise "
             "completa use run_full_analysis. Para explicar dados use ask_analysis."
         )
-        client = LLMClient(model=Config.LLM_HELENA_MODEL)
+        client = LLMClient(
+            model=Config.LLM_HELENA_MODEL,
+            reasoning_effort=Config.LLM_HELENA_REASONING_EFFORT,
+        )
         return client.chat_json(
             messages=[
                 {"role": "system", "content": system},
@@ -620,7 +623,7 @@ class HelenaPlanner:
                 },
             ],
             temperature=0.1,
-            max_tokens=1800,
+            max_tokens=Config.HELENA_PLAN_MAX_TOKENS,
             session_id="helena-control",
             phase_id=context.get("route_name"),
         )
