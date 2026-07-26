@@ -134,6 +134,10 @@ class Config:
     # Helena decide operacao real e roda poucas vezes: vale pagar raciocinio alto.
     # O resto do sistema segue no esforco global (LUNA_REASONING_EFFORT).
     LLM_HELENA_REASONING_EFFORT = os.environ.get('LLM_HELENA_REASONING_EFFORT', 'high').strip().lower()
+    # Teto de saida por secao do relatorio. Atendendo pela assinatura, o token
+    # de saida deixou de ser o custo dominante, e 4096 truncava a analise antes
+    # de ela terminar de se justificar.
+    REPORT_SECTION_MAX_TOKENS = int(os.environ.get('REPORT_SECTION_MAX_TOKENS', '16000'))
 
     # Gateway interno INTEIA / OmniRoute
     OMNIROUTE_URL = os.environ.get('OMNIROUTE_URL', '')

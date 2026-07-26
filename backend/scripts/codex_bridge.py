@@ -50,6 +50,39 @@ DEFAULT_EFFORT = os.environ.get("CODEX_BRIDGE_EFFORT", "low")
 # padrao barato.
 EFFORT_SUFFIXES = ("high", "medium", "low", "minimal")
 
+# Luna e o motor de volume: a simulacao inteira roda nele. O Sol fica para os
+# poucos pontos que decidem operacao real, onde o gasto de token e baixo e a
+# qualidade do raciocinio e o que importa.
+LUNA = "gpt-5.6-luna"
+SOL = "gpt-5.6-sol"
+
+# Aliases herdados do gateway. Sem esta tabela um alias nao resolvido cairia no
+# modelo padrao do sistema (`gpt-4o-mini`, API paga) — por isso o roteamento
+# mora aqui, e nao apenas numa variavel de ambiente que alguem pode esquecer.
+ROTAS_PADRAO: Dict[str, Tuple[str, str]] = {
+    "haiku-tasks": (LUNA, "low"),      # acao de agente na simulacao
+    "sonnet-tasks": (LUNA, "medium"),  # relatorio, ontologia, analise
+    "opus-tasks": (SOL, "high"),       # Helena decidindo operacao
+}
+
+
+def _carrega_rotas() -> Dict[str, Tuple[str, str]]:
+    """Permite sobrepor o roteamento por env, sem perder o padrao seguro."""
+    rotas = dict(ROTAS_PADRAO)
+    bruto = os.environ.get("CODEX_BRIDGE_ROUTES", "").strip()
+    if not bruto:
+        return rotas
+    try:
+        for alias, destino in (json.loads(bruto) or {}).items():
+            modelo, _, esforco = str(destino).partition(":")
+            rotas[str(alias)] = (modelo or LUNA, esforco or DEFAULT_EFFORT)
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    return rotas
+
+
+ROTAS = _carrega_rotas()
+
 app = Flask(__name__)
 _slots = threading.Semaphore(MAX_CONCURRENCY)
 _stats_lock = threading.Lock()
@@ -80,12 +113,29 @@ def subprocess_env() -> Dict[str, str]:
 
 
 def split_model(model: str) -> Tuple[str, str]:
-    """Separa `gpt-5.6-luna-high` em (modelo, esforco)."""
-    model = (model or "").strip() or DEFAULT_MODEL
+    """
+    Resolve o que o chamador pediu em (modelo do Codex, esforco).
+
+    Ordem: alias conhecido, depois sufixo de esforco (`gpt-5.6-luna-high`),
+    depois nome ja explicito. Qualquer coisa irreconhecivel cai no Luna — nunca
+    num modelo de terceiro, que sairia da assinatura.
+    """
+    pedido = (model or "").strip()
+    if not pedido:
+        return DEFAULT_MODEL, DEFAULT_EFFORT
+
+    rota = ROTAS.get(pedido)
+    if rota:
+        return rota
+
     for suffix in EFFORT_SUFFIXES:
-        if model.endswith(f"-{suffix}"):
-            return model[: -(len(suffix) + 1)], suffix
-    return model, DEFAULT_EFFORT
+        if pedido.endswith(f"-{suffix}"):
+            base = pedido[: -(len(suffix) + 1)]
+            return (base if base.startswith("gpt-5") else DEFAULT_MODEL), suffix
+
+    if pedido.startswith("gpt-5"):
+        return pedido, DEFAULT_EFFORT
+    return DEFAULT_MODEL, DEFAULT_EFFORT
 
 
 def build_prompt(messages: List[Dict[str, Any]], wants_json: bool) -> str:
@@ -270,14 +320,13 @@ def chat_completions():
 
 @app.get("/v1/models")
 def models():
-    base, _ = split_model(DEFAULT_MODEL)
-    dados = [
-        {"id": base, "object": "model", "owned_by": "codex-cli"},
-    ] + [
-        {"id": f"{base}-{s}", "object": "model", "owned_by": "codex-cli"}
-        for s in EFFORT_SUFFIXES
-    ]
-    return jsonify({"object": "list", "data": dados})
+    ids = [LUNA, SOL]
+    ids += [f"{LUNA}-{s}" for s in EFFORT_SUFFIXES]
+    ids += list(ROTAS)
+    return jsonify({
+        "object": "list",
+        "data": [{"id": i, "object": "model", "owned_by": "codex-cli"} for i in ids],
+    })
 
 
 @app.get("/health")
@@ -300,6 +349,7 @@ def health():
         "concorrencia_maxima": MAX_CONCURRENCY,
         "modelo_padrao": DEFAULT_MODEL,
         "esforco_padrao": DEFAULT_EFFORT,
+        "rotas": {alias: f"{m}:{e}" for alias, (m, e) in ROTAS.items()},
         **atual,
     }), (200 if binary else 503)
 

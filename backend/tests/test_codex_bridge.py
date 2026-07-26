@@ -63,6 +63,42 @@ def test_modelo_vazio_cai_no_padrao():
     assert cb.split_model("")[0] == cb.split_model(None)[0] == cb.DEFAULT_MODEL
 
 
+# --- roteamento: Luna move o volume, Sol so decide ---
+
+def test_agentes_e_relatorio_vao_para_luna():
+    assert cb.split_model("haiku-tasks") == (cb.LUNA, "low")
+    assert cb.split_model("sonnet-tasks") == (cb.LUNA, "medium")
+
+
+def test_helena_vai_para_sol_com_raciocinio_alto():
+    """Poucas chamadas decidindo operacao real: e onde o Sol se paga."""
+    assert cb.split_model("opus-tasks") == (cb.SOL, "high")
+
+
+def test_modelo_desconhecido_cai_no_luna_e_nao_fora_da_assinatura():
+    """Sem isso, um alias nao resolvido iria para gpt-4o-mini na API paga."""
+    for pedido in ("gpt-4o-mini", "claude-opus-4.5", "alias-que-ninguem-mapeou"):
+        assert cb.split_model(pedido)[0] == cb.LUNA
+
+
+def test_sufixo_de_esforco_nao_inventa_modelo_de_terceiro():
+    assert cb.split_model("gpt-4o-mini-high") == (cb.LUNA, "high")
+
+
+def test_rotas_podem_ser_sobrepostas_por_env(monkeypatch):
+    monkeypatch.setenv("CODEX_BRIDGE_ROUTES", json.dumps({"sonnet-tasks": "gpt-5.6-sol:high"}))
+    rotas = cb._carrega_rotas()
+
+    assert rotas["sonnet-tasks"] == ("gpt-5.6-sol", "high")
+    # As demais rotas padrao sobrevivem a sobreposicao parcial.
+    assert rotas["haiku-tasks"] == (cb.LUNA, "low")
+
+
+def test_env_de_rotas_invalido_nao_derruba_o_padrao(monkeypatch):
+    monkeypatch.setenv("CODEX_BRIDGE_ROUTES", "isto nao e json")
+    assert cb._carrega_rotas()["haiku-tasks"] == (cb.LUNA, "low")
+
+
 # --- montagem do prompt ---
 
 def test_sistema_vem_antes_do_usuario():
