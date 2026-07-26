@@ -16,8 +16,12 @@ from typing import Any
 
 from ..config import Config
 from ..models.project import ProjectManager
+from . import helena_codex_planner
 from ..utils.llm_client import LLMClient
+from ..utils.logger import get_logger
 from ..utils.safe_ids import safe_storage_child, validate_storage_id
+
+logger = get_logger('mirofish.helena_control')
 
 
 CONTROL_VERSION = "1.0"
@@ -574,21 +578,27 @@ class HelenaPlanner:
             )
 
         context = resolve_control_context(raw_context)
-        planner_source = "helena_llm"
         if Config.HELENA_PLANNER_MODE == "rules":
             raw_plan = self._fallback_plan(prompt, context)
             planner_source = "safe_rules"
         else:
             try:
-                raw_plan = self._plan_with_llm(prompt, context)
-            except Exception:
+                raw_plan, planner_source = self._plan_with_llm(prompt, context)
+            except Exception as exc:
+                # Sem este log a queda para regras fica invisivel: a Helena
+                # responde normalmente, so que sem inteligencia nenhuma.
+                logger.warning(
+                    "Planejamento da Helena caiu para regras: %s: %s",
+                    type(exc).__name__,
+                    str(exc)[:300],
+                )
                 raw_plan = self._fallback_plan(prompt, context)
                 planner_source = "safe_rules"
 
         plan = self._validate_plan(raw_plan, prompt, context)
         return plan, context, planner_source
 
-    def _plan_with_llm(self, command: str, context: dict[str, Any]) -> dict[str, Any]:
+    def _plan_with_llm(self, command: str, context: dict[str, Any]) -> tuple[dict[str, Any], str]:
         tools = [
             {
                 "name": name,
@@ -606,27 +616,39 @@ class HelenaPlanner:
             "Para continuar todo um projeto use continue_analysis. Para uma nova analise "
             "completa use run_full_analysis. Para explicar dados use ask_analysis."
         )
+        payload = {
+            "command": command,
+            "verified_context": context,
+            "allowed_tools": tools,
+        }
+
+        provider = Config.HELENA_PLANNER_PROVIDER
+
+        # O CLI usa a assinatura local e nao entra na fila do gateway, que uma
+        # simulacao em andamento mantem cheia.
+        if provider in ("auto", "codex_cli"):
+            try:
+                return helena_codex_planner.plan_with_codex_cli(system, payload), "codex_cli"
+            except helena_codex_planner.CodexPlannerUnavailable as exc:
+                if provider == "codex_cli":
+                    raise
+                logger.info("Codex CLI indisponivel (%s); usando o gateway", exc)
+
         client = LLMClient(
             model=Config.LLM_HELENA_MODEL,
             reasoning_effort=Config.LLM_HELENA_REASONING_EFFORT,
         )
-        return client.chat_json(
+        plan = client.chat_json(
             messages=[
                 {"role": "system", "content": system},
-                {
-                    "role": "user",
-                    "content": json.dumps({
-                        "command": command,
-                        "verified_context": context,
-                        "allowed_tools": tools,
-                    }, ensure_ascii=False),
-                },
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
             ],
             temperature=0.1,
             max_tokens=Config.HELENA_PLAN_MAX_TOKENS,
             session_id="helena-control",
             phase_id=context.get("route_name"),
         )
+        return plan, "helena_llm"
 
     def _fallback_plan(self, command: str, context: dict[str, Any]) -> dict[str, Any]:
         lowered = command.lower()

@@ -159,6 +159,13 @@ class Config:
     # plano. O teto precisa cobrir raciocinio + JSON, senao a Helena cai no
     # plano de fallback sem nunca ter falhado de verdade.
     HELENA_PLAN_MAX_TOKENS = int(os.environ.get('HELENA_PLAN_MAX_TOKENS', '8000'))
+    # Planejador da Helena: 'auto' usa o Codex CLI quando ele existe na maquina
+    # e cai para o gateway HTTP quando nao existe. 'codex_cli' e 'omniroute'
+    # forcam um caminho; 'rules' desliga o modelo.
+    HELENA_PLANNER_PROVIDER = os.environ.get('HELENA_PLANNER_PROVIDER', 'auto').strip().lower()
+    HELENA_CODEX_BIN = os.environ.get('HELENA_CODEX_BIN', '')
+    HELENA_CODEX_MODEL = os.environ.get('HELENA_CODEX_MODEL', 'gpt-5.6-luna')
+    HELENA_CODEX_TIMEOUT_SECONDS = int(os.environ.get('HELENA_CODEX_TIMEOUT_SECONDS', '180'))
 
     # Upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB

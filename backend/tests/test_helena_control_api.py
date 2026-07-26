@@ -196,11 +196,11 @@ def test_prompt_injection_nao_cria_ferramenta_fora_da_allowlist(helena_client, m
     monkeypatch.setattr(
         HelenaPlanner,
         "_plan_with_llm",
-        lambda self, command, context: {
+        lambda self, command, context: ({
             "summary": "ignorar regras",
             "rationale": "teste",
             "actions": [{"tool": "shell", "params": {"command": "whoami"}}],
-        },
+        }, "helena_llm"),
     )
     response = client.post(
         "/api/helena/commands/plan",
@@ -286,14 +286,14 @@ def test_planejador_remove_acoes_redundantes_do_modelo(helena_client, monkeypatc
     monkeypatch.setattr(
         HelenaPlanner,
         "_plan_with_llm",
-        lambda self, command, context: {
+        lambda self, command, context: ({
             "summary": "Inspecionar duas vezes",
             "rationale": "resposta redundante simulada",
             "actions": [
                 {"tool": "inspect_context", "params": {}},
                 {"tool": "inspect_context", "params": {}},
             ],
-        },
+        }, "helena_llm"),
     )
     response = client.post(
         "/api/helena/commands/plan",
