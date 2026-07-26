@@ -220,6 +220,51 @@ def test_health_reporta_a_concorrencia(cliente):
     assert corpo["concorrencia_maxima"] == cb.MAX_CONCURRENCY
 
 
+# --- cobranca pela assinatura, nunca pela API paga ---
+
+def test_credencial_de_api_nao_chega_ao_subprocesso(monkeypatch):
+    """Com OPENAI_API_KEY no ambiente, o CLI atenderia pela API paga."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-secreta")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://gateway/v1")
+    monkeypatch.setenv("PATH", "/usr/bin")
+
+    env = cb.subprocess_env()
+
+    assert "OPENAI_API_KEY" not in env
+    assert "OPENAI_BASE_URL" not in env
+    # O resto do ambiente precisa sobreviver, senao o binario nem e encontrado.
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_codex_home_configurado_e_repassado(monkeypatch):
+    monkeypatch.setenv("CODEX_BRIDGE_CODEX_HOME", "/caminho/.codex-pro")
+    assert cb.subprocess_env()["CODEX_HOME"] == "/caminho/.codex-pro"
+
+
+def test_chamada_real_roda_sem_credencial_de_api(cliente, monkeypatch):
+    capturado = {}
+
+    def fake_run(command, **kwargs):
+        capturado["env"] = kwargs.get("env")
+        return _ok()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-secreta")
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    cliente.post("/v1/chat/completions", json={"messages": [{"role": "user", "content": "oi"}]})
+
+    assert "OPENAI_API_KEY" not in capturado["env"]
+
+
+def test_health_denuncia_variaveis_de_api_presentes(cliente, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-secreta")
+    corpo = cliente.get("/health").get_json()
+
+    assert corpo["cobranca"] == "assinatura"
+    assert "OPENAI_API_KEY" in corpo["variaveis_de_api_removidas"]
+    # O valor da credencial nunca pode aparecer no diagnostico.
+    assert "sk-proj-secreta" not in cliente.get("/health").get_data(as_text=True)
+
+
 def test_models_lista_as_variantes_de_esforco(cliente):
     ids = [m["id"] for m in cliente.get("/v1/models").get_json()["data"]]
     assert any(i.endswith("-high") for i in ids)

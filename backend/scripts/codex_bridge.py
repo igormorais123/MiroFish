@@ -64,6 +64,21 @@ def codex_path() -> Optional[str]:
     return shutil.which("codex")
 
 
+# Presentes no ambiente, estas variaveis fazem o CLI atender pela API paga em
+# vez da assinatura — que e justamente o que esta ponte existe para evitar.
+# `codex doctor` acusa isso como "mixed auth signals".
+VARIAVEIS_DE_API = ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_ORGANIZATION", "OPENAI_PROJECT")
+
+
+def subprocess_env() -> Dict[str, str]:
+    """Ambiente do subprocesso, sem credencial de API e com o CODEX_HOME certo."""
+    env = {k: v for k, v in os.environ.items() if k not in VARIAVEIS_DE_API}
+    codex_home = os.environ.get("CODEX_BRIDGE_CODEX_HOME", "").strip()
+    if codex_home:
+        env["CODEX_HOME"] = codex_home
+    return env
+
+
 def split_model(model: str) -> Tuple[str, str]:
     """Separa `gpt-5.6-luna-high` em (modelo, esforco)."""
     model = (model or "").strip() or DEFAULT_MODEL
@@ -187,6 +202,7 @@ def run_codex(prompt: str, model: str, effort: str) -> Tuple[str, Dict[str, int]
                     command,
                     cwd=workdir,
                     input=prompt,
+                    env=subprocess_env(),
                     capture_output=True,
                     text=True,
                     encoding="utf-8",
@@ -272,9 +288,15 @@ def health():
     concluidas = atual["concluidas"]
     atual["latencia_media_s"] = round(atual["segundos"] / concluidas, 1) if concluidas else None
     atual.pop("segundos", None)
+    env = subprocess_env()
     return jsonify({
         "ok": bool(binary),
         "codex": binary,
+        "codex_home": env.get("CODEX_HOME") or os.environ.get("CODEX_HOME"),
+        "cobranca": "assinatura",
+        "variaveis_de_api_removidas": [
+            k for k in VARIAVEIS_DE_API if k in os.environ
+        ],
         "concorrencia_maxima": MAX_CONCURRENCY,
         "modelo_padrao": DEFAULT_MODEL,
         "esforco_padrao": DEFAULT_EFFORT,
