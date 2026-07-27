@@ -16,8 +16,8 @@
 | **F1** — ingestão paginada, pincite, gate anti-eco | **concluída** | #104 |
 | **F2** — ontologia processual, postura parametrizada | **concluída** | #104 |
 | **F3** — conversa | destrava com F1+F2; falta rodar e verificar | — |
-| **F4** — produtos do escritório | não iniciada | — |
-| **F5** — simulação atrás de gate de validação | não iniciada | — |
+| **F4** — cronologia, omissões, cobertura, contradições, valor da informação | **concluída** | #104 |
+| **F5** — simulação atrás de gate de validação | **concluída** | #104 |
 
 Nenhum PR foi mergeado: o CI do GitHub Actions está travado por faturamento da
 conta, e o check é obrigatório. O #104 está empilhado sobre o #101 e precisa
@@ -131,7 +131,7 @@ vier*.
 Destrava sozinha quando F1 e F2 estiverem de pé. Nenhuma das quatro ferramentas
 precisa ser alterada.
 
-### F4 — Produtos do escritório
+### F4 — Produtos do escritório — **feito**
 
 A saída deixa de ser um relatório sobre o sistema. Passa a ser:
 
@@ -154,7 +154,7 @@ de não-promoção: correto sobre o quantum, adverso ao cliente.
 dos atos. O acréscimo decisivo é **clicar num fato e abrir o PDF na página exata** —
 é o que separa "a IA disse" de "está na fl. X".
 
-### F5 — Simulação social, opcional e atrás de gate
+### F5 — Simulação social, opcional e atrás de gate — **feito**
 
 Rebaixada a opcional. Continua no produto para os domínios em que nasceu:
 eleitoral, reputacional, difusão de narrativa. Para litígio, só com validação
