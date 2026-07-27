@@ -136,3 +136,39 @@ def test_reaparicao_em_outro_pedaco_traz_a_folha():
 
     assert atributos["occurrences"] == 2
     assert atributos["citation"] == "parte2.pdf, p. 1"
+
+
+# --- normalização de tipos ---
+
+def test_variante_acentuada_casa_com_o_tipo_da_ontologia():
+    """O mesmo conceito aparecia partido em dois no grafo: Orgao e Órgão."""
+    from app.services.llm_entity_extractor import normalize_type
+
+    permitidos = ["Evento", "Documento", "Tese", "Norma", "Valor", "Diligencia", "Parte", "Orgao"]
+    assert normalize_type("Órgão", permitidos) == "Orgao"
+    assert normalize_type("Diligência", permitidos) == "Diligencia"
+    assert normalize_type("ORGAO", permitidos) == "Orgao"
+
+
+def test_tipo_fora_da_ontologia_e_preservado():
+    """Não é filtro: tipo desconhecido continua visível para diagnóstico."""
+    from app.services.llm_entity_extractor import normalize_type
+    assert normalize_type("Pessoa", ["Evento", "Documento"]) == "Pessoa"
+
+
+def test_sem_lista_de_permitidos_nada_muda():
+    from app.services.llm_entity_extractor import normalize_type
+    assert normalize_type("Órgão") == "Órgão"
+    assert normalize_type("") == "Entity"
+
+
+def test_merge_normaliza_o_tipo():
+    from app.services.llm_entity_extractor import LLMEntityExtractor
+
+    brutas = [
+        {"name": "TRF4", "type": "Órgão", "summary": "", "relations": [], "_proveniencia": None},
+        {"name": "STJ", "type": "Orgao", "summary": "", "relations": [], "_proveniencia": None},
+    ]
+    resultado = LLMEntityExtractor._merge(None, [brutas], 1, None, ["Orgao"])
+
+    assert resultado.entity_types == {"Orgao"}

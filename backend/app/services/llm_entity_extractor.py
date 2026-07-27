@@ -6,6 +6,7 @@ Usa a ontologia gerada + texto do documento para extrair entidades concretas.
 import uuid
 import json
 import os
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Set, Tuple
 
@@ -76,6 +77,29 @@ def split_into_chunks(text: str) -> List[Tuple[int, str]]:
             break
         inicio = max(fim - CHUNK_OVERLAP, inicio + 1)
     return pedacos
+
+
+def normalize_type(bruto: str, permitidos: Optional[List[str]] = None) -> str:
+    """
+    Casa o tipo devolvido pelo modelo com o da ontologia, ignorando acento.
+
+    O modelo alterna entre "Orgao" e "Orgao" acentuado, "Diligencia" e
+    "Diligencia" acentuada, e cada variante virava um tipo proprio — o mesmo
+    conceito aparecia partido em dois no grafo.
+    """
+    tipo = (bruto or "Entity").strip() or "Entity"
+    if not permitidos:
+        return tipo
+
+    def chave(t: str) -> str:
+        sem = unicodedata.normalize("NFKD", t)
+        return "".join(c for c in sem if not unicodedata.combining(c)).casefold()
+
+    alvo = chave(tipo)
+    for candidato in permitidos:
+        if chave(candidato) == alvo:
+            return candidato
+    return tipo
 
 
 def find_excerpt(nome: str, trecho: str, offset: int) -> Optional[Dict[str, Any]]:
@@ -160,7 +184,7 @@ class LLMEntityExtractor:
                 pedacos,
             ))
 
-        return self._merge(colhidos, len(pedacos), page_index)
+        return self._merge(colhidos, len(pedacos), page_index, defined_entity_types)
 
     def _extract_from_chunk(
         self, offset: int, trecho: str, ontology_context: str
@@ -220,6 +244,7 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
         colhidos: List[List[Dict[str, Any]]],
         total_pedacos: int,
         page_index: Optional[List[PageSpan]] = None,
+        permitidos: Optional[List[str]] = None,
     ) -> FilteredEntities:
         """
         Junta o que veio dos pedacos, deduplicando por nome.
@@ -251,7 +276,7 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                 nome = (bruta.get("name") or "").strip()
                 if not nome:
                     continue
-                tipo = (bruta.get("type") or "Entity").strip()
+                tipo = normalize_type(bruta.get("type"), permitidos)
                 chave = nome.casefold()
                 proveniencia = bruta.get("_proveniencia")
 
