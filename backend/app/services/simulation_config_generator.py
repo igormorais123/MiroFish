@@ -20,6 +20,7 @@ from openai import OpenAI
 
 from ..config import Config
 from ..utils.logger import get_logger
+from .sergipe_synthetic_voters import SERGIPE_SYNTHETIC_VOTER_TYPE
 from .zep_entity_reader import EntityNode, ZepEntityReader
 
 logger = get_logger('mirofish.simulation_config')
@@ -826,7 +827,21 @@ Retorne apenas JSON puro, sem markdown:
         simulation_requirement: str
     ) -> List[AgentActivityConfig]:
         """Gera configuracoes de agentes em lote."""
-        
+        if entities and all(
+            (entity.get_entity_type() or "").lower() == SERGIPE_SYNTHETIC_VOTER_TYPE.lower()
+            for entity in entities
+        ):
+            return [
+                AgentActivityConfig(
+                    agent_id=start_idx + i,
+                    entity_uuid=entity.uuid,
+                    entity_name=entity.name,
+                    entity_type=entity.get_entity_type() or SERGIPE_SYNTHETIC_VOTER_TYPE,
+                    **self._generate_agent_config_by_rule(entity),
+                )
+                for i, entity in enumerate(entities)
+            ]
+
         # Monta a lista resumida de entidades do lote.
         entity_list = []
         summary_len = self.AGENT_SUMMARY_LENGTH
@@ -980,6 +995,29 @@ Retorne apenas JSON puro, sem markdown:
                 "sentiment_bias": 0.0,
                 "stance": "neutral",
                 "influence_weight": 1.0
+            }
+        elif entity_type == SERGIPE_SYNTHETIC_VOTER_TYPE.lower():
+            attrs = entity.attributes or {}
+            internet = str(attrs.get("acesso_internet") or "").lower()
+            interest = str(attrs.get("interesse_politico") or "").lower()
+            base_activity = 0.55
+            if "sem_acesso" in internet or "sem acesso" in internet:
+                base_activity = 0.25
+            elif "alto" in interest:
+                base_activity = 0.75
+            elif "baixo" in interest:
+                base_activity = min(base_activity, 0.4)
+
+            return {
+                "activity_level": base_activity,
+                "posts_per_hour": round(max(0.05, base_activity * 0.45), 2),
+                "comments_per_hour": round(max(0.1, base_activity * 1.2), 2),
+                "active_hours": [7, 8, 12, 18, 19, 20, 21, 22],
+                "response_delay_min": 5 if base_activity >= 0.5 else 20,
+                "response_delay_max": 45 if base_activity >= 0.5 else 180,
+                "sentiment_bias": 0.0,
+                "stance": "neutral",
+                "influence_weight": 0.8,
             }
         else:
             # Perfis gerais: pico principal no periodo noturno.

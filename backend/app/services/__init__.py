@@ -26,6 +26,8 @@ _EXPORTS = {
     'TimeSimulationConfig': ('simulation_config_generator', 'TimeSimulationConfig'),
     'EventConfig': ('simulation_config_generator', 'EventConfig'),
     'PlatformConfig': ('simulation_config_generator', 'PlatformConfig'),
+    'SergipeSyntheticVoterRepository': ('sergipe_synthetic_voters', 'SergipeSyntheticVoterRepository'),
+    'SergipeAugmentationResult': ('sergipe_synthetic_voters', 'SergipeAugmentationResult'),
     'SimulationRunner': ('simulation_runner', 'SimulationRunner'),
     'SimulationRunState': ('simulation_runner', 'SimulationRunState'),
     'RunnerStatus': ('simulation_runner', 'RunnerStatus'),
