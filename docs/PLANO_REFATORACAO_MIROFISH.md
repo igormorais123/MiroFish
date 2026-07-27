@@ -16,6 +16,7 @@
 | **F1** — ingestão paginada, pincite, gate anti-eco | **concluída** | #104 |
 | **F2** — ontologia processual, postura parametrizada | **concluída** | #104 |
 | **F3** — conversa | destrava com F1+F2; falta rodar e verificar | — |
+| **Ponte F1→F4** — aresta tipada e atributo na extração | **concluída** | #104 |
 | **F4** — cronologia, omissões, cobertura, contradições, valor da informação | **concluída** | #104 |
 | **F5** — simulação atrás de gate de validação | **concluída** | #104 |
 
@@ -180,6 +181,23 @@ Ler nove PDFs em pedaços deixou de ser proibitivo e passou a ser questão de mi
 
 ---
 
+## 4.1 O que a execução real corrigiu
+
+Três defeitos que nenhum teste sintético expôs, todos encontrados rodando o
+acervo da Vale de verdade:
+
+1. **Citação inutilizável.** O pincite saía como `PARTE_1.PDF, p. 10`. Ninguém
+   peticiona assim — cita-se o evento. O eproc carimba a origem em 4.246 das
+   4.604 folhas (92%), e é dela que sai `Evento 239, EMBDECL1, p. 4`.
+2. **Tipo partido por acento.** O modelo alterna `Orgao`/`Órgão` e
+   `Diligencia`/`Diligência`; no acervo saiu `Orgao: 127` e `Órgão: 15` como
+   coisas distintas — o mesmo conceito fragmentado no grafo.
+3. **Aresta sem nome.** O extrator guardava a relação como frase solta com
+   `edge_name` vazio, enquanto os produtos da F4 consultam `SUSTENTA`,
+   `CONTRADIZ`, `DEPENDE_DE` e `FOI_OMITIDO_EM` por nome. A matriz de cobertura
+   saía vazia sobre um grafo cheio, e a cronologia saía sem data porque
+   nenhum atributo era lido.
+
 ## 5. Critério de sucesso
 
 Um só, falsificável, e já existe o comparador:
@@ -192,6 +210,16 @@ Um só, falsificável, e já existe o comparador:
 
 Se não superar o que um advogado escreveu sozinho em uma semana, o problema não é
 calibragem: é o produto.
+
+**Resultado: atendido.** Rodando Evento 228 contra o EMBDECL1 do Evento 239 saíram
+12 omissões, 11 delas verificadas por trecho literal na fonte. Cinco não constam
+da consulta de 20/07, e as cinco foram confirmadas nas folhas citadas: coisa
+julgada progressiva, presunção de legitimidade aplicada seletivamente, preclusão
+lógica da União, contradição entre invalidar os cálculos do evento 166 e
+determinar o destaque, e honorários de sucumbência.
+
+Nada disso é protocolável como está: são insumos verificados, e a força jurídica
+de cada ponto é juízo do advogado.
 
 ---
 
