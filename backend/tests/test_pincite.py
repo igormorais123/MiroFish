@@ -172,3 +172,118 @@ def test_merge_normaliza_o_tipo():
     resultado = LLMEntityExtractor._merge(None, [brutas], 1, None, ["Orgao"])
 
     assert resultado.entity_types == {"Orgao"}
+
+
+# --- arestas tipadas: a ponte entre o grafo e os produtos do escritorio ---
+
+def test_relacao_vira_aresta_com_nome_da_ontologia():
+    """
+    Sem nome, a aresta nao e consultavel: `build_coverage_matrix` procura
+    SUSTENTA e CONTRADIZ por nome e devolvia matriz vazia sobre grafo cheio.
+    """
+    from app.services.llm_entity_extractor import parse_relation
+
+    aresta = parse_relation({"tipo": "sustenta", "alvo": "Tese do CIEX"}, ["SUSTENTA"])
+
+    assert aresta["edge_name"] == "SUSTENTA"
+    assert aresta["target"] == "Tese do CIEX"
+    assert aresta["direction"] == "outgoing"
+
+
+def test_relacao_acentuada_casa_com_a_aresta():
+    from app.services.llm_entity_extractor import parse_relation
+    assert parse_relation(
+        {"tipo": "Diligência", "alvo": "X"}, ["Diligencia"]
+    )["edge_name"] == "Diligencia"
+
+
+def test_frase_solta_e_preservada_mas_nao_vira_aresta_consultavel():
+    """Formato antigo continua entrando; so nao finge ser relacao tipada."""
+    from app.services.llm_entity_extractor import parse_relation
+
+    aresta = parse_relation("relaciona-se de algum modo com a outra peca")
+
+    assert aresta["edge_name"] == ""
+    assert aresta["fact"].startswith("relaciona-se")
+
+
+def test_relacao_sem_alvo_e_descartada():
+    from app.services.llm_entity_extractor import parse_relation
+    assert parse_relation({"tipo": "SUSTENTA"}) is None
+    assert parse_relation({"tipo": "SUSTENTA", "alvo": "  "}) is None
+    assert parse_relation("") is None
+    assert parse_relation(None) is None
+
+
+def test_merge_entrega_grafo_que_a_matriz_de_cobertura_consegue_ler():
+    """Teste de ponta: extracao -> grafo -> produto do escritorio."""
+    from app.services.case_products import build_coverage_matrix
+    from app.services.llm_entity_extractor import LLMEntityExtractor
+
+    brutas = [
+        {"name": "Tese do credito-premio", "type": "Tese", "summary": "",
+         "relations": [{"tipo": "DEPENDE_DE", "alvo": "Guia de 1996"}],
+         "_proveniencia": None},
+        {"name": "Guia de 1996", "type": "Documento", "summary": "",
+         "relations": [{"tipo": "SUSTENTA", "alvo": "Tese do credito-premio"}],
+         "_proveniencia": None},
+    ]
+
+    resultado = LLMEntityExtractor._merge(
+        None, [brutas], 1, None, ["Tese", "Documento"], ["SUSTENTA", "DEPENDE_DE"]
+    )
+    cobertura = build_coverage_matrix(resultado.entities)
+
+    assert len(cobertura) == 1
+    assert cobertura[0].sustentada_por == ["Guia de 1996"]
+    assert cobertura[0].depende_de == ["Guia de 1996"]
+    assert cobertura[0].orfa is False
+
+
+def test_atributos_lidos_chegam_na_entidade_e_alimentam_a_cronologia():
+    from app.services.case_products import build_timeline
+    from app.services.llm_entity_extractor import LLMEntityExtractor
+
+    brutas = [{
+        "name": "Evento 239", "type": "Evento", "summary": "embargos de declaracao",
+        "attributes": {"numero_evento": "239", "data": "12/03/2024", "sujeito": "Vale Trading"},
+        "relations": [], "_proveniencia": None,
+    }]
+
+    resultado = LLMEntityExtractor._merge(None, [brutas], 1, None, ["Evento"], [])
+    linha = build_timeline(resultado.entities)
+
+    assert linha[0].data == "2024-03-12"
+    assert linha[0].sujeito == "Vale Trading"
+    assert linha[0].evento == "239"
+
+
+def test_reaparicao_completa_atributo_que_faltava_sem_sobrescrever():
+    from app.services.llm_entity_extractor import LLMEntityExtractor
+
+    primeiro = {"name": "Evento 239", "type": "Evento", "summary": "",
+                "attributes": {"data": "12/03/2024"}, "relations": [], "_proveniencia": None}
+    segundo = {"name": "Evento 239", "type": "Evento", "summary": "",
+               "attributes": {"data": "01/01/1900", "sujeito": "Vale Trading"},
+               "relations": [], "_proveniencia": None}
+
+    atributos = LLMEntityExtractor._merge(
+        None, [[primeiro], [segundo]], 2, None, ["Evento"], []
+    ).entities[0].attributes
+
+    assert atributos["data"] == "12/03/2024"
+    assert atributos["sujeito"] == "Vale Trading"
+
+
+def test_aresta_repetida_entre_pedacos_nao_duplica():
+    from app.services.llm_entity_extractor import LLMEntityExtractor
+
+    rel = {"tipo": "SUSTENTA", "alvo": "Tese X"}
+    bruta = {"name": "Doc", "type": "Documento", "summary": "",
+             "relations": [rel], "_proveniencia": None}
+
+    entidade = LLMEntityExtractor._merge(
+        None, [[dict(bruta)], [dict(bruta)]], 2, None, ["Documento"], ["SUSTENTA"]
+    ).entities[0]
+
+    assert len(entidade.related_edges) == 1
