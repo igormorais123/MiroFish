@@ -120,6 +120,28 @@ def normalize_type(bruto: str, permitidos: Optional[List[str]] = None) -> str:
 BARRA_SOLTA = re.compile(r'\\(?!["\\/bfnrtu])')
 
 
+# O modelo preenche o atributo com a propria negativa em vez de omiti-lo. No
+# acervo da Vale, 576 dos 752 campos de data traziam "nao informada" e
+# variantes — atributo assim polui o grafo e finge dado onde nao ha.
+NEGATIVA = re.compile(
+    r"^(n[aã]o\s+(informad|consta|identificad|especificad|mencionad|aplicav|h[aá]\b)"
+    r"|sem\s+informa|desconhecid|indefinid|n[aã]o\s+dispon[ií]v)",
+    re.IGNORECASE,
+)
+
+# Formas curtas precisam ser o valor inteiro: como prefixo, "na" casaria com
+# "Naopolis" e o atributo legitimo cairia junto.
+NEGATIVA_CURTA = re.compile(r"^(n\s*[/.]\s*a\.?|-+|\?+|n[/.]d\.?)$", re.IGNORECASE)
+
+
+def is_ausencia(valor: Any) -> bool:
+    """True quando o valor e a negativa do proprio dado, nao o dado."""
+    if not isinstance(valor, str):
+        return False
+    limpo = valor.strip()
+    return bool(NEGATIVA.match(limpo) or NEGATIVA_CURTA.match(limpo))
+
+
 def loads_first_object(bruto: str) -> Dict[str, Any]:
     """
     Le o primeiro objeto JSON, tolerando o que o modelo emenda em volta.
@@ -431,6 +453,7 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                 lidos = {
                     k: v for k, v in (bruta.get("attributes") or {}).items()
                     if isinstance(k, str) and v not in (None, "", [], {})
+                    and not is_ausencia(v)
                 } if isinstance(bruta.get("attributes"), dict) else {}
                 relacoes = [
                     r for r in (

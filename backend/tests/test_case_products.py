@@ -243,3 +243,72 @@ def test_lacuna_sem_diligencia_cadastrada_ainda_e_reportada():
 def test_pacote_inclui_valor_da_informacao():
     entidades = [No("Tese", "Tese", edges=[aresta("DEPENDE_DE", "Doc faltante")])]
     assert len(build_case_products(entidades)["information_value"]) == 1
+
+
+# --- data como a peca escreve ---
+
+def test_data_por_extenso_entra_na_cronologia():
+    """
+    Das 752 datas extraidas do acervo da Vale, so 83 vinham em dd/mm/aaaa.
+    Ler so esse formato descartava atos com data perfeitamente legivel.
+    """
+    from app.services.case_products import _data_ordenavel
+
+    assert _data_ordenavel("28 de marco de 2003") == "2003-03-28"
+    assert _data_ordenavel("31 de Dezembro de 1995") == "1995-12-31"
+    assert _data_ordenavel("29 (vinte e nove) de abril de 1994") == "1994-04-29"
+
+
+def test_dia_e_mes_sem_zero_a_esquerda():
+    from app.services.case_products import _data_ordenavel
+    assert _data_ordenavel("9/5/1996") == "1996-05-09"
+
+
+def test_ano_isolado_situa_o_ato_sem_inventar_o_dia():
+    from app.services.case_products import _data_ordenavel
+
+    assert _data_ordenavel("2018") == "2018"
+    # Ordena junto com as datas completas, que e o ponto.
+    assert "2018" < "2018-03-01"
+
+
+def test_mes_por_extenso_desconhecido_nao_vira_data_torta():
+    from app.services.case_products import _data_ordenavel
+    assert _data_ordenavel("12 de brumario de 1799") is None
+
+
+def test_texto_sem_data_continua_sem_data():
+    from app.services.case_products import _data_ordenavel
+    assert _data_ordenavel("nao informada") is None
+    assert _data_ordenavel("") is None
+    assert _data_ordenavel(None) is None
+
+
+def test_cronologia_ordena_extenso_e_numerico_juntos():
+    from app.services.case_products import build_timeline
+
+    class E:
+        def __init__(self, data):
+            self.labels = ["Entity", "Evento"]
+            self.attributes = {"data": data, "numero_evento": data}
+            self.summary = data
+            self.related_edges = []
+
+    linha = build_timeline([E("17/07/2003"), E("28 de marco de 2003"), E("2018")])
+
+    assert [a.data for a in linha] == ["2003-03-28", "2003-07-17", "2018"]
+
+
+def test_ano_de_dois_digitos_e_lido_com_o_corte_do_seculo():
+    """544 das 551 datas que sobravam no acervo vinham assim."""
+    from app.services.case_products import _data_ordenavel
+
+    assert _data_ordenavel("28/3/05") == "2005-03-28"
+    assert _data_ordenavel("25.03.92") == "1992-03-25"
+    assert _data_ordenavel("30/5/05") == "2005-05-30"
+
+
+def test_ano_de_quatro_digitos_nao_e_afetado_pelo_corte():
+    from app.services.case_products import _data_ordenavel
+    assert _data_ordenavel("17/07/2003") == "2003-07-17"
+    assert _data_ordenavel("09/05/1996") == "1996-05-09"

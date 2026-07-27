@@ -53,15 +53,50 @@ def _por_tipo(entidades: Sequence[Any], tipo: str) -> List[Any]:
 
 # --- 1. cronologia auditada ---
 
-# Datas como aparecem em peca: 12/03/2019, 12-03-2019, 2019-03-12.
+# Peca judicial escreve data por extenso com a mesma naturalidade com que
+# escreve em numeros, e as vezes so o ano. No acervo da Vale, das 752 datas
+# extraidas apenas 83 vinham em dd/mm/aaaa: ler so esse formato jogava fora
+# 93 atos que tinham data perfeitamente legivel.
+_MESES = {
+    "janeiro": "01", "fevereiro": "02", "marco": "03", "março": "03",
+    "abril": "04", "maio": "05", "junho": "06", "julho": "07",
+    "agosto": "08", "setembro": "09", "outubro": "10",
+    "novembro": "11", "dezembro": "12",
+}
+
+# Ano de dois digitos: 544 das 551 datas que sobravam no acervo da Vale vinham
+# assim ("28/3/05", "25.03.92"). O corte separa os autos antigos dos recentes —
+# este processo corre desde 1986, entao 92 e 1992 e 05 e 2005.
+CORTE_DO_SECULO = 30
+
+
+def _quatro_digitos(ano: str) -> str:
+    if len(ano) == 4:
+        return ano
+    return f"20{ano}" if int(ano) <= CORTE_DO_SECULO else f"19{ano}"
+
+
 _PADROES_DE_DATA = (
     (re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b"), lambda m: (m[1], m[2], m[3])),
-    (re.compile(r"\b(\d{2})[/-](\d{2})[/-](\d{4})\b"), lambda m: (m[3], m[2], m[1])),
+    (re.compile(r"\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b"),
+     lambda m: (_quatro_digitos(m[3]), m[2].zfill(2), m[1].zfill(2))),
+    # "29 (vinte e nove) de abril de 1994" — o parentetico aparece em peca.
+    (re.compile(r"\b(\d{1,2})\s*(?:\([^)]*\))?\s*de\s+([a-zç]+)\s+de\s+(\d{4})\b", re.I),
+     lambda m: (m[3], _MESES.get(m[2].lower(), ""), m[1].zfill(2))),
 )
+
+# Ano isolado: precisao menor, mas situa o ato na cronologia.
+_SO_ANO = re.compile(r"\b(19|20)\d{2}\b")
 
 
 def _data_ordenavel(bruta: Any) -> Optional[str]:
-    """Normaliza para AAAA-MM-DD, unica forma que ordena como texto."""
+    """
+    Normaliza para AAAA-MM-DD, unica forma que ordena como texto.
+
+    Data so com ano volta como AAAA: ordena junto e deixa visivel que a
+    precisao e menor, o que e melhor do que descartar o ato ou inventar
+    um dia que a peca nao traz.
+    """
     if not bruta:
         return None
     texto = str(bruta)
@@ -69,8 +104,10 @@ def _data_ordenavel(bruta: Any) -> Optional[str]:
         m = padrao.search(texto)
         if m:
             ano, mes, dia = extrai(m)
-            return f"{ano}-{mes}-{dia}"
-    return None
+            if mes:
+                return f"{ano}-{mes}-{dia}"
+    m = _SO_ANO.search(texto)
+    return m.group(0) if m else None
 
 
 @dataclass

@@ -375,7 +375,7 @@ def test_tipo_realmente_diferente_nao_e_absorvido_por_semelhanca():
 
 
 def test_barra_solta_no_trecho_copiado_nao_derruba_a_resposta():
-    """"R\$" e o que o OCR deixa para tras: barra que nao inicia escape valido."""
+    r'''O OCR deixa barra que nao inicia escape valido, como em R\$.'''
     from app.services.llm_entity_extractor import loads_first_object
 
     d = loads_first_object(r'{"entities": [{"name": "X", "evidencia": "valor de R\$ 382.632"}]}')
@@ -401,3 +401,37 @@ def test_aspa_nao_escapada_derruba_so_a_entidade_e_nao_o_pedaco():
     # A entidade com objeto aninhado precisa sobreviver: e a mais completa.
     assert [e["name"] for e in entidades] == ["A", "C"]
     assert entidades[0]["attributes"]["data"] == "12/03/2024"
+
+
+# --- negativa preenchida como se fosse dado ---
+
+def test_atributo_preenchido_com_a_negativa_nao_entra():
+    """576 dos 752 campos de data do acervo traziam "nao informada" e variantes."""
+    from app.services.llm_entity_extractor import LLMEntityExtractor
+
+    bruta = {
+        "name": "Evento 5", "type": "Evento", "summary": "", "relations": [],
+        "attributes": {"data": "nao informada no texto", "sujeito": "Uniao"},
+        "_proveniencia": None,
+    }
+
+    atributos = LLMEntityExtractor._merge(None, [[bruta]], 1, None, ["Evento"], []).entities[0].attributes
+
+    assert "data" not in atributos
+    assert atributos["sujeito"] == "Uniao"
+
+
+def test_variantes_da_negativa():
+    from app.services.llm_entity_extractor import is_ausencia
+
+    for v in ("não informado", "Não consta", "sem informação", "N/A", "-", "???",
+              "desconhecido", "não identificada no trecho"):
+        assert is_ausencia(v) is True, v
+
+
+def test_valor_legitimo_nao_e_confundido_com_negativa():
+    from app.services.llm_entity_extractor import is_ausencia
+
+    for v in ("17/07/2003", "União", "Nao obstante o pedido, o juizo deferiu",
+              "Naopolis", "Semanal"):
+        assert is_ausencia(v) is False, v
