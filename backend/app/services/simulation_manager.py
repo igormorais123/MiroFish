@@ -236,7 +236,8 @@ class SimulationManager:
         defined_entity_types: Optional[List[str]] = None,
         use_llm_for_profiles: bool = True,
         progress_callback: Optional[callable] = None,
-        parallel_profile_count: int = 3
+        parallel_profile_count: int = 3,
+        page_index: Optional[List[Any]] = None,
     ) -> SimulationState:
         """
         Preparar ambiente de simulacao (totalmente automatizado)
@@ -307,6 +308,7 @@ class SimulationManager:
                     text=document_text,
                     ontology=ontology,
                     defined_entity_types=defined_entity_types,
+                    page_index=page_index,
                 )
                 logger.info(f"Fallback LLM extraiu {filtered.filtered_count} entidades")
 

@@ -50,6 +50,18 @@ class SearchResult:
             "degraded_reason": self.degraded_reason,
         }
 
+    def recovered_facts(self, prompt: str) -> "ResultadoDoGate":
+        """
+        Separa o que foi recuperado do que so devolve o proprio pedido.
+
+        No caso Vale Trading a busca devolveu 11 mil caracteres repetindo o
+        prompt sob o carimbo "Origem: parametros documentados no pedido", e
+        isso contou como conhecimento recuperado.
+        """
+        from .fact_recovery_gate import filter_recovered_facts
+
+        return filter_recovered_facts(self.facts, prompt)
+
     def to_text(self) -> str:
         """Converte para texto estruturado para consumo do LLM."""
         text_parts = [f"Busca: {self.query}", f"Foram encontradas {self.total_count} informacoes relevantes"]
