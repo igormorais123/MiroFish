@@ -19,6 +19,7 @@ from openai import OpenAI
 from ..config import Config
 from ..utils.logger import get_logger
 from .zep_entity_reader import EntityNode, ZepEntityReader
+from . import entity_naming
 
 logger = get_logger('mirofish.oasis_profile')
 
@@ -52,6 +53,9 @@ class OasisAgentProfile:
     # Informacoes da entidade de origem
     source_entity_uuid: Optional[str] = None
     source_entity_type: Optional[str] = None
+    # Nome da entidade no grafo. Fica registrado para rastrear o perfil de volta
+    # a origem mesmo quando o agente ostenta apenas o papel institucional.
+    source_entity_name: Optional[str] = None
 
     created_at: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
 
@@ -224,9 +228,15 @@ class OasisProfileGenerator:
         """
         entity_type = entity.get_entity_type() or "Entity"
 
-        # Informacoes basicas
-        name = entity.name
-        user_name = self._generate_username(name)
+        # Informacoes basicas. Orgao publico nao ostenta o proprio nome: o
+        # agente exerce o papel processual, e a identificacao nominal fica
+        # apenas no registro de origem, para auditoria.
+        entity_name = entity.name
+        name = entity_naming.nome_publico(entity_name)
+        if name != entity_name:
+            user_name = entity_naming.username_publico(name, random.randint(100, 999))
+        else:
+            user_name = self._generate_username(name)
 
         # Constroi informacoes de contexto
         context = self._build_entity_context(entity)
@@ -268,6 +278,7 @@ class OasisProfileGenerator:
             interested_topics=profile_data.get("interested_topics", []),
             source_entity_uuid=entity.uuid,
             source_entity_type=entity_type,
+            source_entity_name=entity_name,
         )
 
     def _generate_username(self, name: str) -> str:
