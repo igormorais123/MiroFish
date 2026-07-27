@@ -5,9 +5,20 @@ Suporta extracao de texto de arquivos PDF, Markdown e TXT
 
 import bisect
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+
+# O eproc carimba a origem em toda folha que gera:
+#   "Processo 5020376-80.2018.4.04.7100/RS, Evento 3, INIC2, Página 3"
+# Medido no acervo da Vale Trading: 4.246 de 4.604 folhas (92%) tem o carimbo.
+CARIMBO_EPROC = re.compile(
+    r"Processo\s+([\d\.\-]+/\w+)\s*,\s*Evento\s+(\d+)\s*,\s*([A-Z0-9_]+)\s*,\s*"
+    r"P[aáà]gina\s+(\d+)",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -18,9 +29,31 @@ class PageSpan:
     page: int
     start: int
     end: int
+    # Extraidos do carimbo do eproc, quando a folha o traz. E esta a referencia
+    # que se usa numa peca: ninguem cita "PARTE_1.PDF, p. 10", cita o evento.
+    evento: Optional[str] = None
+    tipo_documento: Optional[str] = None
+    pagina_do_evento: Optional[str] = None
 
     def as_citation(self) -> str:
+        """Citacao processual quando o carimbo existe; caminho do PDF quando nao."""
+        if self.evento:
+            tipo = f", {self.tipo_documento}" if self.tipo_documento else ""
+            folha = f", p. {self.pagina_do_evento}" if self.pagina_do_evento else ""
+            return f"Evento {self.evento}{tipo}{folha}"
         return f"{self.doc_id}, p. {self.page}"
+
+    def as_source_ref(self) -> str:
+        """Referencia completa: citacao processual mais onde conferir no arquivo."""
+        base = f"{self.doc_id}, p. {self.page}"
+        return f"{self.as_citation()} ({base})" if self.evento else base
+
+
+def _extrai_carimbo(texto: str) -> Dict[str, Optional[str]]:
+    m = CARIMBO_EPROC.search(texto or "")
+    if not m:
+        return {"evento": None, "tipo_documento": None, "pagina_do_evento": None}
+    return {"evento": m.group(2), "tipo_documento": m.group(3), "pagina_do_evento": m.group(4)}
 
 
 def locate_page(offset: int, spans: List[PageSpan]) -> Optional[PageSpan]:
@@ -227,6 +260,7 @@ class FileParser:
                     page=numero,
                     start=inicio,
                     end=inicio + len(texto),
+                    **_extrai_carimbo(texto),
                 ))
                 if not texto.endswith("\n"):
                     escreve("\n")
