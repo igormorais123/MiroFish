@@ -6,6 +6,23 @@
 >
 > Data: 2026-07-26 · Executor: Claude Opus · Worktree: `_worktrees/mirofish-helena-control`
 
+## Estado da execução
+
+| Fase | Situação | PR |
+|---|---|---|
+| Camada de LLM — assinatura Codex, Luna/Sol | **concluída** | #101 |
+| Performance — delta de ações, copiloto | **concluída** | #102 |
+| **F0** — parar de fabricar confiança (10 itens) | **concluída** | #103 |
+| **F1** — ingestão paginada, pincite, gate anti-eco | **concluída** | #104 |
+| **F2** — ontologia processual, postura parametrizada | **concluída** | #104 |
+| **F3** — conversa | destrava com F1+F2; falta rodar e verificar | — |
+| **F4** — produtos do escritório | não iniciada | — |
+| **F5** — simulação atrás de gate de validação | não iniciada | — |
+
+Nenhum PR foi mergeado: o CI do GitHub Actions está travado por faturamento da
+conta, e o check é obrigatório. O #104 está empilhado sobre o #101 e precisa
+entrar depois dele.
+
 ---
 
 ## 1. O reposicionamento
@@ -76,17 +93,17 @@ sendo publicado com números inventados por cima.
 | 0.2 | Entidades com trecho verbatim e offset; não-ancoradas marcadas | `llm_entity_extractor.py` | **feito** |
 | 0.3 | Queda do Graphiti deixa de ser silenciosa e avisa o modelo | `zep_tools.py` | **feito** |
 | 0.4 | Gate barra grafo sem nós ou sem arestas | `report_system_gate.py` | **feito** |
-| 0.5 | Matar `conviction_operational` e `base_probability_percent` | `decision_packet.py` | pendente |
-| 0.6 | Remover a regra `method_lock` que obriga divulgá-los | `report_*` | pendente |
-| 0.7 | `applies: False` pontua zero e sinaliza, nunca 1,0 | `strategic_density_gate.py:406` | pendente |
-| 0.8 | Desligar priors de servidores federais | `public_data_anchors.json` | pendente |
-| 0.9 | Política de nomeação: órgão real nunca vira perfil que emite falas | `oasis_profile_generator.py` | pendente |
-| 0.10 | Declarar truncamento de rodadas como limitação, não duração nominal | `report_*` | pendente |
+| 0.5 | Matar `conviction_operational` e `base_probability_percent` | `decision_packet.py` | **feito** |
+| 0.6 | Remover a regra `method_lock` que obriga divulgá-los | `decision_packet.py` | **feito** |
+| 0.7 | `applies: False` pontua zero e sinaliza, nunca 1,0 | `strategic_density_gate.py` | **feito** |
+| 0.8 | Desligar priors de servidores federais | `vox_science/artifacts.py` | **feito** |
+| 0.9 | Política de nomeação: órgão real nunca vira perfil que emite falas | `entity_naming.py` | **feito** |
+| 0.10 | Declarar truncamento de rodadas como limitação, não duração nominal | `report_agent.py` | **feito** |
 
 O item 0.9 é exposição jurídica, não estética: fala sintética atribuída a juízo
 federal, persistida em banco, é passivo se migrar para artefato externo.
 
-### F1 — Ingestão real com proveniência processual
+### F1 — Ingestão real com proveniência processual — **feito**
 
 O que a F0 entregou ancora por offset de caractere. Falta a âncora que o escritório
 usa: **evento, página, trecho**.
@@ -98,7 +115,7 @@ usa: **evento, página, trecho**.
   próprio prompt sob o carimbo "Origem: parâmetros documentados no pedido".
 - Run que termina com zero fatos ancorados **aborta** em vez de gerar relatório.
 
-### F2 — Ontologia processual
+### F2 — Ontologia processual — **feito**
 
 A ontologia existe e funciona; está apontada para o domínio errado. Troca de
 vocabulário, não reconstrução.
