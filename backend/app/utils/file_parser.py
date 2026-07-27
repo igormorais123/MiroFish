@@ -3,9 +3,43 @@ Ferramenta de analise de arquivos
 Suporta extracao de texto de arquivos PDF, Markdown e TXT
 """
 
+import bisect
 import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
+
+
+@dataclass(frozen=True)
+class PageSpan:
+    """Onde uma pagina de um documento comeca e termina no corpus concatenado."""
+    doc_id: str
+    doc_index: int
+    page: int
+    start: int
+    end: int
+
+    def as_citation(self) -> str:
+        return f"{self.doc_id}, p. {self.page}"
+
+
+def locate_page(offset: int, spans: List[PageSpan]) -> Optional[PageSpan]:
+    """
+    Documento e pagina de um offset do corpus, ou None fora de qualquer pagina.
+
+    Busca binaria porque um acervo processual tem milhares de paginas e esta
+    consulta roda uma vez por entidade extraida.
+    """
+    if not spans or offset < 0:
+        return None
+    inicios = [s.start for s in spans]
+    indice = bisect.bisect_right(inicios, offset) - 1
+    if indice < 0:
+        return None
+    candidato = spans[indice]
+    # Offsets entre paginas (cabecalho de documento, separador) nao pertencem a
+    # nenhuma folha: melhor devolver None do que atribuir a folha anterior.
+    return candidato if offset < candidato.end else None
 
 
 def _read_text_with_fallback(file_path: str) -> str:
@@ -119,6 +153,85 @@ class FileParser:
     def _extract_from_txt(file_path: str) -> str:
         """Extrair texto de TXT, com deteccao automatica de codificacao"""
         return _read_text_with_fallback(file_path)
+
+    @staticmethod
+    def _pages_from_pdf(file_path: str) -> List[str]:
+        """Texto de cada pagina, preservando a posicao mesmo quando vazia."""
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            raise ImportError("Necessario instalar PyMuPDF: pip install PyMuPDF")
+
+        with fitz.open(file_path) as doc:
+            return [page.get_text() for page in doc]
+
+    @classmethod
+    def extract_pages(cls, file_path: str) -> List[str]:
+        """
+        Texto por pagina. Formatos sem paginacao devolvem uma pagina so.
+
+        Pagina vazia continua na lista: descartar embaralharia a numeracao, e o
+        numero e justamente o que da o pincite.
+        """
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {file_path}")
+        if path.suffix.lower() == '.pdf':
+            return cls._pages_from_pdf(file_path)
+        return [cls.extract_text(file_path)]
+
+    @classmethod
+    def extract_with_page_index(
+        cls, file_paths: List[str]
+    ) -> Tuple[str, List["PageSpan"]]:
+        """
+        Concatena o corpus e devolve o indice de onde cada pagina comeca.
+
+        O texto sai igual ao de `extract_from_multiple`, para nao quebrar quem ja
+        consome; o que se ganha e poder responder "de que documento e de que
+        folha veio este trecho" a partir de um offset — que e o que separa
+        "a IA disse" de "esta na fl. X".
+        """
+        # O texto e os offsets crescem juntos: montar um e depois medir o outro
+        # e como os dois divergem sem ninguem perceber.
+        corpus: List[str] = []
+        spans: List[PageSpan] = []
+        cursor = 0
+
+        def escreve(fragmento: str) -> int:
+            nonlocal cursor
+            inicio = cursor
+            corpus.append(fragmento)
+            cursor += len(fragmento)
+            return inicio
+
+        for indice, file_path in enumerate(file_paths, 1):
+            filename = Path(file_path).name
+            if indice > 1:
+                escreve("\n\n")
+
+            try:
+                paginas = cls.extract_pages(file_path)
+            except Exception as e:
+                escreve(f"=== Documento {indice}: {file_path} (falha na extracao: {str(e)}) ===")
+                continue
+
+            escreve(f"=== Documento {indice}: {filename} ===\n")
+            for numero, texto in enumerate(paginas, 1):
+                if not texto.strip():
+                    continue
+                inicio = escreve(texto)
+                spans.append(PageSpan(
+                    doc_id=filename,
+                    doc_index=indice,
+                    page=numero,
+                    start=inicio,
+                    end=inicio + len(texto),
+                ))
+                if not texto.endswith("\n"):
+                    escreve("\n")
+
+        return "".join(corpus), spans
 
     @classmethod
     def extract_from_multiple(cls, file_paths: List[str]) -> str:

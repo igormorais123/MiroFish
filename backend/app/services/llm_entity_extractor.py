@@ -9,6 +9,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Set, Tuple
 
+from ..utils.file_parser import PageSpan, locate_page
 from ..utils.llm_client import LLMClient
 from ..utils.logger import get_logger
 from .zep_entity_reader import EntityNode, FilteredEntities
@@ -106,14 +107,18 @@ class LLMEntityExtractor:
         text: str,
         ontology: Optional[Dict[str, Any]] = None,
         defined_entity_types: Optional[List[str]] = None,
+        page_index: Optional[List[PageSpan]] = None,
     ) -> FilteredEntities:
         """
         Extrair entidades concretas do texto usando LLM.
 
         Args:
-            text: Texto do documento (pode ser truncado se muito longo)
+            text: Corpus completo, lido em pedacos sobrepostos
             ontology: Ontologia gerada previamente (entity_types, edge_types)
             defined_entity_types: Tipos de entidade para filtrar
+            page_index: Spans de `FileParser.extract_with_page_index`. Com eles a
+                entidade guarda documento e folha, e nao apenas o offset — que e
+                a diferenca entre "a IA disse" e "esta na fl. X".
 
         Returns:
             FilteredEntities com as entidades extraidas
@@ -155,7 +160,7 @@ class LLMEntityExtractor:
                 pedacos,
             ))
 
-        return self._merge(colhidos, len(pedacos))
+        return self._merge(colhidos, len(pedacos), page_index)
 
     def _extract_from_chunk(
         self, offset: int, trecho: str, ontology_context: str
@@ -210,7 +215,12 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                 bruta["_proveniencia"] = find_excerpt(bruta.get("name", ""), trecho, offset)
         return [b for b in brutas if isinstance(b, dict)]
 
-    def _merge(self, colhidos: List[List[Dict[str, Any]]], total_pedacos: int) -> FilteredEntities:
+    def _merge(
+        self,
+        colhidos: List[List[Dict[str, Any]]],
+        total_pedacos: int,
+        page_index: Optional[List[PageSpan]] = None,
+    ) -> FilteredEntities:
         """
         Junta o que veio dos pedacos, deduplicando por nome.
 
@@ -222,6 +232,19 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
         por_nome: Dict[str, EntityNode] = {}
         tipos: Set[str] = set()
         sem_ancora = 0
+
+        def citacao(offset: Optional[int]) -> Dict[str, Any]:
+            """Documento e folha do offset, quando ha indice de paginas."""
+            if offset is None or not page_index:
+                return {"doc_id": None, "page": None, "citation": None}
+            span = locate_page(offset, page_index)
+            if span is None:
+                return {"doc_id": None, "page": None, "citation": None}
+            return {
+                "doc_id": span.doc_id,
+                "page": span.page,
+                "citation": span.as_citation(),
+            }
 
         for brutas in colhidos:
             for bruta in brutas:
@@ -240,6 +263,7 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                             "source_excerpt": proveniencia["excerpt"],
                             "char_offset": proveniencia["char_offset"],
                             "verbatim_found": True,
+                            **citacao(proveniencia["char_offset"]),
                         })
                     continue
 
@@ -257,6 +281,7 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                         "verbatim_found": bool(proveniencia),
                         "source_excerpt": proveniencia["excerpt"] if proveniencia else None,
                         "char_offset": proveniencia["char_offset"] if proveniencia else None,
+                        **citacao(proveniencia["char_offset"] if proveniencia else None),
                     },
                     related_edges=[
                         {"direction": "related", "edge_name": "", "fact": rel}
