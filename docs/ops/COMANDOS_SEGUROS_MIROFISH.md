@@ -81,6 +81,18 @@ curl -fsS -H "X-Internal-Token: ${INTERNAL_API_TOKEN}" \
   "https://inteia.com.br/mirofish/api/helena/commands?limit=1"
 ```
 
+## Provar o modelo efetivo
+
+Healthcheck e catálogo não bastam: um alias pode aceitar `codex/gpt-5.6-luna` e executar outro modelo. Depois de alterar o roteador ou o `.env`, faça uma chamada mínima pelo mesmo ambiente do MiroFish:
+
+```bash
+docker exec -w /app/backend mirofish-inteia \
+  /app/backend/.venv/bin/python scripts/check_llm_model.py \
+  --expected-model gpt-5.6-luna
+```
+
+O comando não imprime credenciais. Ele termina com erro se o modelo efetivo não for `gpt-5.6-luna` ou se a resposta não completar a prova mínima.
+
 ## Commit seguro
 
 ```bash
