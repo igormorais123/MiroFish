@@ -75,19 +75,13 @@ def build_decision_packet(
     raw_conviction = sum(components[key] * weights[key] for key in weights)
     if gate.get("passes_gate") is not True:
         raw_conviction = min(raw_conviction, 0.55)
-    conviction = round(_clamp(raw_conviction, 0.35, 0.92), 4)
+    # Sem piso. O clamp comecava em 0.35 e, somado a formula linear que dela
+    # derivava os percentuais, o pacote nao conseguia produzir numero abaixo de
+    # 54% — nem com grafo vazio e zero fatos ancorados. Um indicador que nao
+    # pode ser baixo nao informa nada; agora chega a zero quando nao ha
+    # evidencia colhida.
+    conviction = round(_clamp(raw_conviction, 0.0, 0.92), 4)
 
-    base_probability_percent = int(round(46 + 24 * conviction))
-    contrary_probability_percent = int(round(16 + 18 * (1 - conviction)))
-    optimistic_probability_percent = 100 - base_probability_percent - contrary_probability_percent
-    if optimistic_probability_percent < 12:
-        delta = 12 - optimistic_probability_percent
-        optimistic_probability_percent = 12
-        base_probability_percent = max(45, base_probability_percent - delta)
-
-    reversal_risk_percent = int(round(_clamp(contrary_probability_percent + (1 - social_scale) * 8, 12, 44)))
-    execution_risk_percent = int(round(_clamp((1 - components["execution"]) * 38 + 8, 8, 42)))
-    evidence_risk_percent = int(round(_clamp((1 - components["knowledge_backing"]) * 34 + 6, 6, 38)))
     convergence = _build_convergence_assessment(
         components=components,
         conviction=conviction,
@@ -100,20 +94,11 @@ def build_decision_packet(
         components=components,
         social_scale=social_scale,
         source_scale=source_scale,
-        contrary_probability_percent=contrary_probability_percent,
-        reversal_risk_percent=reversal_risk_percent,
-        evidence_risk_percent=evidence_risk_percent,
     )
 
     structured_metrics = {
         "conviction_operational": conviction,
         "conviction_operational_percent": int(round(conviction * 100)),
-        "scenario_base_probability_percent": base_probability_percent,
-        "scenario_optimistic_probability_percent": optimistic_probability_percent,
-        "scenario_contrary_probability_percent": contrary_probability_percent,
-        "reversal_risk_probability_percent": reversal_risk_percent,
-        "execution_risk_probability_percent": execution_risk_percent,
-        "evidence_risk_probability_percent": evidence_risk_percent,
         "convergence_score_percent": convergence["score_percent"],
         "convergence_reversal_threshold_percent": 62,
         "convergence_recommended_next_runs": convergence["recommended_next_runs"],
@@ -135,7 +120,10 @@ def build_decision_packet(
         "method_lock": {
             "status": "locked",
             "rules": [
-                "usar somente percentuais oficiais do decision_packet",
+                # A regra "usar somente percentuais oficiais do decision_packet"
+                # saiu junto com os percentuais: ela obrigava o relatorio a
+                # publicar numeros que nao tinham base observada.
+                "ancorar afirmacao em fato recuperado, nunca em metrica agregada",
                 "apresentar tese adversaria mais forte",
                 "declarar gatilhos de reversao",
                 "diferenciar sinal emergente de bootstrap",
@@ -148,41 +136,35 @@ def build_decision_packet(
             "weights": weights,
             "structured_metrics": structured_metrics,
         },
+        # Os cenarios continuam sendo o enquadramento util — tese vencedora,
+        # melhor janela, tese adversaria. O que saiu foi a probabilidade
+        # atribuida a cada um: ela era transformacao linear da conviccao, que
+        # por sua vez era media ponderada de entropias de acoes. Nao havia
+        # frequencia observada nem classe de referencia por tras daqueles
+        # percentuais.
         "scenarios": {
-            "base": {
-                "label": "Base",
-                "probability": round(base_probability_percent / 100, 4),
-                "probability_percent": base_probability_percent,
-                "role": "tese vencedora",
-            },
-            "optimistic": {
-                "label": "Otimista",
-                "probability": round(optimistic_probability_percent / 100, 4),
-                "probability_percent": optimistic_probability_percent,
-                "role": "melhor janela de acao",
-            },
-            "contrary": {
-                "label": "Contrario",
-                "probability": round(contrary_probability_percent / 100, 4),
-                "probability_percent": contrary_probability_percent,
-                "role": "tese adversaria mais forte",
-            },
+            "base": {"label": "Base", "role": "tese vencedora"},
+            "optimistic": {"label": "Otimista", "role": "melhor janela de acao"},
+            "contrary": {"label": "Contrario", "role": "tese adversaria mais forte"},
         },
+        # Cada risco aponta o componente medido que o sustenta, em vez de um
+        # percentual. `component_score` vai de 0 a 1: quanto menor, mais
+        # exposto esta aquele flanco.
         "risks": {
             "reversal": {
                 "label": "Reversao da tese vencedora",
-                "probability": round(reversal_risk_percent / 100, 4),
-                "probability_percent": reversal_risk_percent,
+                "driver": "behavioral_signal",
+                "component_score": components["behavioral_signal"],
             },
             "execution": {
                 "label": "Falha de execucao operacional",
-                "probability": round(execution_risk_percent / 100, 4),
-                "probability_percent": execution_risk_percent,
+                "driver": "execution",
+                "component_score": components["execution"],
             },
             "evidence": {
                 "label": "Lacuna de evidencia decisiva",
-                "probability": round(evidence_risk_percent / 100, 4),
-                "probability_percent": evidence_risk_percent,
+                "driver": "knowledge_backing",
+                "component_score": components["knowledge_backing"],
             },
         },
         "convergence": convergence,
@@ -217,23 +199,27 @@ def decision_packet_prompt_block(packet: Mapping[str, Any] | None) -> str:
     convergence = packet.get("convergence") if isinstance(packet.get("convergence"), Mapping) else {}
     red_team = packet.get("red_team") if isinstance(packet.get("red_team"), Mapping) else {}
 
-    def pct(path: tuple[str, str], default: int = 0) -> int:
-        group = scenarios.get(path[0]) if path[0] in scenarios else risks.get(path[0])
-        if not isinstance(group, Mapping):
-            return default
-        return _positive_int(group.get(path[1]), default=default)
+    def papel(chave: str) -> str:
+        grupo = scenarios.get(chave)
+        return grupo.get("role", "") if isinstance(grupo, Mapping) else ""
+
+    def flanco(chave: str) -> str:
+        grupo = risks.get(chave)
+        if not isinstance(grupo, Mapping):
+            return ""
+        return f"{grupo.get('label', chave)} (lastro {grupo.get('component_score', 0):.2f})"
 
     lines = [
         f"Tese operacional: {packet.get('thesis', '')}",
-        f"Conviccao operacional INTEIA: {packet.get('conviction_operational_percent', 0)}%",
-        "Cenarios oficiais para usar no relatorio:",
-        f"- Base: {pct(('base', 'probability_percent'))}%",
-        f"- Otimista: {pct(('optimistic', 'probability_percent'))}%",
-        f"- Contrario: {pct(('contrary', 'probability_percent'))}%",
-        "Riscos oficiais para quantificar:",
-        f"- Reversao da tese vencedora: {pct(('reversal', 'probability_percent'))}%",
-        f"- Falha de execucao operacional: {pct(('execution', 'probability_percent'))}%",
-        f"- Lacuna de evidencia decisiva: {pct(('evidence', 'probability_percent'))}%",
+        f"Lastro de evidencia coletada: {packet.get('conviction_operational_percent', 0)}%",
+        "Cenarios a enderecar no relatorio:",
+        f"- Base: {papel('base')}",
+        f"- Otimista: {papel('optimistic')}",
+        f"- Contrario: {papel('contrary')}",
+        "Flancos expostos, do componente medido (0 a 1; menor e mais exposto):",
+        f"- {flanco('reversal')}",
+        f"- {flanco('execution')}",
+        f"- {flanco('evidence')}",
         "Indicadores de lastro:",
         (
             f"- Acoes: {indicators.get('total_actions', 0)}; textos: {indicators.get('generated_texts', 0)}; "
@@ -298,12 +284,14 @@ def _build_red_team_assessment(
     components: Mapping[str, float],
     social_scale: float,
     source_scale: float,
-    contrary_probability_percent: int,
-    reversal_risk_percent: int,
-    evidence_risk_percent: int,
 ) -> dict[str, Any]:
     weakest = _weakest_component(components)
-    pressure = int(round(_clamp((contrary_probability_percent + reversal_risk_percent + evidence_risk_percent) / 300, 0.0, 1.0) * 100))
+    # A pressao adversaria e a fragilidade medida do conjunto: quanto menos os
+    # componentes sustentam, mais superficie de ataque existe. Antes era a media
+    # de tres percentuais que ja eram derivados da propria conviccao — o
+    # indicador realimentava a si mesmo.
+    media = sum(components.values()) / len(components) if components else 0.0
+    pressure = int(round(_clamp(1.0 - media, 0.0, 1.0) * 100))
     thesis_by_component = {
         "execution": "A tese adversaria dira que a execucao ainda nao acumulou rodadas e acoes suficientes para sustentar a linha dominante.",
         "semantic_density": "A tese adversaria dira que o discurso dos agentes ainda nao diferenciou mensagens o bastante para cravar a narrativa vencedora.",

@@ -268,7 +268,12 @@ class StrategicDensityGate:
             "evidence_binding_score": round(evidence_binding_score, 2),
             "decision_delta_score": round(decision_delta_score, 2),
             "substantive_score": round(substantive_score, 2),
-            "case_specific_score": round(case_specificity["score"], 2),
+            # None em vez de um numero quando a checagem nao rodou: qualquer
+            # valor aqui seria lido como desempenho medido.
+            "case_specific_score": (
+                round(case_specificity["score"], 2) if case_specificity["applies"] else None
+            ),
+            "case_specificity_evaluated": case_specificity["applies"],
             "final_score": round(final_score, 2),
             "passes_gate": passes_gate,
             "issues": issues,
@@ -404,9 +409,14 @@ class StrategicDensityGate:
         ]
         applies = len(context_hits) >= 2
         if not applies:
+            # Antes devolvia 1.0 aqui, e o relatorio publicava especificidade
+            # maxima justamente quando a checagem nao tinha rodado. Criterio que
+            # nao se aplica nao pontua: fica em zero e e sinalizado como
+            # nao-avaliado, para nao virar nota cheia por omissao.
             return {
                 "applies": False,
-                "score": 1.0,
+                "score": 0.0,
+                "not_evaluated": True,
                 "context_hits": context_hits,
                 "criteria": {},
             }

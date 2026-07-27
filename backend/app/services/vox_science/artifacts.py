@@ -207,7 +207,29 @@ def _methodology_manifest(
 
 def _detect_domain(requirement: str, supporting_text: str) -> dict[str, str]:
     text = f"{requirement} {supporting_text}".lower()
-    if any(term in text for term in ("servidor", "servico publico", "serviço público", "federal", "mgI".lower(), "vozes")):
+
+    # Materia judicial vem antes de tudo: um processo nao tem populacao a
+    # amostrar, tem partes e documentos. Sem esta saida antecipada, "Vara
+    # Federal" e "Justica Federal" caiam no dominio de servidores publicos.
+    if any(term in text for term in (
+        "vara federal", "justica federal", "justiça federal", "trf", "processo judicial",
+        "liquidacao de sentenca", "liquidação de sentença", "embargos", "acordao", "acórdão",
+        "execucao fiscal", "execução fiscal", "peticao", "petição", "autos",
+    )):
+        return {
+            "id": "materia_judicial",
+            "population": "partes e orgaos do processo declarado",
+            "period": "periodo processual declarado",
+        }
+
+    # "federal" sozinho nao caracteriza servidor publico — e a palavra mais
+    # comum do vocabulario judicial brasileiro. Exige-se sinal proprio.
+    if any(term in text for term in (
+        "servidor publico", "servidor público", "servidores publicos", "servidores públicos",
+        "servidor federal", "servidores federais", "servico publico", "serviço público",
+        "pep/mgi", "enap", "pesquisa vozes",
+        "carreira publica", "carreira pública", "teletrabalho", "pgd",
+    )):
         return {
             "id": "servidores_federais",
             "population": "servidores publicos federais ativos",
@@ -227,6 +249,13 @@ def _detect_domain(requirement: str, supporting_text: str) -> dict[str, str]:
 
 
 def _baseline_sources(domain: Mapping[str, str]) -> list[dict[str, Any]]:
+    # Num processo os atores sao partes e orgaos identificados nos autos, nao
+    # uma amostra de populacao. Idade, sexo, escolaridade e renda nao dizem nada
+    # sobre como a Uniao se manifesta numa liquidacao — e alimentar o perfil com
+    # isso e o que faz o sistema inventar comportamento.
+    if domain["id"] == "materia_judicial":
+        return []
+
     common = [
         {
             "name": "IBGE Censo 2022",
