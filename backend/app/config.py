@@ -131,6 +131,13 @@ class Config:
     LLM_PREMIUM_MODEL = os.environ.get('LLM_PREMIUM_MODEL', 'sonnet-tasks')
     # Modelo Helena Strategos — maximo poder analitico (opus-4.6, gpt-5.4-thinking, gemini-4.1)
     LLM_HELENA_MODEL = os.environ.get('LLM_HELENA_MODEL', 'opus-tasks')
+    # Helena decide operacao real e roda poucas vezes: vale pagar raciocinio alto.
+    # O resto do sistema segue no esforco global (LUNA_REASONING_EFFORT).
+    LLM_HELENA_REASONING_EFFORT = os.environ.get('LLM_HELENA_REASONING_EFFORT', 'high').strip().lower()
+    # Teto de saida por secao do relatorio. Atendendo pela assinatura, o token
+    # de saida deixou de ser o custo dominante, e 4096 truncava a analise antes
+    # de ela terminar de se justificar.
+    REPORT_SECTION_MAX_TOKENS = int(os.environ.get('REPORT_SECTION_MAX_TOKENS', '16000'))
 
     # Gateway interno INTEIA / OmniRoute
     OMNIROUTE_URL = os.environ.get('OMNIROUTE_URL', '')
@@ -152,6 +159,17 @@ class Config:
     HELENA_APPROVAL_TTL_SECONDS = int(os.environ.get('HELENA_APPROVAL_TTL_SECONDS', '600'))
     HELENA_EXECUTION_TTL_SECONDS = int(os.environ.get('HELENA_EXECUTION_TTL_SECONDS', '7200'))
     HELENA_PLANNER_MODE = os.environ.get('HELENA_PLANNER_MODE', 'auto').strip().lower()
+    # Com raciocinio alto o modelo consome a cota de saida antes de escrever o
+    # plano. O teto precisa cobrir raciocinio + JSON, senao a Helena cai no
+    # plano de fallback sem nunca ter falhado de verdade.
+    HELENA_PLAN_MAX_TOKENS = int(os.environ.get('HELENA_PLAN_MAX_TOKENS', '8000'))
+    # Planejador da Helena: 'auto' usa o Codex CLI quando ele existe na maquina
+    # e cai para o gateway HTTP quando nao existe. 'codex_cli' e 'omniroute'
+    # forcam um caminho; 'rules' desliga o modelo.
+    HELENA_PLANNER_PROVIDER = os.environ.get('HELENA_PLANNER_PROVIDER', 'auto').strip().lower()
+    HELENA_CODEX_BIN = os.environ.get('HELENA_CODEX_BIN', '')
+    HELENA_CODEX_MODEL = os.environ.get('HELENA_CODEX_MODEL', 'gpt-5.6-luna')
+    HELENA_CODEX_TIMEOUT_SECONDS = int(os.environ.get('HELENA_CODEX_TIMEOUT_SECONDS', '180'))
 
     # Upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB

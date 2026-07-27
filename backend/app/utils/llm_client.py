@@ -122,13 +122,19 @@ class LLMClient:
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        reasoning_effort: Optional[str] = None
     ):
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = (base_url or Config.LLM_BASE_URL).rstrip("/")
         self.model = Config.resolve_model_name(model or Config.LLM_MODEL_NAME)
         self.timeout = Config.LLM_TIMEOUT_SECONDS
         self.max_retries = Config.LLM_MAX_RETRIES
+        # Esforco de raciocinio desta instancia. Sem valor explicito vale o
+        # padrao global (LUNA_REASONING_EFFORT), para nao alterar quem ja usa
+        # o cliente. Permite subir o esforco de um consumidor especifico sem
+        # mexer no custo e no orcamento de tokens de todos os outros.
+        self.reasoning_effort = (reasoning_effort or "").strip().lower() or None
 
         if not self.api_key:
             raise ValueError("LLM_API_KEY ou OMNIROUTE_API_KEY nao configurada")
@@ -387,7 +393,13 @@ class LLMClient:
             # Structured prompts can spend the whole output allowance on
             # reasoning at the provider default. "low" keeps Luna as the
             # model while reserving enough tokens for the actual JSON/text.
-            effort = os.environ.get("LUNA_REASONING_EFFORT", "low").strip().lower()
+            # Um consumidor que precise de mais raciocinio informa o esforco na
+            # construcao do cliente — e precisa reservar max_tokens maior, ja
+            # que o raciocinio sai da mesma cota da resposta.
+            effort = (
+                self.reasoning_effort
+                or os.environ.get("LUNA_REASONING_EFFORT", "low").strip().lower()
+            )
             if effort not in {"none", "low", "medium", "high", "xhigh"}:
                 effort = "low"
             kwargs["reasoning_effort"] = effort
