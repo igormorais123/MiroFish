@@ -34,23 +34,64 @@ def test_decision_packet_gera_probabilidades_deterministicas_com_soma_100():
         },
     )
 
-    probabilities = [
-        scenario["probability_percent"]
-        for scenario in packet["scenarios"].values()
-    ]
-
     assert packet["schema"] == "mirofish.decision_packet.v2"
-    assert sum(probabilities) == 100
-    assert packet["scenarios"]["base"]["probability_percent"] > packet["scenarios"]["contrary"]["probability_percent"]
     assert packet["conviction_operational"] > 0.75
-    assert packet["structured_metrics"]["scenario_base_probability_percent"] == packet["scenarios"]["base"]["probability_percent"]
+
+    # Os cenarios continuam enquadrando a analise, sem probabilidade atribuida:
+    # ela era transformacao linear da propria conviccao, sem frequencia
+    # observada nem classe de referencia por tras.
+    for cenario in packet["scenarios"].values():
+        assert "probability" not in cenario
+        assert "probability_percent" not in cenario
+        assert cenario["role"]
+
+    # Cada risco aponta o componente medido que o sustenta.
+    assert packet["risks"]["evidence"]["driver"] == "knowledge_backing"
+    for risco in packet["risks"].values():
+        assert "probability_percent" not in risco
+        assert 0.0 <= risco["component_score"] <= 1.0
+
     assert packet["method_lock"]["status"] == "locked"
+    assert not any(
+        "percentuais oficiais" in regra for regra in packet["method_lock"]["rules"]
+    )
     assert packet["convergence"]["score_percent"] > 0
     assert packet["red_team"]["opposing_thesis"]
     assert packet["red_team"]["reversal_triggers"]
     assert packet["structured_metrics"]["red_team_pressure_percent"] == packet["red_team"]["pressure_percent"]
     assert packet["structured_metrics"]["convergence_reversal_threshold_percent"] == 62
     assert packet["structured_metrics"]["convergence_recommended_next_runs"] == packet["convergence"]["recommended_next_runs"]
+
+
+def test_conviccao_chega_a_zero_sem_evidencia_coletada():
+    """
+    O piso de 0.35, somado a formula linear que dele derivava os cenarios,
+    impedia o pacote de produzir numero abaixo de 54% — nem com grafo vazio e
+    nenhuma acao. Um indicador que nao pode ser baixo nao informa nada.
+    """
+    packet = build_decision_packet(
+        simulation_id="sim_vazia",
+        simulation_requirement="avaliar tese",
+        quality_gate={
+            "passes_gate": False,
+            "metrics": {
+                "min_actions": 10,
+                "total_actions_count": 0,
+                "profiles_count": 0,
+                "total_rounds": 240,
+                "current_round": 0,
+                "graph_nodes_count": 0,
+                "graph_edges_count": 0,
+                "source_text_characters": 0,
+                "diversity": {},
+            },
+        },
+    )
+
+    assert packet["conviction_operational"] == 0.0
+    assert packet["conviction_operational_percent"] == 0
+    # Sem lastro, a superficie de ataque e maxima.
+    assert packet["red_team"]["pressure_percent"] == 100
 
 
 def test_decision_packet_prompt_expoe_percentuais_oficiais():
@@ -77,8 +118,11 @@ def test_decision_packet_prompt_expoe_percentuais_oficiais():
 
     block = decision_packet_prompt_block(packet)
 
-    assert "Conviccao operacional INTEIA" in block
-    assert f"Base: {packet['scenarios']['base']['probability_percent']}%" in block
-    assert f"Contrario: {packet['scenarios']['contrary']['probability_percent']}%" in block
+    assert "Lastro de evidencia coletada" in block
+    assert packet["scenarios"]["base"]["role"] in block
+    assert packet["scenarios"]["contrary"]["role"] in block
+    # O prompt nao pode mandar a Helena quantificar cenario: era assim que o
+    # percentual fabricado chegava ao texto do relatorio.
+    assert "Riscos oficiais para quantificar" not in block
     assert "Red team obrigatorio" in block
     assert packet["red_team"]["attack_vector"] in block
