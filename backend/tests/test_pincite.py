@@ -372,3 +372,32 @@ def test_tipo_realmente_diferente_nao_e_absorvido_por_semelhanca():
     from app.services.llm_entity_extractor import normalize_type
     assert normalize_type("Pessoa", ["Parte", "Orgao"]) == "Pessoa"
     assert normalize_type("IMPUGNA", ["SUSTENTA", "CONTRADIZ"]) == "IMPUGNA"
+
+
+def test_barra_solta_no_trecho_copiado_nao_derruba_a_resposta():
+    """"R\$" e o que o OCR deixa para tras: barra que nao inicia escape valido."""
+    from app.services.llm_entity_extractor import loads_first_object
+
+    d = loads_first_object(r'{"entities": [{"name": "X", "evidencia": "valor de R\$ 382.632"}]}')
+
+    assert d["entities"][0]["evidencia"] == "valor de R$ 382.632"
+
+
+def test_aspa_nao_escapada_derruba_so_a_entidade_e_nao_o_pedaco():
+    """
+    Pedir copia literal trouxe aspa junto e partiu o objeto no meio. Perder a
+    entidade avariada custa uma linha; perder o pedaco custa folhas dos autos.
+    """
+    from app.services.llm_entity_extractor import loads_first_object
+
+    bruto = (
+        '{"entities": ['
+        '{"name": "A", "attributes": {"data": "12/03/2024"}}, '
+        '{"name": "B", "evidencia": "disse "assim" ali"}, '
+        '{"name": "C", "attributes": {"polo": "ativo"}}]}'
+    )
+    entidades = loads_first_object(bruto)["entities"]
+
+    # A entidade com objeto aninhado precisa sobreviver: e a mais completa.
+    assert [e["name"] for e in entidades] == ["A", "C"]
+    assert entidades[0]["attributes"]["data"] == "12/03/2024"

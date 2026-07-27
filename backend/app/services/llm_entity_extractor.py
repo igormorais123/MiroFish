@@ -7,6 +7,7 @@ import uuid
 import difflib
 import json
 import os
+import re
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Set, Tuple
@@ -113,25 +114,60 @@ def normalize_type(bruto: str, permitidos: Optional[List[str]] = None) -> str:
     return tipo
 
 
+# Barra invertida que nao inicia escape valido de JSON. Aparece em trecho
+# copiado de peca — "R\$" e o que o OCR deixou para tras. E removida, nao
+# duplicada: a folha traz "R$", e evidencia com barra a mais nao casa com ela.
+BARRA_SOLTA = re.compile(r'\\(?!["\\/bfnrtu])')
+
+
 def loads_first_object(bruto: str) -> Dict[str, Any]:
     """
-    Le o primeiro objeto JSON e ignora o que vier depois.
+    Le o primeiro objeto JSON, tolerando o que o modelo emenda em volta.
 
-    O modelo as vezes emenda um comentario apos o JSON e `json.loads` recusa a
-    resposta inteira com "Extra data". No acervo da Vale isso derrubou 3 dos
-    1.164 pedacos — folhas perdidas por causa de texto sobrando.
+    Tres avarias observadas rodando o acervo da Vale, todas em resposta que
+    fora isso estava correta:
 
+    - texto emendado apos o JSON: `json.loads` recusa tudo com "Extra data";
+    - barra invertida solta dentro do trecho copiado: "Invalid \\escape";
+    - aspas duplas dentro do trecho copiado: "Expecting ',' delimiter".
+
+    As duas ultimas apareceram quando cada entidade passou a trazer evidencia
+    literal — pedir copia exata aumenta a chance de vir aspa e barra junto.
+    Descartar o pedaco inteiro por causa disso perde folhas dos autos.
     """
     texto = (bruto or "").strip()
-    try:
-        return json.loads(texto)
-    except json.JSONDecodeError:
-        pass
     inicio = texto.find("{")
     if inicio < 0:
         raise ValueError("resposta sem objeto JSON")
-    objeto, _ = json.JSONDecoder().raw_decode(texto[inicio:])
-    return objeto
+    texto = texto[inicio:]
+
+    for tentativa in (texto, BARRA_SOLTA.sub("", texto)):
+        try:
+            objeto, _ = json.JSONDecoder().raw_decode(tentativa)
+            return objeto
+        except json.JSONDecodeError:
+            continue
+
+    # Ultimo recurso: a aspa nao escapada parte o objeto no meio, entao le-se
+    # entidade por entidade e aproveita-se o que estiver integro. Decodificar
+    # em vez de recortar por regex, senao `attributes` — que e objeto aninhado
+    # — derruba justamente as entidades mais completas.
+    decoder = json.JSONDecoder()
+    reparado = BARRA_SOLTA.sub("", texto)
+    entidades = []
+    posicao = reparado.find("{", 1)
+    while posicao > 0:
+        try:
+            item, fim = decoder.raw_decode(reparado[posicao:])
+        except json.JSONDecodeError:
+            posicao = reparado.find("{", posicao + 1)
+            continue
+        if isinstance(item, dict) and item.get("name"):
+            entidades.append(item)
+        posicao = reparado.find("{", posicao + fim)
+    if entidades:
+        return {"entities": entidades}
+    raise ValueError("nenhuma entidade legivel na resposta")
 
 
 def parse_relation(bruta: Any, arestas: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
@@ -305,6 +341,8 @@ Responda APENAS com um JSON valido no formato:
 
 "evidencia" precisa ser copia exata de um trecho do TEXTO acima — e por ela que
 a entidade fica ancorada na folha de origem. Nao parafraseie nem resuma ali.
+Escolha um trecho sem aspas e sem barra invertida, ou troque a aspa por apostrofo:
+aspa solta dentro do JSON invalida a resposta inteira.
 
 Preencha "attributes" apenas com os atributos listados para aquele tipo, e
 somente quando o valor estiver no texto — atributo ausente e informacao, campo
