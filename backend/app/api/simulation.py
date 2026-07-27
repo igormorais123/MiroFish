@@ -16,6 +16,7 @@ from ..services.mission_selection import MissionSelection
 from ..services.decision_readiness import evaluate_decision_readiness
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
+from ..services.simulation_copilot import answer_operator_question, build_pulse
 from ..utils.logger import get_logger
 from ..utils.rate_limit import rate_limit
 from ..utils.safe_ids import safe_storage_child
@@ -2099,12 +2100,14 @@ def get_run_status(simulation_id: str):
 @simulation_bp.route('/<simulation_id>/run-status/detail', methods=['GET'])
 def get_run_status_detail(simulation_id: str):
     """
-    Obter estado detalhado (com todas as acoes)
+    Obter estado detalhado com as acoes novas desde a ultima consulta
 
-    Para exibicao em tempo real no frontend
+    Para exibicao em tempo real no frontend. O cliente devolve o cursor recebido
+    na chamada anterior e recebe apenas o que ainda nao viu.
 
     Parametros de Query:
-        platform: filtrar (twitter/reddit, opcional)
+        since_twitter, since_reddit, since_legacy: acoes ja recebidas por origem
+            (omitir na primeira chamada; o servidor devolve a cauda recente)
 
     Retorno:
         {
@@ -2114,7 +2117,7 @@ def get_run_status_detail(simulation_id: str):
                 "runner_status": "running",
                 "current_round": 5,
                 ...
-                "all_actions": [
+                "actions": [                      # somente as novas, ordem cronologica
                     {
                         "round_num": 5,
                         "timestamp": "2025-12-01T10:30:00",
@@ -2125,17 +2128,28 @@ def get_run_status_detail(simulation_id: str):
                         "action_args": {"content": "..."},
                         "result": null,
                         "success": true
-                    },
-                    ...
+                    }
                 ],
-                "twitter_actions": [...],  # Todas as acoes do Twitter
-                "reddit_actions": [...]    # Todas as acoes do Reddit
+                "cursor": {"twitter": 120, "reddit": 98},   # devolver na proxima chamada
+                "actions_total": 218
             }
         }
     """
     try:
         run_state = SimulationRunner.get_run_state(simulation_id)
-        platform_filter = request.args.get('platform')
+
+        cursor = {}
+        for key in ("twitter", "reddit", "legacy"):
+            raw_value = request.args.get(f"since_{key}")
+            if raw_value is None:
+                continue
+            try:
+                cursor[key] = max(0, int(raw_value))
+            except (TypeError, ValueError):
+                return jsonify({
+                    "success": False,
+                    "error": f"Parametro since_{key} invalido: {raw_value}"
+                }), 400
 
         if not run_state:
             return jsonify({
@@ -2143,45 +2157,19 @@ def get_run_status_detail(simulation_id: str):
                 "data": {
                     "simulation_id": simulation_id,
                     "runner_status": "idle",
-                    "all_actions": [],
-                    "twitter_actions": [],
-                    "reddit_actions": []
+                    "actions": [],
+                    "cursor": cursor,
+                    "actions_total": 0,
                 }
             })
 
-        # Obtem lista completa de acoes
-        all_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform=platform_filter
-        )
+        delta = SimulationRunner.get_actions_delta(simulation_id, cursor=cursor)
 
-        # Obtem acoes por plataforma
-        twitter_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform="twitter"
-        ) if not platform_filter or platform_filter == "twitter" else []
-
-        reddit_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform="reddit"
-        ) if not platform_filter or platform_filter == "reddit" else []
-
-        # Obtem acoes da rodada atual
-        current_round = run_state.current_round
-        recent_actions = SimulationRunner.get_all_actions(
-            simulation_id=simulation_id,
-            platform=platform_filter,
-            round_num=current_round
-        ) if current_round > 0 else []
-
-        # Obtem informacoes basicas
         result = run_state.to_dict()
-        result["all_actions"] = [a.to_dict() for a in all_actions]
-        result["twitter_actions"] = [a.to_dict() for a in twitter_actions]
-        result["reddit_actions"] = [a.to_dict() for a in reddit_actions]
+        result["actions"] = [action.to_dict() for action in delta["actions"]]
+        result["cursor"] = delta["cursor"]
+        result["actions_total"] = delta["total"]
         result["rounds_count"] = max(len(run_state.rounds), int(run_state.current_round or 0))
-        # recent_actions exibe apenas a rodada mais recente
-        result["recent_actions"] = [a.to_dict() for a in recent_actions]
 
         return jsonify({
             "success": True,
@@ -3047,6 +3035,123 @@ def close_simulation_env():
 
     except Exception as e:
         logger.error(f"Falha ao fechar ambiente: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/copilot/pulse', methods=['GET'])
+def get_copilot_pulse(simulation_id: str):
+    """
+    Leitura operacional do que a simulacao esta fazendo agora
+
+    Deterministico e sem LLM: pode ser consultado durante toda a execucao sem
+    custo de token. Traz ritmo, distribuicao de acoes e anomalias detectadas.
+
+    Parametros de Query:
+        window: tamanho da janela de acoes analisada (default 120)
+
+    Retorno:
+        {
+            "success": true,
+            "data": {
+                "runner_status": "running",
+                "progress": {"current_round": 12, "progress_percent": 8.3, ...},
+                "activity": {
+                    "actions_per_minute": 42.5,
+                    "by_action_type": {"CREATE_POST": 40, "LIKE_POST": 62},
+                    "distinct_agents_in_window": 37,
+                    ...
+                },
+                "alerts": [{"code": "stalled", "severity": "critical", "message": "..."}],
+                "headline": "Rodada 12 (8.3%), 42.5 acoes/min, 37 agentes ativos..."
+            }
+        }
+    """
+    try:
+        try:
+            window = int(request.args.get('window', 120))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "error": "Parametro window invalido"
+            }), 400
+
+        window = max(10, min(window, 1000))
+        pulse = build_pulse(simulation_id, window=window)
+
+        return jsonify({
+            "success": True,
+            "data": pulse
+        })
+
+    except Exception as e:
+        logger.error(f"Falha ao obter pulso do copiloto: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@simulation_bp.route('/<simulation_id>/copilot/ask', methods=['POST'])
+@rate_limit(limit=20, window_seconds=60.0, scope='simulation.copilot')
+def ask_copilot(simulation_id: str):
+    """
+    Perguntar ao copiloto sobre a simulacao em execucao
+
+    Diferente do chat do relatorio, que so opera depois da entrega: aqui a
+    resposta e ancorada no estado vivo da run.
+
+    Requisicao (JSON):
+        {
+            "question": "por que o ritmo caiu?",
+            "chat_history": [{"role": "user", "content": "..."}]
+        }
+
+    Retorno:
+        {
+            "success": true,
+            "data": {"response": "...", "pulse": {...}}
+        }
+    """
+    try:
+        data = request.get_json() or {}
+        question = (data.get('question') or data.get('message') or '').strip()
+
+        if not question:
+            return jsonify({
+                "success": False,
+                "error": "Informe a pergunta"
+            }), 400
+
+        # A demanda original ancora a resposta no objetivo da simulacao.
+        simulation_requirement = ""
+        try:
+            state = SimulationManager().get_simulation(simulation_id)
+            if state:
+                project = ProjectManager.get_project(state.project_id)
+                if project:
+                    simulation_requirement = project.simulation_requirement or ""
+        except Exception as context_err:
+            logger.warning(f"Contexto da simulacao indisponivel para o copiloto: {context_err}")
+
+        result = answer_operator_question(
+            simulation_id=simulation_id,
+            question=question,
+            simulation_requirement=simulation_requirement,
+            chat_history=data.get('chat_history') or [],
+        )
+
+        return jsonify({
+            "success": True,
+            "data": result
+        })
+
+    except Exception as e:
+        logger.error(f"Falha na consulta ao copiloto: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
