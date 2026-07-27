@@ -287,3 +287,88 @@ def test_aresta_repetida_entre_pedacos_nao_duplica():
     ).entities[0]
 
     assert len(entidade.related_edges) == 1
+
+
+# --- ancoragem pela evidencia literal ---
+
+def test_entidade_nomeada_por_parafrase_ancora_pela_evidencia():
+    """
+    Uma tese e nomeada por parafrase e uma norma por forma extensa; nenhuma das
+    duas aparece assim na folha. So pelo nome, 47% do acervo da Vale ficou sem
+    ancora — a entidade existia, o nome e que nao era literal.
+    """
+    from app.services.llm_entity_extractor import find_excerpt
+
+    folha = "Nesse sentido, o art. 604 do CPC ampara a liquidacao por calculo."
+    p = find_excerpt(
+        "Artigo 604 do Codigo de Processo Civil", folha, 1000,
+        evidencia="art. 604 do CPC",
+    )
+
+    assert p is not None
+    assert p["ancorado_por"] == "evidencia"
+    assert p["char_offset"] == 1000 + folha.find("art. 604")
+
+
+def test_nome_literal_tem_precedencia_sobre_a_evidencia():
+    from app.services.llm_entity_extractor import find_excerpt
+
+    folha = "a SECEX certificou; adiante, a SECEX reiterou"
+    p = find_excerpt("SECEX", folha, 0, evidencia="reiterou")
+
+    assert p["ancorado_por"] == "nome"
+    assert p["char_offset"] == folha.find("SECEX")
+
+
+def test_evidencia_que_nao_esta_na_folha_nao_ancora():
+    """Evidencia parafraseada e alucinacao: nao pode virar pincite."""
+    from app.services.llm_entity_extractor import find_excerpt
+    assert find_excerpt("Tese X", "texto sem relacao alguma", 0,
+                        evidencia="o juizo assim decidiu") is None
+
+
+def test_evidencia_curta_demais_nao_ancora():
+    """Agulha de 3 caracteres casa por acaso e ancoraria na folha errada."""
+    from app.services.llm_entity_extractor import find_excerpt
+    assert find_excerpt("Tese X", "de fato o pedido procede", 0, evidencia="de") is None
+
+
+# --- resposta com texto sobrando ---
+
+def test_json_com_comentario_depois_ainda_e_lido():
+    """"Extra data" derrubou 3 dos 1.164 pedacos do acervo da Vale."""
+    from app.services.llm_entity_extractor import loads_first_object
+
+    d = loads_first_object('{"entities": [{"name": "SECEX"}]}\nSegue o resumo...')
+
+    assert d["entities"][0]["name"] == "SECEX"
+
+
+def test_json_com_cerca_e_preambulo():
+    from app.services.llm_entity_extractor import loads_first_object
+    assert loads_first_object('Claro! {"entities": []} espero ter ajudado')["entities"] == []
+
+
+def test_resposta_sem_json_falha_de_forma_explicita():
+    import pytest as _pytest
+    from app.services.llm_entity_extractor import loads_first_object
+    with _pytest.raises(ValueError):
+        loads_first_object("nao consegui processar este trecho")
+
+
+# --- erro de digitacao no nome da aresta ---
+
+def test_variante_com_erro_de_digitacao_casa_com_a_aresta():
+    """FUNDAMENTA_SEM e FUNDAMENTAMENTA_SE_EM viraram arestas proprias no acervo."""
+    from app.services.llm_entity_extractor import normalize_type
+
+    permitidos = ["FUNDAMENTA_SE_EM", "SUSTENTA", "CONTRADIZ"]
+    assert normalize_type("FUNDAMENTA_SEM", permitidos) == "FUNDAMENTA_SE_EM"
+    assert normalize_type("FUNDAMENTAMENTA_SE_EM", permitidos) == "FUNDAMENTA_SE_EM"
+
+
+def test_tipo_realmente_diferente_nao_e_absorvido_por_semelhanca():
+    """O corte precisa ser alto o bastante para nao fundir tipos distintos."""
+    from app.services.llm_entity_extractor import normalize_type
+    assert normalize_type("Pessoa", ["Parte", "Orgao"]) == "Pessoa"
+    assert normalize_type("IMPUGNA", ["SUSTENTA", "CONTRADIZ"]) == "IMPUGNA"

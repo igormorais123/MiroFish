@@ -4,6 +4,7 @@ Usa a ontologia gerada + texto do documento para extrair entidades concretas.
 """
 
 import uuid
+import difflib
 import json
 import os
 import unicodedata
@@ -99,7 +100,38 @@ def normalize_type(bruto: str, permitidos: Optional[List[str]] = None) -> str:
     for candidato in permitidos:
         if chave(candidato) == alvo:
             return candidato
+
+    # Erro de digitacao do modelo: no acervo da Vale sairam FUNDAMENTA_SEM,
+    # FUNDAMENTA_SE e FUNDAMENTAMENTA_SE_EM ao lado de FUNDAMENTA_SE_EM, cada
+    # variante virando uma aresta propria. O corte alto evita casar dois nomes
+    # da ontologia que sejam legitimamente parecidos.
+    proximos = difflib.get_close_matches(
+        alvo, [chave(c) for c in permitidos], n=1, cutoff=0.85
+    )
+    if proximos:
+        return next(c for c in permitidos if chave(c) == proximos[0])
     return tipo
+
+
+def loads_first_object(bruto: str) -> Dict[str, Any]:
+    """
+    Le o primeiro objeto JSON e ignora o que vier depois.
+
+    O modelo as vezes emenda um comentario apos o JSON e `json.loads` recusa a
+    resposta inteira com "Extra data". No acervo da Vale isso derrubou 3 dos
+    1.164 pedacos — folhas perdidas por causa de texto sobrando.
+
+    """
+    texto = (bruto or "").strip()
+    try:
+        return json.loads(texto)
+    except json.JSONDecodeError:
+        pass
+    inicio = texto.find("{")
+    if inicio < 0:
+        raise ValueError("resposta sem objeto JSON")
+    objeto, _ = json.JSONDecoder().raw_decode(texto[inicio:])
+    return objeto
 
 
 def parse_relation(bruta: Any, arestas: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
@@ -130,22 +162,38 @@ def parse_relation(bruta: Any, arestas: Optional[List[str]] = None) -> Optional[
     }
 
 
-def find_excerpt(nome: str, trecho: str, offset: int) -> Optional[Dict[str, Any]]:
+def find_excerpt(
+    nome: str, trecho: str, offset: int, evidencia: str = ""
+) -> Optional[Dict[str, Any]]:
     """
-    Localiza o nome da entidade dentro do pedaco que a originou.
+    Localiza a entidade dentro do pedaco que a originou.
 
-    Devolve None quando o nome nao aparece no texto — sinal de que o modelo a
-    inventou em vez de extrair. Sem esta checagem, entidade alucinada e
-    entidade lida entram no grafo com o mesmo peso.
+    Devolve None quando nada disso aparece no texto — sinal de que o modelo
+    inventou em vez de extrair. Sem esta checagem, entidade alucinada e entidade
+    lida entram no grafo com o mesmo peso.
+
+    Procura primeiro o nome, depois a evidencia literal que o modelo copiou.
+    So pelo nome, quase metade do acervo da Vale ficava sem ancora — porque uma
+    tese e nomeada por parafrase ("Tese de forca condenatoria da sentenca") e
+    uma norma por forma extensa ("Artigo 604 do Codigo de Processo Civil")
+    enquanto a folha traz "art. 604 do CPC". A entidade existe; o nome e que nao
+    e literal.
     """
-    posicao = trecho.lower().find((nome or "").lower())
-    if posicao < 0:
-        return None
-    inicio = max(posicao - EXCERPT_RADIUS, 0)
-    return {
-        "char_offset": offset + posicao,
-        "excerpt": trecho[inicio:posicao + len(nome) + EXCERPT_RADIUS].strip(),
-    }
+    for agulha in (nome, evidencia):
+        agulha = (agulha or "").strip()
+        # Agulha curta casa por acaso e ancoraria na folha errada.
+        if len(agulha) < 4:
+            continue
+        posicao = trecho.lower().find(agulha.lower())
+        if posicao < 0:
+            continue
+        inicio = max(posicao - EXCERPT_RADIUS, 0)
+        return {
+            "char_offset": offset + posicao,
+            "excerpt": trecho[inicio:posicao + len(agulha) + EXCERPT_RADIUS].strip(),
+            "ancorado_por": "nome" if agulha == (nome or "").strip() else "evidencia",
+        }
+    return None
 
 
 class LLMEntityExtractor:
@@ -248,11 +296,15 @@ Responda APENAS com um JSON valido no formato:
       "name": "Nome da Entidade",
       "type": "Tipo (Pessoa, Organizacao, Lugar, Evento, Conceito, etc.)",
       "summary": "Descricao breve baseada no texto",
+      "evidencia": "trecho curto copiado LITERALMENTE do texto onde a entidade aparece",
       "attributes": {{"nome_do_atributo": "valor lido no texto"}},
       "relations": [{{"tipo": "NOME_DA_RELACAO", "alvo": "Nome da outra entidade"}}]
     }}
   ]
 }}
+
+"evidencia" precisa ser copia exata de um trecho do TEXTO acima — e por ela que
+a entidade fica ancorada na folha de origem. Nao parafraseie nem resuma ali.
 
 Preencha "attributes" apenas com os atributos listados para aquele tipo, e
 somente quando o valor estiver no texto — atributo ausente e informacao, campo
@@ -283,7 +335,7 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                     result = result[:-3]
                 result = result.strip()
 
-            brutas = json.loads(result).get("entities", [])
+            brutas = loads_first_object(result).get("entities", [])
         except Exception as e:
             logger.error("Falha ao extrair entidades no offset %d: %s", offset, e)
             return []
@@ -291,7 +343,9 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
         # Anexa a proveniencia aqui, onde o pedaco de origem ainda existe.
         for bruta in brutas:
             if isinstance(bruta, dict):
-                bruta["_proveniencia"] = find_excerpt(bruta.get("name", ""), trecho, offset)
+                bruta["_proveniencia"] = find_excerpt(
+                    bruta.get("name", ""), trecho, offset, bruta.get("evidencia", "")
+                )
         return [b for b in brutas if isinstance(b, dict)]
 
     def _merge(
@@ -382,6 +436,9 @@ Extraia entre 5 e 30 entidades. Use exatamente a grafia que aparece no texto."""
                         "extraction_method": "llm_fallback",
                         "occurrences": 1,
                         "verbatim_found": bool(proveniencia),
+                        # Ancorada pelo nome ou pela evidencia: quem revisa
+                        # precisa saber que a grafia do nome nao esta na folha.
+                        "ancorado_por": proveniencia.get("ancorado_por") if proveniencia else None,
                         "source_excerpt": proveniencia["excerpt"] if proveniencia else None,
                         "char_offset": proveniencia["char_offset"] if proveniencia else None,
                         **citacao(proveniencia["char_offset"] if proveniencia else None),
