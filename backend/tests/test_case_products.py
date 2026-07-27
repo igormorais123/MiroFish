@@ -179,6 +179,10 @@ def test_pacote_conta_o_que_esta_ancorado_nos_autos():
         "anchored_entities": 1,
         "orphan_theses": 1,
         "exposed_theses": 0,
+        "dated_acts": 1,
+        # A entidade se chama "Ato" e nao tem resumo: a descricao nao diz o que
+        # aconteceu, so que aconteceu.
+        "substantive_acts": 0,
     }
 
 
@@ -312,3 +316,56 @@ def test_ano_de_quatro_digitos_nao_e_afetado_pelo_corte():
     from app.services.case_products import _data_ordenavel
     assert _data_ordenavel("17/07/2003") == "2003-07-17"
     assert _data_ordenavel("09/05/1996") == "1996-05-09"
+
+
+# --- cronologia x indice de andamentos ---
+
+def _ato(descricao):
+    from app.services.case_products import AtoProcessual
+    return AtoProcessual(evento="1", data="1984-03-06", sujeito=None,
+                         natureza=None, descricao=descricao, citacao=None)
+
+
+def test_descricao_que_so_repete_a_chave_nao_e_substantiva():
+    """Uma tabela de andamentos do Evento 96 virou 456 pseudo-atos assim."""
+    for d in (
+        "Ato processual identificado pelo número 25 e pela data 13/10/83.",
+        "Registro processual numerado 34.",
+        "Registro numerado associado aos valores de 1987.",
+        "Ato processual datado de 09/04/84.",
+    ):
+        assert _ato(d).substantivo is False, d
+
+
+def test_ato_que_diz_o_que_aconteceu_e_substantivo():
+    for d in (
+        "Juntada de embargos de declaração no processo.",
+        "Despacho ou decisão que rejeitou os embargos de declaração.",
+        "Data do trânsito em julgado do acórdão da Primeira Turma.",
+        "Petição de Luiz Alberto Maffini requerendo juntada de título.",
+        "Ato processual de oposição dos embargos de declaração.",
+    ):
+        assert _ato(d).substantivo is True, d
+
+
+def test_ato_generico_continua_na_cronologia():
+    """O ato existe e a data e boa; separar nao e descartar."""
+    from app.services.case_products import build_case_products
+
+    class E:
+        labels = ["Entity", "Evento"]
+        attributes = {"data": "06/03/1984", "numero_evento": "34"}
+        summary = "Registro processual numerado 34."
+        related_edges = []
+
+    p = build_case_products([E()])
+
+    assert len(p["timeline"]) == 1
+    assert p["summary"]["dated_acts"] == 1
+    assert p["summary"]["substantive_acts"] == 0
+    assert p["timeline"][0]["substantivo"] is False
+
+
+def test_descricao_vazia_nao_e_marcada_como_indice():
+    """Sem descricao nao ha o que julgar; nao e o mesmo que tautologia."""
+    assert _ato("").substantivo is True

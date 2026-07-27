@@ -110,6 +110,34 @@ def _data_ordenavel(bruta: Any) -> Optional[str]:
     return m.group(0) if m else None
 
 
+# Descricao que so repete o numero e a data do proprio ato. Sai as centenas
+# quando o acervo traz um indice de andamentos: no caso Vale, uma tabela do
+# Evento 96 virou 456 pseudo-atos, todos com a chave repetida como descricao.
+_ESQUELETO = {
+    "ato", "atos", "registro", "registros", "processual", "processuais",
+    "identificado", "identificada", "numerado", "numerada", "associado",
+    "associada", "datado", "datada", "correspondente", "referente",
+    "numero", "número", "data", "datas", "ano", "valores", "dados", "texto",
+    "documento", "processo", "pelo", "pela", "de", "do", "da", "dos", "das",
+    "e", "a", "o", "no", "na", "com", "em", "ao", "aos", "as", "à", "um", "uma",
+}
+
+
+def _e_tautologica(descricao: str) -> bool:
+    """
+    True quando a descricao nao diz nada alem do que a chave ja dizia.
+
+    Retirar o esqueleto e ver o que sobra e mais robusto do que casar a frase
+    inteira: o modelo escreve a mesma vacuidade de dez maneiras diferentes
+    ("identificado pelo numero 25", "numerado 34", "associado aos valores de
+    1987"), e o que todas tem em comum e nao sobrar substantivo nenhum.
+    """
+    palavras = re.findall(r"[^\W\d_]+", (descricao or "").lower(), re.UNICODE)
+    if not palavras:
+        return False
+    return not [p for p in palavras if p not in _ESQUELETO]
+
+
 @dataclass
 class AtoProcessual:
     evento: Optional[str]
@@ -119,6 +147,16 @@ class AtoProcessual:
     descricao: str
     citacao: Optional[str]
 
+    @property
+    def substantivo(self) -> bool:
+        """
+        O ato diz o que aconteceu, e nao apenas que aconteceu.
+
+        Nao serve para descartar — o ato existe e a data e boa. Serve para quem
+        monta a peca separar a cronologia do indice de andamentos.
+        """
+        return not _e_tautologica(self.descricao)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "evento": self.evento,
@@ -127,6 +165,7 @@ class AtoProcessual:
             "natureza": self.natureza,
             "descricao": self.descricao,
             "citacao": self.citacao,
+            "substantivo": self.substantivo,
         }
 
 
@@ -312,9 +351,10 @@ def build_case_products(entidades: Sequence[Any]) -> Dict[str, Any]:
     entidades = list(entidades or [])
     cobertura = build_coverage_matrix(entidades)
     ancoradas = sum(1 for e in entidades if _citacao(e))
+    linha = build_timeline(entidades)
 
     return {
-        "timeline": [a.to_dict() for a in build_timeline(entidades)],
+        "timeline": [a.to_dict() for a in linha],
         "omissions": [o.to_dict() for o in build_omissions(entidades)],
         "coverage": [c.to_dict() for c in cobertura],
         "contradictions": [c.to_dict() for c in build_contradiction_map(entidades)],
@@ -322,6 +362,10 @@ def build_case_products(entidades: Sequence[Any]) -> Dict[str, Any]:
         "summary": {
             "total_entities": len(entidades),
             "anchored_entities": ancoradas,
+            "dated_acts": sum(1 for a in linha if a.data),
+            # Separa a cronologia do indice de andamentos: no caso Vale uma
+            # tabela do Evento 96 respondeu por 63% dos atos datados.
+            "substantive_acts": sum(1 for a in linha if a.data and a.substantivo),
             "orphan_theses": sum(1 for c in cobertura if c.orfa),
             "exposed_theses": sum(1 for c in cobertura if c.exposta),
         },
