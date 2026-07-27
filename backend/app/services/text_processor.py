@@ -2,8 +2,8 @@
 Servico de processamento de texto
 """
 
-from typing import List, Optional
-from ..utils.file_parser import FileParser, split_text_into_chunks
+from typing import List, Optional, Tuple
+from ..utils.file_parser import FileParser, PageSpan, split_text_into_chunks
 
 
 class TextProcessor:
@@ -13,6 +13,16 @@ class TextProcessor:
     def extract_from_files(file_paths: List[str]) -> str:
         """Extrair texto de multiplos arquivos"""
         return FileParser.extract_from_multiple(file_paths)
+
+    @staticmethod
+    def extract_with_pages(file_paths: List[str]) -> Tuple[str, List[PageSpan]]:
+        """
+        Mesmo texto de `extract_from_files`, mais o indice de paginas.
+
+        Quem ingere acervo processual usa esta versao: e o indice que permite
+        dizer de que documento e de que folha veio cada entidade.
+        """
+        return FileParser.extract_with_page_index(file_paths)
 
     @staticmethod
     def split_text(

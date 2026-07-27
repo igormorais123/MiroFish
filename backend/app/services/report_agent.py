@@ -1019,6 +1019,9 @@ Responda em Markdown. Use **negrito** para destaques. NAO use titulos com # — 
 use **negrito** como subtitulos. Maximo 800 palavras."""
 
 HELENA_USER_PROMPT_TEMPLATE = """\
+[De que lugar voce fala]
+{posture_block}
+
 [Cenario da Simulacao]
 Demanda: {simulation_requirement}
 
@@ -3014,7 +3017,14 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         scale_context = self._build_helena_scale_context(self.simulation_id)
         from .decision_packet import decision_packet_prompt_block
 
+        # Sem declarar a postura, a Helena assumia perito do juizo por conta
+        # propria — e entregou veredito de nao-promocao num trabalho contratado
+        # como assistencia tecnica da parte.
+        from .analysis_posture import get_postura
+
+        postura = get_postura(getattr(self, "analysis_posture", None))
         user_prompt = HELENA_USER_PROMPT_TEMPLATE.format(
+            posture_block=postura.prompt_block(),
             simulation_requirement=self.simulation_requirement,
             total_agents=scale_context["total_agents"],
             total_rounds=scale_context["total_rounds"],

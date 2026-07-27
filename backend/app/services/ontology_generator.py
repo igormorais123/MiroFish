@@ -7,6 +7,10 @@ import json
 from typing import Dict, Any, List, Optional
 from ..config import Config
 from ..utils.llm_client import LLMClient
+from ..utils.logger import get_logger
+from . import judicial_ontology
+
+logger = get_logger('mirofish.ontology_generator')
 
 
 # Prompt de sistema para geracao de ontologia
@@ -186,6 +190,15 @@ class OntologyGenerator:
         Returns:
             Definicao de ontologia (entity_types, edge_types etc.)
         """
+        # Material processual usa vocabulario proprio: atos, documentos, teses,
+        # normas, valores e diligencias. A ontologia social descreve quem apoia
+        # quem — num processo isso nao existe, ha um decisor unico e um conjunto
+        # fechado de documentos.
+        corpus = "\n".join(document_texts or []) + "\n" + (simulation_requirement or "")
+        if judicial_ontology.is_material_processual(corpus):
+            logger.info("Material processual detectado; usando a ontologia judicial")
+            return judicial_ontology.build_judicial_ontology()
+
         # Construir mensagem do usuario
         user_message = self._build_user_message(
             document_texts,

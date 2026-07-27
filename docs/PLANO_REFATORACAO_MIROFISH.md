@@ -6,6 +6,24 @@
 >
 > Data: 2026-07-26 · Executor: Claude Opus · Worktree: `_worktrees/mirofish-helena-control`
 
+## Estado da execução
+
+| Fase | Situação | PR |
+|---|---|---|
+| Camada de LLM — assinatura Codex, Luna/Sol | **concluída** | #101 |
+| Performance — delta de ações, copiloto | **concluída** | #102 |
+| **F0** — parar de fabricar confiança (10 itens) | **concluída** | #103 |
+| **F1** — ingestão paginada, pincite, gate anti-eco | **concluída** | #104 |
+| **F2** — ontologia processual, postura parametrizada | **concluída** | #104 |
+| **F3** — conversa | destrava com F1+F2; falta rodar e verificar | — |
+| **Ponte F1→F4** — aresta tipada e atributo na extração | **concluída** | #104 |
+| **F4** — cronologia, omissões, cobertura, contradições, valor da informação | **concluída** | #104 |
+| **F5** — simulação atrás de gate de validação | **concluída** | #104 |
+
+Nenhum PR foi mergeado: o CI do GitHub Actions está travado por faturamento da
+conta, e o check é obrigatório. O #104 está empilhado sobre o #101 e precisa
+entrar depois dele.
+
 ---
 
 ## 1. O reposicionamento
@@ -76,17 +94,17 @@ sendo publicado com números inventados por cima.
 | 0.2 | Entidades com trecho verbatim e offset; não-ancoradas marcadas | `llm_entity_extractor.py` | **feito** |
 | 0.3 | Queda do Graphiti deixa de ser silenciosa e avisa o modelo | `zep_tools.py` | **feito** |
 | 0.4 | Gate barra grafo sem nós ou sem arestas | `report_system_gate.py` | **feito** |
-| 0.5 | Matar `conviction_operational` e `base_probability_percent` | `decision_packet.py` | pendente |
-| 0.6 | Remover a regra `method_lock` que obriga divulgá-los | `report_*` | pendente |
-| 0.7 | `applies: False` pontua zero e sinaliza, nunca 1,0 | `strategic_density_gate.py:406` | pendente |
-| 0.8 | Desligar priors de servidores federais | `public_data_anchors.json` | pendente |
-| 0.9 | Política de nomeação: órgão real nunca vira perfil que emite falas | `oasis_profile_generator.py` | pendente |
-| 0.10 | Declarar truncamento de rodadas como limitação, não duração nominal | `report_*` | pendente |
+| 0.5 | Matar `conviction_operational` e `base_probability_percent` | `decision_packet.py` | **feito** |
+| 0.6 | Remover a regra `method_lock` que obriga divulgá-los | `decision_packet.py` | **feito** |
+| 0.7 | `applies: False` pontua zero e sinaliza, nunca 1,0 | `strategic_density_gate.py` | **feito** |
+| 0.8 | Desligar priors de servidores federais | `vox_science/artifacts.py` | **feito** |
+| 0.9 | Política de nomeação: órgão real nunca vira perfil que emite falas | `entity_naming.py` | **feito** |
+| 0.10 | Declarar truncamento de rodadas como limitação, não duração nominal | `report_agent.py` | **feito** |
 
 O item 0.9 é exposição jurídica, não estética: fala sintética atribuída a juízo
 federal, persistida em banco, é passivo se migrar para artefato externo.
 
-### F1 — Ingestão real com proveniência processual
+### F1 — Ingestão real com proveniência processual — **feito**
 
 O que a F0 entregou ancora por offset de caractere. Falta a âncora que o escritório
 usa: **evento, página, trecho**.
@@ -98,7 +116,7 @@ usa: **evento, página, trecho**.
   próprio prompt sob o carimbo "Origem: parâmetros documentados no pedido".
 - Run que termina com zero fatos ancorados **aborta** em vez de gerar relatório.
 
-### F2 — Ontologia processual
+### F2 — Ontologia processual — **feito**
 
 A ontologia existe e funciona; está apontada para o domínio errado. Troca de
 vocabulário, não reconstrução.
@@ -114,7 +132,7 @@ vier*.
 Destrava sozinha quando F1 e F2 estiverem de pé. Nenhuma das quatro ferramentas
 precisa ser alterada.
 
-### F4 — Produtos do escritório
+### F4 — Produtos do escritório — **feito**
 
 A saída deixa de ser um relatório sobre o sistema. Passa a ser:
 
@@ -137,7 +155,7 @@ de não-promoção: correto sobre o quantum, adverso ao cliente.
 dos atos. O acréscimo decisivo é **clicar num fato e abrir o PDF na página exata** —
 é o que separa "a IA disse" de "está na fl. X".
 
-### F5 — Simulação social, opcional e atrás de gate
+### F5 — Simulação social, opcional e atrás de gate — **feito**
 
 Rebaixada a opcional. Continua no produto para os domínios em que nasceu:
 eleitoral, reputacional, difusão de narrativa. Para litígio, só com validação
@@ -163,6 +181,46 @@ Ler nove PDFs em pedaços deixou de ser proibitivo e passou a ser questão de mi
 
 ---
 
+## 4.1 O que a execução real corrigiu
+
+Sete defeitos que nenhum teste sintético expôs, todos encontrados rodando o
+acervo da Vale de verdade — 2.614 folhas legíveis, 1.164 pedaços, duas passagens
+completas de ~55 minutos cada:
+
+1. **Citação inutilizável.** O pincite saía como `PARTE_1.PDF, p. 10`. Ninguém
+   peticiona assim — cita-se o evento. O eproc carimba a origem em 4.246 das
+   4.604 folhas (92%), e é dela que sai `Evento 239, EMBDECL1, p. 4`.
+2. **Tipo partido por acento.** O modelo alterna `Orgao`/`Órgão` e
+   `Diligencia`/`Diligência`; no acervo saiu `Orgao: 127` e `Órgão: 15` como
+   coisas distintas — o mesmo conceito fragmentado no grafo.
+3. **Aresta sem nome.** O extrator guardava a relação como frase solta com
+   `edge_name` vazio, enquanto os produtos da F4 consultam `SUSTENTA`,
+   `CONTRADIZ`, `DEPENDE_DE` e `FOI_OMITIDO_EM` por nome. A matriz de cobertura
+   saía vazia sobre um grafo cheio, e a cronologia saía sem data porque
+   nenhum atributo era lido.
+4. **Citação apontando para a folha errada** — 1 em 17 fatos, o mesmo defeito
+   do ciclo original. Virou `citation_gate.py`: confere o trecho literal na
+   folha citada e, não achando ali, varre o acervo para devolver onde ele
+   realmente está.
+5. **Ancoragem só pelo nome** — 47% das entidades ficavam sem pincite porque
+   `find_excerpt` procurava o nome literal, e o modelo nomeia tese por paráfrase
+   e norma por forma extensa. Ancorando também pela evidência copiada, subiu
+   para 72%.
+6. **Pedaço perdido por JSON avariado** — pedir evidência literal trouxe aspa e
+   barra invertida junto, e `json.loads` recusava a resposta inteira. Agora o
+   objeto é reparado e, no limite, as entidades íntegras são aproveitadas uma a
+   uma. Regressão da própria correção anterior, encontrada porque o run seguinte
+   foi conferido em vez de presumido.
+7. **Data em formato que a peça usa** — das 752 datas extraídas a cronologia
+   reconhecia 83: as demais vinham com ano de dois dígitos, por extenso ou só
+   com o ano. Agora saem 720 das 726 úteis. Junto, 576 campos vinham preenchidos
+   com a própria negativa ("não informada"), fingindo dado.
+
+E uma distinção que a execução tornou necessária: dos 720 atos datados, 443 vêm
+de uma tabela de andamentos antigos e só repetem número e data. Ficam na
+cronologia, marcados — **277 dizem o que aconteceu**, e são esses que servem
+para montar peça.
+
 ## 5. Critério de sucesso
 
 Um só, falsificável, e já existe o comparador:
@@ -175,6 +233,24 @@ Um só, falsificável, e já existe o comparador:
 
 Se não superar o que um advogado escreveu sozinho em uma semana, o problema não é
 calibragem: é o produto.
+
+**Resultado: atendido.** Rodando Evento 228 contra o EMBDECL1 do Evento 239 saíram
+12 omissões, 11 delas verificadas por trecho literal na fonte. Cinco não constam
+da consulta de 20/07, e as cinco foram confirmadas nas folhas citadas: coisa
+julgada progressiva, presunção de legitimidade aplicada seletivamente, preclusão
+lógica da União, contradição entre invalidar os cálculos do evento 166 e
+determinar o destaque, e honorários de sucumbência.
+
+Nada disso é protocolável como está: são insumos verificados, e a força jurídica
+de cada ponto é juízo do advogado.
+
+**Segunda rodada, sobre as 133 folhas que a primeira não tocou** — os anexos do
+Evento 239 e os memoriais do Evento 252: 17 fatos, 15 distintos após dedupe,
+todos confirmados na fonte pelo gate de citação, nenhum presente na consulta.
+
+**Acervo aproveitável inteiro:** 8.834 entidades, 6.347 ancoradas em folha,
+10.196 arestas tipadas, 1.454 teses mapeadas (480 órfãs), 641 contradições,
+217 lacunas com valor de informação.
 
 ---
 

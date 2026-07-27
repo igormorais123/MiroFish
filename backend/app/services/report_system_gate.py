@@ -83,6 +83,30 @@ def _file_info(path: str) -> dict[str, Any]:
     }
 
 
+def _count_anchored_nodes(graph_id: str) -> Optional[int]:
+    """
+    Quantos nos do grafo tem trecho verbatim do corpus.
+
+    Devolve None quando a contagem nao pode ser feita — grafo indisponivel ou
+    backend sem esse atributo. Ausencia de medida nao vira acusacao: o gate so
+    reprova quando consegue confirmar que nenhum no esta ancorado.
+    """
+    try:
+        from .zep_tools import ZepToolsService
+
+        nodes = ZepToolsService().get_all_nodes(graph_id)
+    except Exception:
+        return None
+    if not nodes:
+        return None
+    ancorados = 0
+    for node in nodes:
+        atributos = getattr(node, "attributes", None) or {}
+        if atributos.get("verbatim_found") or atributos.get("source_excerpt"):
+            ancorados += 1
+    return ancorados
+
+
 def _simulation_dir(simulation_id: str) -> str:
     return os.path.join(Config.UPLOAD_FOLDER, "simulations", simulation_id)
 
@@ -288,6 +312,17 @@ def evaluate_report_system_gate(
                 issues.append(
                     f"Grafo com {graph_nodes} nos e nenhuma relacao: nao ha estrutura a analisar"
                 )
+            else:
+                # Nos existirem nao basta: se nenhum deles foi ancorado num
+                # trecho do corpus, o grafo e um indice de nomes inventados.
+                ancorados = _count_anchored_nodes(effective_graph_id)
+                if ancorados is not None:
+                    metrics["graph_anchored_nodes_count"] = ancorados
+                    if ancorados <= 0:
+                        issues.append(
+                            f"Nenhum dos {graph_nodes} nos do grafo tem trecho de origem no corpus: "
+                            "sem ancoragem, o relatorio nao teria como citar fonte"
+                        )
         except Exception as exc:
             warnings.append(f"Estatisticas do grafo indisponiveis para auditoria numerica: {exc}")
             artifacts["graph_statistics"] = {

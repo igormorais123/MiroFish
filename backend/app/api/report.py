@@ -223,6 +223,37 @@ def _enrich_forecast_ledger_payload(payload):
     return enriched
 
 
+@report_bp.route('/<simulation_id>/case-products', methods=['GET'])
+def get_case_products(simulation_id):
+    """
+    Produtos do escritorio derivados do grafo do caso.
+
+    Cronologia auditada, matriz de omissoes, cobertura por tese, mapa de
+    contradicoes e valor da informacao. Tudo consultado do grafo, nao gerado
+    por modelo: se o grafo nao tem, o produto sai vazio em vez de inventado.
+    """
+    try:
+        from ..services.case_products import build_case_products
+        from ..services.simulation_manager import SimulationManager
+        from ..services.zep_tools import ZepToolsService
+
+        state = SimulationManager().get_simulation(simulation_id)
+        if not state:
+            return jsonify({"success": False, "error": "Simulacao nao encontrada"}), 404
+
+        graph_id = getattr(state, "graph_id", None)
+        if not graph_id:
+            return jsonify({"success": False, "error": "Simulacao sem grafo associado"}), 400
+
+        nodes = ZepToolsService().get_all_nodes(graph_id)
+        produtos = build_case_products(nodes)
+        return jsonify({"success": True, "data": produtos})
+    except Exception as e:
+        logger.error(f"Falha ao montar produtos do caso {simulation_id}: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @report_bp.route('/power-catalog', methods=['GET'])
 def get_power_catalog():
     """Expor poderes formais da missao."""
