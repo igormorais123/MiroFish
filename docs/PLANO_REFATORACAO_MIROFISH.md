@@ -183,8 +183,9 @@ Ler nove PDFs em pedaços deixou de ser proibitivo e passou a ser questão de mi
 
 ## 4.1 O que a execução real corrigiu
 
-Três defeitos que nenhum teste sintético expôs, todos encontrados rodando o
-acervo da Vale de verdade:
+Sete defeitos que nenhum teste sintético expôs, todos encontrados rodando o
+acervo da Vale de verdade — 2.614 folhas legíveis, 1.164 pedaços, duas passagens
+completas de ~55 minutos cada:
 
 1. **Citação inutilizável.** O pincite saía como `PARTE_1.PDF, p. 10`. Ninguém
    peticiona assim — cita-se o evento. O eproc carimba a origem em 4.246 das
@@ -197,6 +198,28 @@ acervo da Vale de verdade:
    `CONTRADIZ`, `DEPENDE_DE` e `FOI_OMITIDO_EM` por nome. A matriz de cobertura
    saía vazia sobre um grafo cheio, e a cronologia saía sem data porque
    nenhum atributo era lido.
+4. **Citação apontando para a folha errada** — 1 em 17 fatos, o mesmo defeito
+   do ciclo original. Virou `citation_gate.py`: confere o trecho literal na
+   folha citada e, não achando ali, varre o acervo para devolver onde ele
+   realmente está.
+5. **Ancoragem só pelo nome** — 47% das entidades ficavam sem pincite porque
+   `find_excerpt` procurava o nome literal, e o modelo nomeia tese por paráfrase
+   e norma por forma extensa. Ancorando também pela evidência copiada, subiu
+   para 72%.
+6. **Pedaço perdido por JSON avariado** — pedir evidência literal trouxe aspa e
+   barra invertida junto, e `json.loads` recusava a resposta inteira. Agora o
+   objeto é reparado e, no limite, as entidades íntegras são aproveitadas uma a
+   uma. Regressão da própria correção anterior, encontrada porque o run seguinte
+   foi conferido em vez de presumido.
+7. **Data em formato que a peça usa** — das 752 datas extraídas a cronologia
+   reconhecia 83: as demais vinham com ano de dois dígitos, por extenso ou só
+   com o ano. Agora saem 720 das 726 úteis. Junto, 576 campos vinham preenchidos
+   com a própria negativa ("não informada"), fingindo dado.
+
+E uma distinção que a execução tornou necessária: dos 720 atos datados, 443 vêm
+de uma tabela de andamentos antigos e só repetem número e data. Ficam na
+cronologia, marcados — **277 dizem o que aconteceu**, e são esses que servem
+para montar peça.
 
 ## 5. Critério de sucesso
 
@@ -220,6 +243,14 @@ determinar o destaque, e honorários de sucumbência.
 
 Nada disso é protocolável como está: são insumos verificados, e a força jurídica
 de cada ponto é juízo do advogado.
+
+**Segunda rodada, sobre as 133 folhas que a primeira não tocou** — os anexos do
+Evento 239 e os memoriais do Evento 252: 17 fatos, 15 distintos após dedupe,
+todos confirmados na fonte pelo gate de citação, nenhum presente na consulta.
+
+**Acervo aproveitável inteiro:** 8.834 entidades, 6.347 ancoradas em folha,
+10.196 arestas tipadas, 1.454 teses mapeadas (480 órfãs), 641 contradições,
+217 lacunas com valor de informação.
 
 ---
 
