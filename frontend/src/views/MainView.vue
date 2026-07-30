@@ -7,7 +7,7 @@
           <div class="brand-mark">IA</div>
           <div class="brand-copy">
             <div class="brand">INTEIA</div>
-            <div class="brand-sub">MiroFish Lab</div>
+            <div class="brand-sub">MiroFish Petições</div>
           </div>
         </div>
       </div>
@@ -27,6 +27,13 @@
       </div>
 
       <div class="header-right">
+        <button class="ai-friend-header" type="button" @click="openAiFriend">
+          <span class="friend-status-dot" aria-hidden="true"></span>
+          <span>
+            <strong>IA Friend</strong>
+            <small>orientar esta fase</small>
+          </span>
+        </button>
         <div class="workflow-step">
           <span class="step-num">Etapa {{ currentStep }}/5</span>
           <span class="step-name">{{ stepNames[currentStep - 1] }}</span>
@@ -97,7 +104,7 @@ const viewMode = ref('split') // graph | split | workbench
 
 // Step State
 const currentStep = ref(1)
-const stepNames = ['Construção do grafo', 'Configuração do ambiente', 'Início da simulação', 'Geração de relatório', 'Interação profunda']
+const stepNames = ['Lastro e grafo', 'Mapa processual', 'Gate de método', 'Produtos e relatório', 'Cocriação assistida']
 
 // Data State
 const currentProjectId = ref(route.params.projectId)
@@ -151,6 +158,14 @@ const addLog = (msg) => {
   if (systemLogs.value.length > 100) {
     systemLogs.value.shift()
   }
+}
+
+const openAiFriend = () => {
+  window.dispatchEvent(new CustomEvent('mirofish:open-ai-friend', {
+    detail: {
+      command: `Inspecione a etapa ${currentStep.value} (${stepNames[currentStep.value - 1]}) deste processo. Mostre o estado verificado, as lacunas e a próxima ação segura, sem alterar o processo.`
+    }
+  }))
 }
 
 // --- Layout Methods ---
@@ -579,6 +594,44 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.ai-friend-header {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid rgba(214, 158, 46, 0.30);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.055);
+  cursor: pointer;
+  text-align: left;
+}
+.ai-friend-header:hover {
+  border-color: rgba(214, 158, 46, 0.62);
+  background: rgba(214, 158, 46, 0.10);
+}
+.ai-friend-header > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ai-friend-header strong {
+  font: 700 10px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.06em;
+}
+.ai-friend-header small {
+  color: rgba(255,255,255,0.58);
+  font-size: 8px;
+}
+.friend-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #49c98b;
+  box-shadow: 0 0 0 4px rgba(73, 201, 139, 0.10);
+}
+
 .workflow-step {
   display: flex;
   align-items: center;
@@ -687,6 +740,17 @@ onUnmounted(() => {
     flex-wrap: wrap;
     justify-content: flex-end;
     max-width: calc(100% - 54px);
+  }
+
+  .ai-friend-header {
+    width: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .ai-friend-header > span:last-child {
+    display: none;
   }
 
   .workflow-step {
