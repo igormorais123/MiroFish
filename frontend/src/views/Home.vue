@@ -11,14 +11,14 @@
           <img src="../assets/logo/inteia_shield.png" alt="INTEIA" class="nav-brasao" />
           <div class="nav-brand-text">
             <span class="nav-brand-main">INTEIA</span>
-            <span class="nav-brand-sub">Mirofish Lab</span>
+            <span class="nav-brand-sub">Mirofish Petições</span>
           </div>
         </div>
 
         <div class="nav-meta">
           <span class="nav-meta-item"><span class="nav-pulse"></span> Motor online</span>
           <span class="nav-meta-divider">/</span>
-          <span class="nav-meta-item nav-mono">v2.0 · simulação social</span>
+          <span class="nav-meta-item nav-mono">v2.1 · petições + IA Friend</span>
         </div>
 
         <div class="nav-links">
@@ -39,40 +39,40 @@
         <div class="hero-left">
           <div class="eyebrow">
             <span class="eyebrow-dot"></span>
-            <span class="eyebrow-tag">INTEIA Signal Engine</span>
-            <span class="eyebrow-meta">/ módulo de simulação social</span>
+            <span class="eyebrow-tag">INTEIA Legal Intelligence</span>
+            <span class="eyebrow-meta">/ laboratório de petições</span>
           </div>
 
           <h1 class="display-title">
-            Transforme contexto bruto em
-            <span class="display-italic">cenários acionáveis</span>
-            <span class="display-accent">da INTEIA.</span>
+            Transforme autos complexos em
+            <span class="display-italic">petições rastreáveis</span>
+            <span class="display-accent">com IA ao seu lado.</span>
           </h1>
 
           <div class="hero-desc">
             <p>
-              O <span class="strong">Mirofish&nbsp;INTEIA</span> opera como motor de simulação e leitura de comportamento dentro do ecossistema <span class="gold">INTEIA</span>. A partir de relatórios, memorandos, dossiês e sinais políticos, monta um ambiente sintético e testa trajetórias prováveis de reação coletiva com disciplina analítica.
+              O <span class="strong">Mirofish&nbsp;INTEIA</span> organiza documentos, reconstrói a cronologia e conecta teses, normas, omissões e contradições com referência ao evento e à página. A <span class="gold">IA Friend Helena</span> acompanha cada fase, mostra o que está comprovado e coordena o próximo passo sem inventar fatos.
             </p>
             <p class="quote">
-              Menos demo genérica, mais inteligência aplicada à decisão<span class="cursor">_</span>
+              O que sabemos · o que falta · o que fazer agora<span class="cursor">_</span>
             </p>
           </div>
 
           <div class="hero-pillars">
             <div class="pillar">
               <div class="pillar-num">01</div>
-              <div class="pillar-label">GraphRAG narrativo</div>
-              <div class="pillar-desc">Memória de curto e longo prazo, multi-fonte.</div>
+              <div class="pillar-label">Proveniência processual</div>
+              <div class="pillar-desc">Documento, evento, página e trecho verificável.</div>
             </div>
             <div class="pillar">
               <div class="pillar-num">02</div>
-              <div class="pillar-label">Agentes psicometricamente parametrizados</div>
-              <div class="pillar-desc">Bio, opinião, MBTI e ancoragem social.</div>
+              <div class="pillar-label">Mapa jurídico interrogável</div>
+              <div class="pillar-desc">Teses, documentos, normas, valores e diligências conectados.</div>
             </div>
             <div class="pillar">
               <div class="pillar-num">03</div>
-              <div class="pillar-label">Relatório auditável</div>
-              <div class="pillar-desc">Análise com citações de cenário e entidade.</div>
+              <div class="pillar-label">IA Friend contínua</div>
+              <div class="pillar-desc">Contexto vivo, plano seguro e próxima ação explícita.</div>
             </div>
           </div>
         </div>
@@ -88,7 +88,7 @@
               <img src="../assets/logo/inteia_shield.png" alt="" class="brand-card-brasao" />
               <div>
                 <div class="brand-card-title">INTEIA</div>
-                <div class="brand-card-sub">Simulação estratégica · núcleo Mirofish</div>
+                <div class="brand-card-sub">Petições rastreáveis · núcleo Mirofish</div>
               </div>
             </div>
 
@@ -110,18 +110,18 @@
 
             <div class="brand-card-footer">
               <div class="kpi">
-                <div class="kpi-value">~ US$&nbsp;0,10–0,35</div>
-                <div class="kpi-label">IA por execução observada</div>
-              </div>
-              <div class="kpi-divider"></div>
-              <div class="kpi">
-                <div class="kpi-value">10⁶</div>
-                <div class="kpi-label">agentes simulados</div>
+                <div class="kpi-value">8</div>
+                <div class="kpi-label">tipos processuais conectados</div>
               </div>
               <div class="kpi-divider"></div>
               <div class="kpi">
                 <div class="kpi-value">5</div>
-                <div class="kpi-label">etapas auditáveis</div>
+                <div class="kpi-label">produtos do escritório</div>
+              </div>
+              <div class="kpi-divider"></div>
+              <div class="kpi">
+                <div class="kpi-value">1</div>
+                <div class="kpi-label">IA amiga em todas as fases</div>
               </div>
             </div>
           </div>
@@ -150,21 +150,21 @@
               <span class="panel-header-mono">READY</span>
             </div>
 
-            <h2 class="section-title">Pronto para uso<span class="title-period">.</span></h2>
+            <h2 class="section-title">Pronto para ler os autos<span class="title-period">.</span></h2>
             <p class="section-desc">
-              O motor de previsão está pronto. Envie múltiplos dados não estruturados para iniciar a simulação.
+              Envie os documentos e diga qual peça, tese ou decisão precisa apoiar. A plataforma começa pelo material disponível e deixa qualquer lacuna explícita.
             </p>
 
             <div class="metrics-row">
               <div class="metric-card">
-                <div class="metric-label-top">custo</div>
-                <div class="metric-value">Baixo</div>
-                <div class="metric-label">Referência técnica observada: US$&nbsp;0,10–0,35 por execução; valor operacional INTEIA: US$&nbsp;0,50–1,75.</div>
+                <div class="metric-label-top">lastro</div>
+                <div class="metric-value">Rastreável</div>
+                <div class="metric-label">Cada achado útil aponta para documento, evento, página e trecho de origem.</div>
               </div>
               <div class="metric-card">
-                <div class="metric-label-top">escala</div>
-                <div class="metric-value">Massiva</div>
-                <div class="metric-label">Suporte a simulações com até milhões de agentes.</div>
+                <div class="metric-label-top">controle</div>
+                <div class="metric-value">Fail-closed</div>
+                <div class="metric-label">Matéria judicial não roda simulação social por padrão; ausência de prova não vira probabilidade.</div>
               </div>
             </div>
 
@@ -214,11 +214,11 @@
 
                 <!-- Labels arestas -->
                 <g fill="rgba(20,22,30,0.55)" font-size="5.5" font-family="JetBrains Mono">
-                  <text x="248" y="135" transform="rotate(-18,248,135)">PERTENCE_A</text>
-                  <text x="370" y="140" transform="rotate(12,370,140)">ATUA_EM</text>
-                  <text x="230" y="205" transform="rotate(22,230,205)">INFLUENCIA</text>
-                  <text x="380" y="210" transform="rotate(-20,380,210)">COMPETE_COM</text>
-                  <text x="300" y="120">GERA</text>
+                  <text x="248" y="135" transform="rotate(-18,248,135)">SUSTENTA</text>
+                  <text x="370" y="140" transform="rotate(12,370,140)">CONTRADIZ</text>
+                  <text x="230" y="205" transform="rotate(22,230,205)">JUNTADO_EM</text>
+                  <text x="380" y="210" transform="rotate(-20,380,210)">DEPENDE_DE</text>
+                  <text x="300" y="120">IMPUGNA</text>
                 </g>
 
                 <!-- Núcleo central -->
@@ -229,69 +229,69 @@
                 <circle cx="310" cy="170" r="20" fill="url(#centerGold)" stroke="#e7b948" stroke-width="1.5" filter="url(#glow)">
                   <animate attributeName="r" values="20;22;20" dur="3.5s" repeatCount="indefinite"/>
                 </circle>
-                <text x="310" y="167" text-anchor="middle" fill="#0a0e1a" font-size="7" font-weight="700" font-family="JetBrains Mono">Cenário</text>
-                <text x="310" y="177" text-anchor="middle" fill="#0a0e1a" font-size="6.5" font-weight="600" font-family="JetBrains Mono">central</text>
+                <text x="310" y="167" text-anchor="middle" fill="#0a0e1a" font-size="7" font-weight="700" font-family="JetBrains Mono">Processo</text>
+                <text x="310" y="177" text-anchor="middle" fill="#0a0e1a" font-size="6.5" font-weight="600" font-family="JetBrains Mono">auditável</text>
 
                 <!-- Hubs -->
                 <g font-family="Geist, Outfit" font-weight="600">
                   <circle cx="200" cy="110" r="14" fill="#1c1e27" stroke="#c9952a" stroke-width="1.4"/>
-                  <text x="200" y="114" text-anchor="middle" fill="#f5f2ea" font-size="7">TechBrasil</text>
+                  <text x="200" y="114" text-anchor="middle" fill="#f5f2ea" font-size="7">Documento</text>
                   <circle cx="430" cy="120" r="14" fill="#1c1e27" stroke="#c9952a" stroke-width="1.4"/>
-                  <text x="430" y="124" text-anchor="middle" fill="#f5f2ea" font-size="7">Mercado TI</text>
+                  <text x="430" y="124" text-anchor="middle" fill="#f5f2ea" font-size="7">Tese</text>
                   <circle cx="180" cy="230" r="13" fill="#1c1e27" stroke="rgba(201,149,42,0.7)" stroke-width="1.2"/>
-                  <text x="180" y="234" text-anchor="middle" fill="#f5f2ea" font-size="6.5">Gestão RH</text>
+                  <text x="180" y="234" text-anchor="middle" fill="#f5f2ea" font-size="6.5">Evento</text>
                   <circle cx="440" cy="240" r="13" fill="#1c1e27" stroke="rgba(201,149,42,0.7)" stroke-width="1.2"/>
-                  <text x="440" y="244" text-anchor="middle" fill="#f5f2ea" font-size="6.5">Imprensa</text>
+                  <text x="440" y="244" text-anchor="middle" fill="#f5f2ea" font-size="6.5">Norma</text>
                   <circle cx="310" cy="60" r="12" fill="#1c1e27" stroke="rgba(201,149,42,0.7)" stroke-width="1.2"/>
-                  <text x="310" y="64" text-anchor="middle" fill="#f5f2ea" font-size="6.5">Produtividade</text>
+                  <text x="310" y="64" text-anchor="middle" fill="#f5f2ea" font-size="6.5">Diligência</text>
                 </g>
 
                 <!-- Pessoas -->
                 <g font-family="Geist, Outfit">
                   <circle cx="100" cy="60" r="8" fill="#c9952a"/>
-                  <text x="100" y="50" text-anchor="middle" fill="#7a5a18" font-size="5.5" font-weight="600">CEO Silva</text>
+                  <text x="100" y="50" text-anchor="middle" fill="#7a5a18" font-size="5.5" font-weight="600">Evento 239</text>
                   <circle cx="90" cy="140" r="7" fill="#c9952a"/>
-                  <text x="90" y="155" text-anchor="middle" fill="#7a5a18" font-size="5.5">CTO Pereira</text>
+                  <text x="90" y="155" text-anchor="middle" fill="#7a5a18" font-size="5.5">Evento 252</text>
                   <circle cx="520" cy="70" r="8" fill="#c9952a"/>
-                  <text x="520" y="60" text-anchor="middle" fill="#7a5a18" font-size="5.5" font-weight="600">Analista Mkt</text>
+                  <text x="520" y="60" text-anchor="middle" fill="#7a5a18" font-size="5.5" font-weight="600">Art. 1.022</text>
                   <circle cx="540" cy="160" r="7" fill="#c9952a"/>
-                  <text x="555" y="155" text-anchor="start" fill="#7a5a18" font-size="5.5">Jornalista</text>
+                  <text x="555" y="155" text-anchor="start" fill="#7a5a18" font-size="5.5">Decisão</text>
                 </g>
 
                 <!-- Recursos / org -->
                 <g font-family="Geist, Outfit">
                   <circle cx="140" cy="180" r="7" fill="#5C9EAD"/>
-                  <text x="140" y="195" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Equipe DevOps</text>
+                  <text x="140" y="195" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Memoriais</text>
                   <circle cx="260" cy="60" r="6" fill="#5C9EAD"/>
-                  <text x="260" y="50" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Sprint Backlog</text>
+                  <text x="260" y="50" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Guia de 1996</text>
                   <circle cx="490" cy="190" r="7" fill="#5C9EAD"/>
-                  <text x="505" y="192" text-anchor="start" fill="rgba(20,22,30,0.55)" font-size="5">LinkedIn</text>
+                  <text x="505" y="192" text-anchor="start" fill="rgba(20,22,30,0.55)" font-size="5">Sentença</text>
                   <circle cx="100" cy="280" r="7" fill="#3FB77C"/>
-                  <text x="100" y="295" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Sindicato</text>
+                  <text x="100" y="295" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Parte autora</text>
                   <circle cx="520" cy="290" r="7" fill="#3FB77C"/>
-                  <text x="520" y="305" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">ABES</text>
+                  <text x="520" y="305" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5">Órgão julgador</text>
                 </g>
 
                 <!-- Periféricos -->
                 <g fill="rgba(20,22,30,0.45)" font-family="Geist, Outfit" font-size="4.5">
                   <circle cx="140" cy="310" r="5" fill="rgba(201,149,42,0.55)"/>
-                  <text x="140" y="325" text-anchor="middle">Turnover 18%</text>
+                  <text x="140" y="325" text-anchor="middle">Valor controvertido</text>
                   <circle cx="260" cy="310" r="5" fill="rgba(201,149,42,0.55)"/>
-                  <text x="260" y="325" text-anchor="middle">NPS 52</text>
+                  <text x="260" y="325" text-anchor="middle">Data do ato</text>
                   <circle cx="390" cy="320" r="5" fill="rgba(201,149,42,0.55)"/>
-                  <text x="390" y="335" text-anchor="middle">Custo R$45k</text>
+                  <text x="390" y="335" text-anchor="middle">Tese órfã</text>
                   <circle cx="500" cy="330" r="5" fill="rgba(201,149,42,0.55)"/>
-                  <text x="500" y="345" text-anchor="middle">Reajuste 8%</text>
+                  <text x="500" y="345" text-anchor="middle">Omissão</text>
                 </g>
 
                 <!-- Legenda -->
                 <g>
                   <rect x="16" y="358" width="220" height="34" rx="6" fill="rgba(245,242,234,0.95)" stroke="rgba(20,22,30,0.18)" stroke-width="0.7"/>
                   <text x="24" y="370" fill="#7a5a18" font-size="5.5" font-weight="700" font-family="Geist, Outfit" letter-spacing="0.6">TIPOS DE ENTIDADE</text>
-                  <circle cx="28" cy="382" r="3" fill="#c9952a"/><text x="36" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Pessoa</text>
-                  <circle cx="76" cy="382" r="3" fill="#1c1e27"/><text x="84" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Hub</text>
-                  <circle cx="118" cy="382" r="3" fill="#5C9EAD"/><text x="126" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Recurso</text>
-                  <circle cx="172" cy="382" r="3" fill="#3FB77C"/><text x="180" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Organização</text>
+                  <circle cx="28" cy="382" r="3" fill="#c9952a"/><text x="36" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Evento</text>
+                  <circle cx="76" cy="382" r="3" fill="#1c1e27"/><text x="84" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Tese</text>
+                  <circle cx="118" cy="382" r="3" fill="#5C9EAD"/><text x="126" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Documento</text>
+                  <circle cx="172" cy="382" r="3" fill="#3FB77C"/><text x="180" y="385" fill="#14161e" font-size="5" font-family="Geist, Outfit">Parte</text>
                 </g>
               </svg>
             </div>
@@ -299,7 +299,7 @@
             <div class="steps-container">
               <div class="steps-header">
                 <span class="diamond-icon">◇</span>
-                <span>Fluxo de trabalho</span>
+                <span>Fluxo jurídico assistido</span>
                 <span class="steps-header-meta">5 etapas</span>
               </div>
               <div class="workflow-list">
@@ -319,7 +319,7 @@
           <div class="right-panel">
             <div class="pipeline-card">
               <div class="pipeline-card-header">
-                <span class="pipeline-card-title">Como funciona a simulação</span>
+                <span class="pipeline-card-title">Como funciona a análise jurídica</span>
                 <span class="pipeline-card-mono">/ pipeline</span>
               </div>
               <svg viewBox="0 0 480 280" xmlns="http://www.w3.org/2000/svg" class="pipeline-svg">
@@ -333,13 +333,13 @@
                 <rect width="480" height="280" rx="12" fill="#fbf8ee"/>
                 <rect x="1" y="1" width="478" height="278" rx="11" fill="none" stroke="rgba(20,22,30,0.10)" stroke-width="1"/>
 
-                <text x="240" y="22" text-anchor="middle" fill="#7a5a18" font-size="9" font-weight="600" font-family="Geist, Outfit" letter-spacing="1.2">PIPELINE · DADO → PREVISÃO</text>
+                <text x="240" y="22" text-anchor="middle" fill="#7a5a18" font-size="9" font-weight="600" font-family="Geist, Outfit" letter-spacing="1.2">PIPELINE · AUTOS → PEÇA</text>
 
                 <!-- Step 1 -->
                 <rect x="16" y="36" width="86" height="54" rx="8" fill="#ffffff" stroke="rgba(20,22,30,0.14)" stroke-width="0.8"/>
                 <text x="59" y="52" text-anchor="middle" fill="#7a5a18" font-size="7" font-weight="700" font-family="JetBrains Mono">01</text>
-                <text x="59" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">Envie seu</text>
-                <text x="59" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">documento</text>
+                <text x="59" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">Envie os</text>
+                <text x="59" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">autos</text>
                 <text x="59" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">PDF · MD · TXT</text>
 
                 <line x1="106" y1="63" x2="126" y2="63" stroke="#c9952a" stroke-width="1.3" marker-end="url(#flowArrow)"/>
@@ -347,9 +347,9 @@
                 <!-- Step 2 -->
                 <rect x="130" y="36" width="86" height="54" rx="8" fill="#ffffff" stroke="rgba(20,22,30,0.14)" stroke-width="0.8"/>
                 <text x="173" y="52" text-anchor="middle" fill="#7a5a18" font-size="7" font-weight="700" font-family="JetBrains Mono">02</text>
-                <text x="173" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">IA extrai</text>
-                <text x="173" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">entidades</text>
-                <text x="173" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">Pessoas, empresas...</text>
+                <text x="173" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">IA localiza</text>
+                <text x="173" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">fatos e teses</text>
+                <text x="173" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">Evento · página · trecho</text>
 
                 <line x1="220" y1="63" x2="240" y2="63" stroke="#c9952a" stroke-width="1.3" marker-end="url(#flowArrow)"/>
 
@@ -357,54 +357,96 @@
                 <rect x="244" y="36" width="86" height="54" rx="8" fill="#ffffff" stroke="#c9952a" stroke-width="1.4"/>
                 <text x="287" y="52" text-anchor="middle" fill="#7a5a18" font-size="7" font-weight="700" font-family="JetBrains Mono">03</text>
                 <text x="287" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">Monta grafo</text>
-                <text x="287" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">de relações</text>
-                <text x="287" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">Quem se conecta a quem</text>
+                <text x="287" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">processual</text>
+                <text x="287" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">Sustenta · contradiz · omite</text>
 
                 <line x1="334" y1="63" x2="354" y2="63" stroke="#c9952a" stroke-width="1.3" marker-end="url(#flowArrow)"/>
 
                 <!-- Step 4 -->
                 <rect x="358" y="36" width="106" height="54" rx="8" fill="#ffffff" stroke="rgba(20,22,30,0.14)" stroke-width="0.8"/>
                 <text x="411" y="52" text-anchor="middle" fill="#7a5a18" font-size="7" font-weight="700" font-family="JetBrains Mono">04</text>
-                <text x="411" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">Cria agentes</text>
-                <text x="411" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">com personalidade</text>
-                <text x="411" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">Bio, opinião, MBTI</text>
+                <text x="411" y="64" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">Confere</text>
+                <text x="411" y="74" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="600" font-family="Geist, Outfit">o lastro</text>
+                <text x="411" y="84" text-anchor="middle" fill="rgba(20,22,30,0.55)" font-size="5" font-family="Geist, Outfit">Trecho na folha citada</text>
 
                 <path d="M411,94 L411,108" fill="none" stroke="#c9952a" stroke-width="1.3" marker-end="url(#flowArrow)"/>
 
                 <!-- Step 5 (destacado/dark accent) -->
                 <rect x="130" y="112" width="334" height="60" rx="10" fill="#1c1e27" stroke="#c9952a" stroke-width="1.5" filter="url(#stepGlow)"/>
-                <text x="297" y="132" text-anchor="middle" fill="#eab14a" font-size="8" font-weight="700" font-family="JetBrains Mono">05  ·  SIMULAÇÃO</text>
-                <text x="297" y="146" text-anchor="middle" fill="#f5f2ea" font-size="7" font-weight="500" font-family="Geist, Outfit">Agentes interagem em redes simuladas (posts, likes, comentários)</text>
-                <text x="297" y="158" text-anchor="middle" fill="rgba(245,242,234,0.65)" font-size="5.5" font-family="Geist, Outfit">Feed aberto + comunidade · múltiplas rodadas · memória temporal</text>
+                <text x="297" y="132" text-anchor="middle" fill="#eab14a" font-size="8" font-weight="700" font-family="JetBrains Mono">05  ·  PRODUTOS DO ESCRITÓRIO</text>
+                <text x="297" y="146" text-anchor="middle" fill="#f5f2ea" font-size="7" font-weight="500" font-family="Geist, Outfit">Cronologia · omissões · cobertura de teses · contradições</text>
+                <text x="297" y="158" text-anchor="middle" fill="rgba(245,242,234,0.65)" font-size="5.5" font-family="Geist, Outfit">Valor da informação · lacunas explícitas · revisão humana</text>
 
                 <path d="M297,176 L297,190" fill="none" stroke="#c9952a" stroke-width="1.3" marker-end="url(#flowArrow)"/>
 
                 <!-- Resultado -->
                 <rect x="96" y="194" width="288" height="56" rx="10" fill="rgba(201,149,42,0.14)" stroke="#c9952a" stroke-width="1.2"/>
-                <text x="240" y="212" text-anchor="middle" fill="#7a5a18" font-size="8" font-weight="700" font-family="JetBrains Mono">RELATÓRIO DE PREVISÃO</text>
-                <text x="240" y="226" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="500" font-family="Geist, Outfit" opacity="0.92">Análise com dados do grafo · entrevistas com agentes · busca de fatos</text>
-                <text x="240" y="238" text-anchor="middle" fill="rgba(20,22,30,0.65)" font-size="5.5" font-family="Geist, Outfit">Gerado por IA com ferramentas de investigação sobre o mundo simulado</text>
+                <text x="240" y="212" text-anchor="middle" fill="#7a5a18" font-size="8" font-weight="700" font-family="JetBrains Mono">BASE AUDITÁVEL DA PETIÇÃO</text>
+                <text x="240" y="226" text-anchor="middle" fill="#14161e" font-size="6.5" font-weight="500" font-family="Geist, Outfit" opacity="0.92">Fatos, fundamentos, lacunas e referências prontos para conferência</text>
+                <text x="240" y="238" text-anchor="middle" fill="rgba(20,22,30,0.65)" font-size="5.5" font-family="Geist, Outfit">IA organiza; o advogado decide, revisa e assina</text>
 
                 <!-- Cenário lateral -->
                 <rect x="22" y="112" width="86" height="60" rx="8" fill="rgba(201,149,42,0.08)" stroke="rgba(201,149,42,0.40)" stroke-width="0.8" stroke-dasharray="3,3"/>
-                <text x="65" y="138" text-anchor="middle" fill="#7a5a18" font-size="6" font-weight="600" font-family="Geist, Outfit" opacity="0.95">Seu cenário</text>
-                <text x="65" y="150" text-anchor="middle" fill="rgba(20,22,30,0.65)" font-size="5.5" font-family="Geist, Outfit" font-style="italic">"Migrar para</text>
-                <text x="65" y="159" text-anchor="middle" fill="rgba(20,22,30,0.65)" font-size="5.5" font-family="Geist, Outfit" font-style="italic">trabalho remoto"</text>
+                <text x="65" y="138" text-anchor="middle" fill="#7a5a18" font-size="6" font-weight="600" font-family="Geist, Outfit" opacity="0.95">Seu objetivo</text>
+                <text x="65" y="150" text-anchor="middle" fill="rgba(20,22,30,0.65)" font-size="5.5" font-family="Geist, Outfit" font-style="italic">"Preparar</text>
+                <text x="65" y="159" text-anchor="middle" fill="rgba(20,22,30,0.65)" font-size="5.5" font-family="Geist, Outfit" font-style="italic">embargos"</text>
                 <line x1="112" y1="142" x2="126" y2="142" stroke="#c9952a" stroke-width="0.8" marker-end="url(#flowArrow)" opacity="0.7"/>
 
-                <text x="240" y="270" text-anchor="middle" fill="rgba(122,90,24,0.55)" font-size="6" font-family="Geist, Outfit" letter-spacing="1.5">DOCUMENTO → SIMULAÇÃO → RELATÓRIO</text>
+                <text x="240" y="270" text-anchor="middle" fill="rgba(122,90,24,0.55)" font-size="6" font-family="Geist, Outfit" letter-spacing="1.5">AUTOS → LASTRO → PETIÇÃO</text>
               </svg>
             </div>
 
             <div class="console-box">
               <div class="console-box-header">
                 <span class="console-box-title">Console interativo</span>
-                <span class="console-box-mono">/ Mirofish · INTEIA</span>
+                <span class="console-box-mono">/ Mirofish · IA Friend</span>
+              </div>
+
+              <section class="ai-friend-primer" aria-labelledby="ai-friend-primer-title">
+                <div class="ai-friend-primer-head">
+                  <div>
+                    <span class="ai-friend-kicker"><span class="ai-friend-pulse"></span> IA FRIEND · HELENA</span>
+                    <h3 id="ai-friend-primer-title">Comece pelo resultado que você precisa.</h3>
+                  </div>
+                  <button class="friend-open-btn" type="button" @click="openAiFriend()">
+                    Conversar com Helena
+                    <span aria-hidden="true">↗</span>
+                  </button>
+                </div>
+                <p>
+                  Ela recebe o contexto desta tela, propõe um plano antes de agir e mantém leitura, aprovação e execução separadas.
+                </p>
+                <div class="axi-receipt" aria-live="polite">
+                  <span><strong>{{ files.length }}</strong> arquivo{{ files.length === 1 ? '' : 's' }}</span>
+                  <span><strong>{{ objectiveLength }}</strong> caracteres no objetivo</span>
+                  <span :class="{ ready: canSubmit }"><strong>{{ canSubmit ? 'pronto' : '0 resultado' }}</strong> {{ readinessLabel }}</span>
+                </div>
+              </section>
+
+              <div class="mode-switcher" role="group" aria-label="Tipo de análise">
+                <button
+                  type="button"
+                  :class="{ active: productMode === 'legal' }"
+                  :aria-pressed="productMode === 'legal'"
+                  @click="productMode = 'legal'"
+                >
+                  Petições
+                  <small>cronologia · teses · omissões</small>
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: productMode === 'social' }"
+                  :aria-pressed="productMode === 'social'"
+                  @click="productMode = 'social'"
+                >
+                  Simulação social
+                  <small>eleitoral · reputação · narrativas</small>
+                </button>
               </div>
 
               <div class="console-section">
                 <div class="console-header">
-                  <span class="console-label"><span class="console-label-num">01</span> Dados de origem</span>
+                  <span class="console-label"><span class="console-label-num">01</span> {{ productMode === 'legal' ? 'Autos e documentos' : 'Dados de origem' }}</span>
                   <span class="console-meta">PDF · MD · TXT</span>
                 </div>
 
@@ -458,7 +500,7 @@
 
               <div class="console-section">
                 <div class="console-header">
-                  <span class="console-label"><span class="console-label-num">02</span> Cenário da simulação</span>
+                  <span class="console-label"><span class="console-label-num">02</span> {{ productMode === 'legal' ? 'Objetivo jurídico' : 'Cenário da simulação' }}</span>
                   <span class="console-meta">linguagem natural</span>
                 </div>
                 <div class="input-wrapper">
@@ -466,11 +508,22 @@
                     id="scenario"
                     v-model="formData.simulationRequirement"
                     class="code-input"
-                    placeholder="// Descreva em linguagem natural o cenário de simulação ou previsão"
+                    :placeholder="scenarioPlaceholder"
                     rows="6"
                     :disabled="loading"
                   ></textarea>
-                  <div class="model-badge">Motor: INTEIA / Mirofish</div>
+                  <div class="model-badge">{{ productMode === 'legal' ? 'Modo: petições rastreáveis' : 'Modo: simulação social' }}</div>
+                </div>
+                <div class="prompt-suggestions" aria-label="Sugestões de objetivo">
+                  <button
+                    v-for="prompt in activePrompts"
+                    :key="prompt.label"
+                    type="button"
+                    @click="applyPrompt(prompt.text)"
+                  >
+                    <span>{{ prompt.label }}</span>
+                    <small>{{ prompt.hint }}</small>
+                  </button>
                 </div>
               </div>
 
@@ -481,7 +534,7 @@
                   :disabled="!canSubmit || loading"
                 >
                   <span class="btn-label">
-                    <span v-if="!loading">Iniciar motor</span>
+                    <span v-if="!loading">{{ productMode === 'legal' ? 'Iniciar análise' : 'Iniciar motor' }}</span>
                     <span v-else>Inicializando...</span>
                   </span>
                   <span class="btn-arrow" aria-hidden="true">
@@ -490,7 +543,12 @@
                     </svg>
                   </span>
                 </button>
-                <p class="btn-hint" v-if="!canSubmit">Descreva ao menos um cenário para liberar o motor.</p>
+                <p class="btn-hint" v-if="!canSubmit">
+                  0 resultados · descreva o objetivo para liberar a próxima etapa.
+                </p>
+                <p class="btn-hint next-step" v-else>
+                  Próximo: construir o grafo e conferir o lastro documental antes de qualquer conclusão.
+                </p>
               </div>
             </div>
           </div>
@@ -506,7 +564,7 @@
       <div class="footer-inner">
         <div class="footer-left">
           <span class="footer-brand">INTEIA</span>
-          <span class="footer-meta">Mirofish Lab · simulação social</span>
+          <span class="footer-meta">Mirofish Petições · IA Friend</span>
         </div>
         <div class="footer-right">
           <span class="footer-meta">© INTEIA · Inteligência aplicada à decisão.</span>
@@ -531,6 +589,7 @@ const formData = ref({
   simulationRequirement: ''
 })
 
+const productMode = ref('legal')
 const files = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -538,14 +597,73 @@ const isDragOver = ref(false)
 const fileInput = ref(null)
 
 const workflowSteps = [
-  { num: '01', title: 'Construção do grafo', desc: 'Extração de sinais reais, memória individual e coletiva, montagem do GraphRAG.' },
-  { num: '02', title: 'Configuração do ambiente', desc: 'Extração de entidades e relações, geração de perfis e parametrização do mundo.' },
-  { num: '03', title: 'Início da simulação', desc: 'Simulação paralela em duas plataformas, interpretação automática e memória dinâmica.' },
-  { num: '04', title: 'Geração de relatório', desc: 'Agente de relatório usa ferramentas especializadas para analisar o ambiente simulado.' },
-  { num: '05', title: 'Interação profunda', desc: 'Converse com agentes do mundo simulado e com o agente de relatório.' }
+  { num: '01', title: 'Ingestão com proveniência', desc: 'Leitura dos autos com referência por documento, evento, página e trecho.' },
+  { num: '02', title: 'Mapa processual', desc: 'Eventos, teses, normas, valores e diligências conectados em um grafo interrogável.' },
+  { num: '03', title: 'Gate de aplicabilidade', desc: 'A IA separa análise documental de simulação social e bloqueia o método inadequado.' },
+  { num: '04', title: 'Produtos do escritório', desc: 'Cronologia, omissões, cobertura de teses, contradições e valor da informação.' },
+  { num: '05', title: 'Cocriação assistida', desc: 'Helena mantém contexto e coordena a próxima ação com revisão humana.' }
 ]
 
 const canSubmit = computed(() => formData.value.simulationRequirement.trim() !== '')
+const objectiveLength = computed(() => formData.value.simulationRequirement.trim().length)
+const readinessLabel = computed(() => (
+  canSubmit.value ? 'para construir o grafo' : 'até receber um objetivo'
+))
+const scenarioPlaceholder = computed(() => (
+  productMode.value === 'legal'
+    ? '// Ex.: Reconstrua a cronologia e prepare a base factual de embargos de declaração, citando evento, documento e página.'
+    : '// Descreva em linguagem natural o cenário de simulação ou previsão.'
+))
+
+const promptCatalog = {
+  legal: [
+    {
+      label: 'Reconstruir cronologia',
+      hint: 'datas + atos + fonte',
+      text: 'Reconstrua a cronologia processual completa. Para cada ato, indique data, evento, documento, página e trecho de origem. Separe lacunas e datas imprecisas.'
+    },
+    {
+      label: 'Mapear teses e lastro',
+      hint: 'sustenta + contradiz',
+      text: 'Mapeie as teses do caso, os documentos e normas que as sustentam, as contradições e as dependências. Marque expressamente toda tese órfã de prova.'
+    },
+    {
+      label: 'Localizar omissões',
+      hint: 'suscitado × enfrentado',
+      text: 'Identifique questões suscitadas e não enfrentadas. Mostre onde cada ponto foi alegado e qual decisão deveria tê-lo examinado, sem acrescentar fatos externos.'
+    }
+  ],
+  social: [
+    {
+      label: 'Testar narrativa',
+      hint: 'difusão + reação',
+      text: 'Simule como esta narrativa se difunde entre os atores do ecossistema, indicando reações, pontos de inflexão e sinais observáveis.'
+    },
+    {
+      label: 'Cenário eleitoral',
+      hint: 'atores + coalizões',
+      text: 'Modele o cenário eleitoral descrito nos documentos, com atores, coalizões, conflitos e hipóteses de reação coletiva.'
+    },
+    {
+      label: 'Crise reputacional',
+      hint: 'trajetórias + resposta',
+      text: 'Analise a evolução provável da crise reputacional e compare trajetórias de resposta, deixando premissas e incertezas explícitas.'
+    }
+  ]
+}
+
+const activePrompts = computed(() => promptCatalog[productMode.value])
+
+const applyPrompt = text => {
+  formData.value.simulationRequirement = text
+}
+
+const openAiFriend = (suggestedCommand = '') => {
+  const command = suggestedCommand || formData.value.simulationRequirement.trim()
+  window.dispatchEvent(new CustomEvent('mirofish:open-ai-friend', {
+    detail: { command }
+  }))
+}
 
 const triggerFileInput = () => {
   if (!loading.value) fileInput.value?.click()
@@ -1294,6 +1412,174 @@ const startSimulation = () => {
   font-family: var(--mono); font-size: 0.72rem;
   color: var(--text-faint); text-align: center;
 }
+.btn-hint.next-step { color: var(--gold-deep); }
+
+/* === IA Friend · princípios AXI traduzidos para o produto === */
+.ai-friend-primer {
+  margin: 18px 18px 0;
+  padding: 18px;
+  border: 1px solid rgba(201, 149, 42, 0.26);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(201, 149, 42, 0.10), rgba(255, 255, 255, 0.72)),
+    repeating-linear-gradient(90deg, transparent 0 24px, rgba(122, 90, 24, 0.025) 24px 25px);
+}
+.ai-friend-primer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+.ai-friend-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--gold-deep);
+}
+.ai-friend-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 4px rgba(63, 183, 124, 0.12);
+}
+.ai-friend-primer h3 {
+  margin-top: 6px;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.34rem;
+  line-height: 1.14;
+}
+.ai-friend-primer > p {
+  margin: 12px 0 0;
+  max-width: 64ch;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.friend-open-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid rgba(20, 22, 30, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 180ms ease;
+}
+.friend-open-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--gold);
+  box-shadow: 0 8px 20px rgba(122, 90, 24, 0.10);
+}
+.axi-receipt {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 15px;
+  border: 1px solid rgba(20, 22, 30, 0.09);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(251, 248, 238, 0.82);
+}
+.axi-receipt span {
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+.axi-receipt span + span { border-left: 1px solid rgba(20, 22, 30, 0.08); }
+.axi-receipt strong {
+  display: block;
+  color: var(--ember);
+  font-size: 0.72rem;
+}
+.axi-receipt .ready strong { color: #257b51; }
+
+.mode-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 18px 0;
+  padding: 5px;
+  border: 1px solid rgba(20, 22, 30, 0.09);
+  border-radius: 12px;
+  background: rgba(20, 22, 30, 0.035);
+}
+.mode-switcher button {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mode-switcher small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  font-weight: 400;
+}
+.mode-switcher button.active {
+  border-color: rgba(201, 149, 42, 0.26);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
+  box-shadow: 0 5px 14px rgba(20, 22, 30, 0.05);
+}
+.mode-switcher button.active small { color: var(--gold-deep); }
+
+.prompt-suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.prompt-suggestions button {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(20, 22, 30, 0.10);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+.prompt-suggestions button:hover {
+  border-color: rgba(201, 149, 42, 0.50);
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+}
+.prompt-suggestions span {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.prompt-suggestions small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+}
 
 /* === HistoryDatabase wrapper (modo paper — sem overrides, herda estilo light original) === */
 .history-wrap {
@@ -1342,6 +1628,12 @@ const startSimulation = () => {
   .brand-card-footer { flex-direction: column; gap: 14px; }
   .kpi-divider { width: 100%; height: 1px; }
   .kpi { padding: 0; }
+  .ai-friend-primer-head { flex-direction: column; }
+  .friend-open-btn { width: 100%; justify-content: space-between; }
+  .axi-receipt { grid-template-columns: 1fr; }
+  .axi-receipt span + span { border-left: 0; border-top: 1px solid rgba(20, 22, 30, 0.08); }
+  .mode-switcher,
+  .prompt-suggestions { grid-template-columns: 1fr; }
   .footer-inner { flex-direction: column; gap: 12px; text-align: center; }
 }
 

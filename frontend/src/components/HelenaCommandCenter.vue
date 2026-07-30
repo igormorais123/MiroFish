@@ -4,8 +4,8 @@
       v-if="!isOpen"
       class="helena-launcher"
       type="button"
-      aria-label="Abrir controle operacional Helena"
-      title="Helena · Alt+H"
+      aria-label="Abrir IA Friend Helena"
+      title="IA Friend Helena · Alt+H"
       @click="openPanel"
     >
       <span class="launcher-orbit" aria-hidden="true"></span>
@@ -13,7 +13,10 @@
         <path d="M12 3a5 5 0 0 0-4.6 7H6a3 3 0 0 0 0 6h1.4a5 5 0 0 0 9.2 0H18a3 3 0 1 0 0-6h-1.4A5 5 0 0 0 12 3Z" />
         <path d="M9 12h6M12 9v6" />
       </svg>
-      <span class="launcher-label">Helena</span>
+      <span class="launcher-label">
+        <strong>IA Friend</strong>
+        <small>Helena · Alt+H</small>
+      </span>
     </button>
 
     <section
@@ -28,7 +31,7 @@
         <div class="helena-identity">
           <div class="helena-mark" aria-hidden="true">H</div>
           <div>
-            <p class="eyebrow">CONTROLE OPERACIONAL</p>
+            <p class="eyebrow">IA FRIEND · CONTEXTO VIVO</p>
             <h2 id="helena-title">Helena</h2>
           </div>
         </div>
@@ -40,7 +43,7 @@
           <button
             class="icon-button"
             type="button"
-            aria-label="Fechar controle Helena"
+            aria-label="Fechar IA Friend Helena"
             @click="closePanel"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -61,6 +64,10 @@
         >
           Atualizar
         </button>
+      </div>
+      <div class="next-step-strip">
+        <span>PRÓXIMA AÇÃO</span>
+        <p>{{ contextualNextStep }}</p>
       </div>
 
       <main class="helena-body">
@@ -121,8 +128,8 @@
           <section class="command-workspace">
             <div class="workspace-heading">
               <div>
-                <p class="eyebrow">COMANDO EM LINGUAGEM NATURAL</p>
-                <h3>O que Helena deve fazer?</h3>
+                <p class="eyebrow">OBJETIVO EM LINGUAGEM NATURAL</p>
+                <h3>Que resultado você precisa agora?</h3>
               </div>
               <button class="text-button danger" type="button" @click="lockSession">
                 Bloquear
@@ -136,12 +143,24 @@
               v-model="command"
               rows="4"
               maxlength="4000"
-              placeholder="Ex.: Veja o estado atual e continue a análise até o relatório."
+              placeholder="Ex.: Confira o lastro documental, mostre as lacunas e proponha a próxima ação segura."
               :disabled="busy || executionState === 'executing'"
               @keydown.ctrl.enter.prevent="requestPlan"
             ></textarea>
+            <div class="command-suggestions" aria-label="Comandos sugeridos">
+              <button
+                v-for="suggestion in commandSuggestions"
+                :key="suggestion.label"
+                type="button"
+                :disabled="busy || executionState === 'executing'"
+                @click="command = suggestion.command"
+              >
+                <span>{{ suggestion.label }}</span>
+                <small>{{ suggestion.hint }}</small>
+              </button>
+            </div>
             <div class="composer-footer">
-              <span>Ctrl+Enter para planejar</span>
+              <span>Plano primeiro · Ctrl+Enter</span>
               <span>{{ command.length }}/4000</span>
             </div>
             <button
@@ -151,7 +170,7 @@
               @click="requestPlan"
             >
               <span v-if="busy && executionState === 'planning'" class="spinner small" aria-hidden="true"></span>
-              {{ executionState === 'planning' ? 'Helena está planejando…' : 'Planejar comando' }}
+              {{ executionState === 'planning' ? 'Helena está planejando…' : 'Criar plano seguro' }}
             </button>
           </section>
 
@@ -335,14 +354,25 @@ const routeContext = computed(() => ({
 
 const phaseLabels = {
   Home: 'Visão geral',
-  Process: 'Fase 1–2 · Ontologia e grafo',
-  Simulation: 'Fase 3 · Preparação',
-  SimulationRun: 'Fase 3 · Simulação',
-  Report: 'Fase 4 · Relatório',
-  Interaction: 'Fase 5 · Interação'
+  Process: 'Fase 1–2 · Lastro e grafo',
+  Simulation: 'Fase 3 · Gate de método',
+  SimulationRun: 'Fase 3 · Execução aplicável',
+  Report: 'Fase 4 · Produtos e relatório',
+  Interaction: 'Fase 5 · Cocriação'
 }
 
 const phaseLabel = computed(() => phaseLabels[String(route.name)] || 'MiroFish')
+const nextSteps = {
+  Home: 'Envie os autos e descreva a peça, tese ou decisão que precisa apoiar.',
+  Process: 'Confira a proveniência do grafo antes de avançar para qualquer conclusão.',
+  Simulation: 'Valide se o domínio comporta simulação; matéria judicial permanece documental por padrão.',
+  SimulationRun: 'Acompanhe somente a execução autorizada e preserve os recibos de auditoria.',
+  Report: 'Revise cronologia, omissões, cobertura de teses, contradições e lacunas.',
+  Interaction: 'Converta achados verificados em orientação, mantendo hipótese e fato separados.'
+}
+const contextualNextStep = computed(() => (
+  nextSteps[String(route.name)] || 'Inspecione o contexto atual e peça um plano antes de agir.'
+))
 const contextIdentifier = computed(() => {
   const context = resolvedContext.value || routeContext.value
   return context.report_id || context.simulation_id || context.project_id || 'sem processo ativo'
@@ -357,6 +387,24 @@ const availabilityLabel = computed(() => {
   if (status.value.available) return 'Bloqueada'
   return 'Indisponível'
 })
+
+const commandSuggestions = [
+  {
+    label: 'Inspecionar o caso',
+    hint: 'estado + lacunas + próximo passo',
+    command: 'Inspecione o contexto atual. Resuma o que está comprovado, o que falta e qual é a próxima ação segura, sem alterar o processo.'
+  },
+  {
+    label: 'Conferir lastro',
+    hint: 'evento + página + trecho',
+    command: 'Confira o lastro documental dos achados atuais. Aponte referências verificáveis e separe fatos, inferências e itens não verificados.'
+  },
+  {
+    label: 'Coordenar até a peça',
+    hint: 'plano completo com gates',
+    command: 'Planeje a análise jurídica até uma base de petição revisável, respeitando os gates de proveniência, aplicabilidade e aprovação humana.'
+  }
+]
 
 const openPanel = async () => {
   isOpen.value = true
@@ -648,13 +696,23 @@ const handleShortcut = event => {
   }
 }
 
+const handleOpenAiFriend = event => {
+  const suggestedCommand = String(event?.detail?.command || '').trim()
+  if (suggestedCommand && executionState.value !== 'executing') {
+    command.value = suggestedCommand.slice(0, 4000)
+  }
+  openPanel()
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleShortcut)
+  window.addEventListener('mirofish:open-ai-friend', handleOpenAiFriend)
   loadStatus()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleShortcut)
+  window.removeEventListener('mirofish:open-ai-friend', handleOpenAiFriend)
   sessionToken.value = ''
 })
 </script>
@@ -673,13 +731,13 @@ onBeforeUnmount(() => {
   right: 22px;
   bottom: 22px;
   z-index: 1400;
-  font-family: Inter, "Space Grotesk", system-ui, sans-serif;
+  font-family: var(--f-sans, "Geist"), system-ui, sans-serif;
 }
 
 .helena-launcher {
   position: relative;
-  min-width: 122px;
-  height: 52px;
+  min-width: 188px;
+  height: 58px;
   padding: 0 18px 0 14px;
   border: 1px solid rgba(215, 165, 58, 0.48);
   border-radius: 16px;
@@ -722,8 +780,19 @@ summary:focus-visible {
 }
 
 .launcher-label {
-  font: 700 13px/1 "JetBrains Mono", monospace;
-  letter-spacing: 0.08em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.launcher-label strong {
+  font: 700 12px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.10em;
+}
+.launcher-label small {
+  color: var(--helena-muted);
+  font: 500 9px/1 var(--f-sans, "Geist"), sans-serif;
+  letter-spacing: 0.04em;
 }
 
 .helena-panel {
@@ -871,6 +940,27 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
+.next-step-strip {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 16px 10px;
+  border-bottom: 1px solid var(--helena-line);
+  background: rgba(215, 165, 58, 0.045);
+}
+.next-step-strip span {
+  color: var(--helena-gold);
+  font: 700 8px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: 0.12em;
+}
+.next-step-strip p {
+  margin: 0;
+  color: #b4c0d2;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .text-button {
   padding: 5px 0;
   border: 0;
@@ -979,7 +1069,7 @@ textarea {
   border: 1px solid rgba(172, 190, 218, 0.22);
   color: var(--helena-ink);
   background: #080f1b;
-  font: 500 13px/1.55 Inter, system-ui, sans-serif;
+  font: 500 13px/1.55 var(--f-sans, "Geist"), system-ui, sans-serif;
 }
 
 input {
@@ -1057,6 +1147,40 @@ button:disabled {
   margin-top: -4px;
   color: #6f7f96;
   font-size: 9px;
+}
+
+.command-suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.command-suggestions button {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(172, 190, 218, 0.15);
+  border-radius: 10px;
+  color: #dbe3ef;
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+  cursor: pointer;
+  transition: 150ms ease;
+}
+.command-suggestions button:hover {
+  border-color: rgba(215, 165, 58, 0.46);
+  background: rgba(215, 165, 58, 0.07);
+  transform: translateY(-1px);
+}
+.command-suggestions span {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.command-suggestions small {
+  display: block;
+  margin-top: 4px;
+  color: #72839b;
+  font: 500 7px/1.3 "JetBrains Mono", monospace;
 }
 
 .plan-card {
@@ -1448,6 +1572,15 @@ code {
   .plan-actions .primary-button,
   .plan-actions .secondary-button {
     width: 100%;
+  }
+
+  .next-step-strip {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .command-suggestions {
+    grid-template-columns: 1fr;
   }
 }
 
