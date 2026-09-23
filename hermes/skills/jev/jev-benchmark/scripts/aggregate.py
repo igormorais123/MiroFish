@@ -96,11 +96,14 @@ def validate_rows(rows: list[dict]) -> None:
             errors.append(f"row {index}: missing {', '.join(missing)}")
             continue
         # Identifiers are validated, never coerced: task_id 1 and "1" must not merge.
-        for field in ("task_id", "arch"):
-            if not isinstance(row[field], str) or not row[field].strip():
-                errors.append(f"row {index}: {field} must be a non-empty string")
+        row_errors = [
+            f"row {index}: {field} must be a non-empty string"
+            for field in ("task_id", "arch")
+            if not isinstance(row[field], str) or not row[field].strip()
+        ]
         if not isinstance(row["rep"], int) or isinstance(row["rep"], bool) or row["rep"] < 0:
-            errors.append(f"row {index}: rep must be a non-negative integer")
+            row_errors.append(f"row {index}: rep must be a non-negative integer")
+        errors.extend(row_errors)
         if not isinstance(row["success"], bool):
             errors.append(f"row {index}: success must be true or false")
         for field in MEASURE_FIELDS:
@@ -109,7 +112,8 @@ def validate_rows(rows: list[dict]) -> None:
         for field in COUNT_FIELDS:
             if not isinstance(row[field], int) or isinstance(row[field], bool) or row[field] < 0:
                 errors.append(f"row {index}: {field} must be a non-negative integer")
-        cells[(row["arch"], row["task_id"])].append(row["rep"])
+        if not row_errors:  # invalid identifiers may be unhashable (lists, objects)
+            cells[(row["arch"], row["task_id"])].append(row["rep"])
     if errors:
         raise ValueError("invalid rows: " + "; ".join(errors))
 

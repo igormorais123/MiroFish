@@ -236,12 +236,31 @@ def test_benchmark_rejects_non_finite_metrics(tmp_path, value):
         ("rep", "1", "rep must be a non-negative integer"),
         ("rep", True, "rep must be a non-negative integer"),
         ("rep", -1, "rep must be a non-negative integer"),
+        ("task_id", ["t1"], "task_id must be a non-empty string"),
+        ("arch", {"name": "A"}, "arch must be a non-empty string"),
+        ("rep", [1], "rep must be a non-negative integer"),
     ],
 )
 def test_benchmark_rejects_non_text_identifiers(field, value, message):
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
     with pytest.raises(ValueError, match=message):
         agg.summarize([{**_row("t1", "A"), field: value}])
+
+
+def test_benchmark_cli_reports_unhashable_ids_without_traceback(tmp_path):
+    results = tmp_path / "results.jsonl"
+    results.write_text(json.dumps({**_row("t1", "A"), "task_id": ["t1"]}), encoding="utf-8")
+    script = SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py"
+    run = subprocess.run(["python3", str(script), str(results)], capture_output=True, text=True)
+    assert run.returncode == 1
+    assert "task_id must be a non-empty string" in run.stderr
+    assert "Traceback" not in run.stderr
+
+
+def test_team_router_invalidates_review_on_new_diff():
+    text = (SKILLS_ROOT / "jev-orquestracao-equipe" / "SKILL.md").read_text(encoding="utf-8")
+    assert '"diff_version"' in text
+    assert "invalida" in text and "`tests` e `review`" in text
 
 
 def test_benchmark_does_not_merge_numeric_and_text_task_ids():

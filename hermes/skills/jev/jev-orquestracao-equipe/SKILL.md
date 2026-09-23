@@ -50,6 +50,7 @@ Mantenha um único objeto de estado e atualize-o após cada papel. Nada de estad
   "hypothesis": "cupom expirado gera None em price_calc",
   "evidence": ["logs/app.log:1822 TypeError NoneType"],
   "diff": null,
+  "diff_version": 0,
   "tests": null,
   "review": null,
   "history": [{"role": "RESEARCHER", "result": "hipótese confirmada por log"}],
@@ -65,12 +66,15 @@ Mantenha um único objeto de estado e atualize-o após cada papel. Nada de estad
    1. `rounds >= max_rounds` → `HUMAN`.
    2. Sem hipótese com evidência → `RESEARCHER`.
    3. Hipótese com evidência e sem diff → `CODER`.
-   4. Diff sem testes, ou testes desatualizados em relação ao diff → `TESTER`.
+   4. Diff sem testes do `diff_version` atual → `TESTER`.
    5. Testes falhando → `CODER` (com a falha anexada), ou `RESEARCHER` se a falha refutar a hipótese.
-   6. Testes verdes e sem revisão → `REVIEWER`.
-   7. Revisão `PASS` → `DONE`. Revisão `RETRY` → `CODER`. Revisão `HUMAN` → `HUMAN`.
+   6. Testes verdes e sem revisão do `diff_version` atual → `REVIEWER`.
+   7. Revisão `PASS` → `DONE`. Revisão `RETRY` → `CODER` (com `retry_instructions`). Revisão `HUMAN` → `HUMAN`.
 3. **Delegue** passando ao papel só o recorte do estado de que ele precisa e o formato de retorno.
 4. **Incorpore o retorno** ao estado, anexe em `history`, incremente `rounds`.
+   Todo diff novo do `CODER` incrementa `diff_version` e **invalida** `tests` e `review` (volta os dois para `null`).
+   `tests` e `review` guardam o `diff_version` que avaliaram; resultado de versão anterior não conta.
+   Sem essa invalidação, um `RETRY` antigo sobrevive à correção e o router devolve ao `CODER` em círculo até `max_rounds`, sem nunca revisar o conserto.
 5. **Volte ao passo 2.** Encerre em `DONE` (relate ao Igor) ou `HUMAN` (pergunte ao Igor).
 
 ## Contrato de decisão do router
@@ -93,9 +97,11 @@ Mantenha um único objeto de estado e atualize-o após cada papel. Nada de estad
 - **Handoff gordo**: mandar a conversa inteira para o subagente. Passe só o recorte e o formato de retorno.
 - **Dois CODERS na mesma branch**: siga o `CLAUDE.md` do repositório — uma instância por branch.
 - **Retorno sem estado**: papel que responde "feito" sem evidência volta para o mesmo papel.
+- **Revisão velha valendo para diff novo**: se `review.diff_version` difere de `diff_version`, a revisão não existe.
 
 ## Verificação
 
 - `history` mostra a sequência real e o motivo de cada escolha.
+- Após cada `RETRY` houve novo diff, novos testes e nova revisão, todos com o mesmo `diff_version`.
 - Toda transição para `DONE` passou por `REVIEWER` com `PASS`.
 - O limite de rodadas foi respeitado.
