@@ -227,6 +227,31 @@ def test_benchmark_rejects_non_finite_metrics(tmp_path, value):
         agg.summarize(agg.load(str(results)))
 
 
+@pytest.mark.parametrize(
+    "field,value,message",
+    [
+        ("task_id", 1, "task_id must be a non-empty string"),
+        ("task_id", "  ", "task_id must be a non-empty string"),
+        ("arch", 7, "arch must be a non-empty string"),
+        ("rep", "1", "rep must be a non-negative integer"),
+        ("rep", True, "rep must be a non-negative integer"),
+        ("rep", -1, "rep must be a non-negative integer"),
+    ],
+)
+def test_benchmark_rejects_non_text_identifiers(field, value, message):
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    with pytest.raises(ValueError, match=message):
+        agg.summarize([{**_row("t1", "A"), field: value}])
+
+
+def test_benchmark_does_not_merge_numeric_and_text_task_ids():
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    rows = [_row("1", "A", True, rep=1), _row("1", "A", False, rep=2)]
+    rows.append({**_row("x", "A", False, rep=1), "task_id": 1})
+    with pytest.raises(ValueError, match="row 3: task_id must be a non-empty string"):
+        agg.summarize(rows)
+
+
 def test_benchmark_baseline_keeps_file_order_or_explicit_choice():
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
     rows = [_row(t, "control", False) for t in ("t1", "t2")] + [_row(t, "B+JEV") for t in ("t1", "t2")]

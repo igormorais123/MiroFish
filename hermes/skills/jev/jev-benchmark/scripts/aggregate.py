@@ -39,7 +39,7 @@ def _task_success(items: list[dict]) -> dict[str, float]:
     """Mean success per task_id, averaging repetitions within the task."""
     per_task: dict[str, list[int]] = defaultdict(list)
     for item in items:
-        per_task[str(item["task_id"])].append(1 if item["success"] else 0)
+        per_task[item["task_id"]].append(1 if item["success"] else 0)
     return {task: sum(values) / len(values) for task, values in per_task.items()}
 
 
@@ -95,6 +95,12 @@ def validate_rows(rows: list[dict]) -> None:
         if missing:
             errors.append(f"row {index}: missing {', '.join(missing)}")
             continue
+        # Identifiers are validated, never coerced: task_id 1 and "1" must not merge.
+        for field in ("task_id", "arch"):
+            if not isinstance(row[field], str) or not row[field].strip():
+                errors.append(f"row {index}: {field} must be a non-empty string")
+        if not isinstance(row["rep"], int) or isinstance(row["rep"], bool) or row["rep"] < 0:
+            errors.append(f"row {index}: rep must be a non-negative integer")
         if not isinstance(row["success"], bool):
             errors.append(f"row {index}: success must be true or false")
         for field in MEASURE_FIELDS:
@@ -103,7 +109,7 @@ def validate_rows(rows: list[dict]) -> None:
         for field in COUNT_FIELDS:
             if not isinstance(row[field], int) or isinstance(row[field], bool) or row[field] < 0:
                 errors.append(f"row {index}: {field} must be a non-negative integer")
-        cells[(str(row["arch"]), str(row["task_id"]))].append(row["rep"])
+        cells[(row["arch"], row["task_id"])].append(row["rep"])
     if errors:
         raise ValueError("invalid rows: " + "; ".join(errors))
 
@@ -119,12 +125,12 @@ def validate_rows(rows: list[dict]) -> None:
             if not reps:
                 problems.append(f"{arch} missing task {task}")
                 continue
-            duplicates = sorted({str(rep) for rep in reps if reps.count(rep) > 1})
+            duplicates = sorted({rep for rep in reps if reps.count(rep) > 1})
             if duplicates:
-                problems.append(f"{arch}/{task} duplicate rep {', '.join(duplicates)}")
-            absent = sorted(str(rep) for rep in expected_reps - set(reps))
+                problems.append(f"{arch}/{task} duplicate rep {', '.join(map(str, duplicates))}")
+            absent = sorted(expected_reps - set(reps))
             if absent:
-                problems.append(f"{arch}/{task} missing rep {', '.join(absent)}")
+                problems.append(f"{arch}/{task} missing rep {', '.join(map(str, absent))}")
     if problems:
         raise ValueError("incomplete benchmark grid: " + "; ".join(problems))
 
