@@ -28,8 +28,6 @@ HUMAN_PATTERNS = (
     "docker-compose*.yaml",
 )
 FORBIDDEN_PATTERNS = (
-    ".env",
-    "*/.env",
     "node_modules/*",
     "*/node_modules/*",
     "dist/*",
@@ -39,8 +37,24 @@ FORBIDDEN_PATTERNS = (
 )
 
 
+ENV_TEMPLATE_SUFFIXES = (".example", ".sample", ".template", ".dist")
+
+
 def _matches(path: str, patterns: tuple[str, ...]) -> bool:
     return any(fnmatch(path, pattern) for pattern in patterns)
+
+
+def _is_secret_env(path: str) -> bool:
+    """True for .env, .env.local, foo/.env.production; False for .env.example*."""
+    name = path.rsplit("/", 1)[-1]
+    if name != ".env" and not name.startswith(".env."):
+        return False
+    variant = name[len(".env"):]
+    return not any(variant.startswith(suffix) for suffix in ENV_TEMPLATE_SUFFIXES)
+
+
+def _is_forbidden(path: str) -> bool:
+    return _is_secret_env(path) or _matches(path, FORBIDDEN_PATTERNS)
 
 
 def decide(evidence: dict) -> dict:
@@ -55,7 +69,7 @@ def decide(evidence: dict) -> dict:
     if not files:
         return {"decision": "HUMAN", "reason": "empty diff"}
 
-    forbidden = [f for f in files if _matches(f, FORBIDDEN_PATTERNS)]
+    forbidden = [f for f in files if _is_forbidden(f)]
     if forbidden:
         return {
             "decision": "RETRY" if attempt < max_attempts else "HUMAN",

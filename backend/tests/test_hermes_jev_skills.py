@@ -62,6 +62,19 @@ def test_pre_gate_decisions():
     assert gate.decide({"changed_files": ["a.py"]})["decision"] == "HUMAN"
 
 
+@pytest.mark.parametrize("path", [".env", ".env.local", ".env.production", "foo/.env.test", "backend/.env"])
+def test_pre_gate_blocks_secret_env_variants(path):
+    gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")
+    evidence = {"changed_files": [path], "tests_exit_code": 0, "build_exit_code": 0}
+    assert gate.decide(evidence)["decision"] == "RETRY"
+
+
+@pytest.mark.parametrize("path", [".env.example", ".env.example.omniroute", "deploy/.env.sample", ".envrc.md"])
+def test_pre_gate_allows_env_templates(path):
+    gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")
+    assert not gate._is_secret_env(path)
+
+
 def test_benchmark_aggregate(tmp_path):
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
     rows = [
@@ -76,4 +89,20 @@ def test_benchmark_aggregate(tmp_path):
     assert summary["A"]["success_rate"] == 0.5
     assert summary["B+JEV"]["success_rate"] == 1.0
     assert summary["A"]["cost_per_success_usd"] == pytest.approx(0.04)
+    assert summary["A"]["tasks"] == 2
+    assert summary["A"]["diff_vs_baseline_ci95"] is None
+    assert summary["B+JEV"]["diff_vs_baseline_ci95"] is not None
     assert "B+JEV" in agg.render(summary)
+
+
+def test_benchmark_bootstrap_resamples_tasks_not_runs():
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    # Two tasks, one always solved and one never; many repetitions must not
+    # shrink the interval as if each run were independent.
+    rows = [
+        {"task_id": task, "arch": "A", "success": task == "easy", "rep": rep}
+        for task in ("easy", "hard")
+        for rep in range(50)
+    ]
+    low, high = agg.summarize(rows)["A"]["success_ci95"]
+    assert low == 0.0 and high == 1.0

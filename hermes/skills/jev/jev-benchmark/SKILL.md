@@ -50,7 +50,8 @@ Benchmark = repetir + medir com as mesmas condições.
    python3 ~/.hermes/skills/jev/jev-benchmark/scripts/aggregate.py runs/benchmark-AAAAMMDD-slug/results.jsonl
    ```
 4. Interprete com cuidado:
-   - diferença de taxa de sucesso menor que o intervalo do bootstrap impresso pelo script → **sem diferença demonstrada**;
+   - o script reamostra **tarefas**, não execuções, e usa as mesmas tarefas sorteadas para todas as arquiteturas (bootstrap pareado); repetições de uma tarefa não são observações independentes;
+   - intervalo pareado da diferença contra a base que contém zero → **sem diferença demonstrada**;
    - olhe custo por sucesso, não só custo médio: arquitetura barata que falha sai cara;
    - intervenção humana pesa mais que latência para o Igor: declare o peso no relatório.
 5. Entregue ao Igor: hipótese, condições, tabela agregada, conclusão ("confirmada", "refutada" ou "inconclusiva") e próximo experimento.
@@ -59,6 +60,7 @@ Benchmark = repetir + medir com as mesmas condições.
 
 - **Tarefas escolhidas depois de ver o resultado**: invalida o benchmark. Congele o conjunto antes.
 - **Uma repetição só**: variação de modelo engole a diferença. Repita.
+- **Contar repetição como amostra nova**: 20 tarefas × 3 repetições são 20 observações para o intervalo, não 60.
 - **Mudar duas coisas ao mesmo tempo** (modelo e roteador): não se sabe o que causou o efeito.
 - **Declarar vencedor com empate estatístico**: diga "inconclusivo" e aumente a amostra.
 
@@ -66,4 +68,4 @@ Benchmark = repetir + medir com as mesmas condições.
 
 - `conditions.json` existe e é idêntico para as duas arquiteturas.
 - O número de linhas em `results.jsonl` é tarefas × arquiteturas × repetições.
-- O relatório traz as cinco métricas e o intervalo de confiança da taxa de sucesso.
+- O relatório traz as cinco métricas, o intervalo da taxa de sucesso e o intervalo pareado da diferença.
