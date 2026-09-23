@@ -69,6 +69,11 @@ def decide(evidence: dict) -> dict:
     if not files:
         return {"decision": "HUMAN", "reason": "empty diff"}
 
+    # Deploy and CI changes escalate first, even when the diff also has forbidden files.
+    sensitive = [f for f in files if _matches(f, HUMAN_PATTERNS)]
+    if sensitive:
+        return {"decision": "HUMAN", "reason": "deploy or CI files changed", "files": sensitive}
+
     forbidden = [f for f in files if _is_forbidden(f)]
     if forbidden:
         return {
@@ -76,10 +81,6 @@ def decide(evidence: dict) -> dict:
             "reason": "forbidden files in diff",
             "retry_instructions": [f"Remove {f} from the diff" for f in forbidden],
         }
-
-    sensitive = [f for f in files if _matches(f, HUMAN_PATTERNS)]
-    if sensitive:
-        return {"decision": "HUMAN", "reason": "deploy or CI files changed", "files": sensitive}
 
     failing = [
         name

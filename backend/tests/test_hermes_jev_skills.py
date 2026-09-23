@@ -60,6 +60,8 @@ def test_pre_gate_decisions():
     assert gate.decide({**base, "changed_files": ["Dockerfile"]})["decision"] == "HUMAN"
     assert gate.decide({**base, "changed_files": [".env"]})["decision"] == "RETRY"
     assert gate.decide({"changed_files": ["a.py"]})["decision"] == "HUMAN"
+    mixed = {**base, "changed_files": [".env.local", "deploy/nginx/site.conf"]}
+    assert gate.decide(mixed)["decision"] == "HUMAN"
 
 
 @pytest.mark.parametrize("path", [".env", ".env.local", ".env.production", "foo/.env.test", "backend/.env"])
