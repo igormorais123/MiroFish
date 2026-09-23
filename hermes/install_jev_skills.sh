@@ -9,7 +9,20 @@ SOURCE_DIR="${SCRIPT_DIR}/skills/jev"
 HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
 TARGET_DIR="${HERMES_HOME}/skills/jev"
 DRY_RUN=0
-[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1
+
+usage() {
+  echo "usage: $(basename "$0") [--dry-run]"
+  echo "Installs the JEV skills into \${HERMES_HOME:-\$HOME/.hermes}/skills/jev"
+}
+
+# Any unknown argument aborts before touching the installed skills.
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown option: $arg" >&2; usage >&2; exit 2 ;;
+  esac
+done
 
 EXPECTED=(
   jev-evals

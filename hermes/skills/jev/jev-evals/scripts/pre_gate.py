@@ -57,10 +57,36 @@ def _is_forbidden(path: str) -> bool:
     return _is_secret_env(path) or _matches(path, FORBIDDEN_PATTERNS)
 
 
+def _is_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _evidence_errors(evidence) -> list[str]:
+    """Malformed evidence must never slip past the path rules."""
+    if not isinstance(evidence, dict):
+        return ["evidence must be a JSON object"]
+    errors = []
+    files = evidence.get("changed_files")
+    if files is not None and not (
+        isinstance(files, list) and all(isinstance(f, str) and f for f in files)
+    ):
+        errors.append("changed_files must be a list of non-empty strings")
+    for key in ("tests_exit_code", "build_exit_code"):
+        if evidence.get(key) is not None and not _is_int(evidence[key]):
+            errors.append(f"{key} must be an integer or null")
+    for key in ("attempt", "max_attempts"):
+        if key in evidence and not (_is_int(evidence[key]) and evidence[key] >= 1):
+            errors.append(f"{key} must be a positive integer")
+    return errors
+
+
 def decide(evidence: dict) -> dict:
-    attempt = int(evidence.get("attempt", 1))
-    max_attempts = int(evidence.get("max_attempts", 3))
-    files = list(evidence.get("changed_files") or [])
+    errors = _evidence_errors(evidence)
+    if errors:
+        return {"decision": "HUMAN", "reason": "invalid evidence: " + "; ".join(errors)}
+    attempt = evidence.get("attempt", 1)
+    max_attempts = evidence.get("max_attempts", 3)
+    files = evidence.get("changed_files") or []
     tests_exit = evidence.get("tests_exit_code")
     build_exit = evidence.get("build_exit_code")
 

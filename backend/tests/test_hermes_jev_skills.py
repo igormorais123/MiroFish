@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -82,6 +84,45 @@ def test_pre_gate_blocks_secret_env_variants(path):
 def test_pre_gate_allows_env_templates(path):
     gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")
     assert not gate._is_secret_env(path)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    [
+        {"changed_files": ".env", "tests_exit_code": 0},
+        {"changed_files": "Dockerfile", "tests_exit_code": 0},
+        {"changed_files": [".env", 3], "tests_exit_code": 0},
+        {"changed_files": ["a.py"], "tests_exit_code": "0"},
+        {"changed_files": ["a.py"], "tests_exit_code": 0, "attempt": "2"},
+        {"changed_files": ["a.py"], "tests_exit_code": 0, "max_attempts": 0},
+        ["a.py"],
+    ],
+)
+def test_pre_gate_malformed_evidence_goes_to_human(evidence):
+    gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")
+    result = gate.decide(evidence)
+    assert result["decision"] == "HUMAN"
+    assert result["reason"].startswith("invalid evidence")
+
+
+INSTALLER = SKILLS_ROOT.parents[1] / "install_jev_skills.sh"
+
+
+@pytest.mark.parametrize("args", [["--help"], ["-h"], ["--dryrun"], ["--dry-run", "extra"]])
+def test_installer_never_installs_on_unknown_or_help_args(tmp_path, args):
+    env = {**os.environ, "HERMES_HOME": str(tmp_path)}
+    result = subprocess.run(["bash", str(INSTALLER), *args], env=env, capture_output=True, text=True)
+    assert not (tmp_path / "skills").exists()
+    assert result.returncode == (0 if args[0] in ("--help", "-h") else 2)
+
+
+def test_installer_dry_run_and_install(tmp_path):
+    env = {**os.environ, "HERMES_HOME": str(tmp_path)}
+    dry = subprocess.run(["bash", str(INSTALLER), "--dry-run"], env=env, capture_output=True, text=True)
+    assert dry.returncode == 0 and not (tmp_path / "skills").exists()
+    real = subprocess.run(["bash", str(INSTALLER)], env=env, capture_output=True, text=True)
+    assert real.returncode == 0
+    assert len(list((tmp_path / "skills" / "jev").glob("*/SKILL.md"))) == len(EXPECTED)
 
 
 def test_benchmark_aggregate(tmp_path):
