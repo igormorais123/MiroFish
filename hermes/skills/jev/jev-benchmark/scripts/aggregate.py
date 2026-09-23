@@ -107,9 +107,11 @@ def validate_rows(rows: list[dict]) -> None:
     if errors:
         raise ValueError("invalid rows: " + "; ".join(errors))
 
+    # The expected grid is the union of everything seen, so the short cell is
+    # the one reported, regardless of which row happens to come first.
     archs = sorted({arch for arch, _ in cells})
     tasks = sorted({task for _, task in cells})
-    expected_reps = set(next(iter(cells.values()))) if cells else set()
+    expected_reps = {rep for reps in cells.values() for rep in reps}
     problems: list[str] = []
     for arch in archs:
         for task in tasks:
@@ -120,15 +122,9 @@ def validate_rows(rows: list[dict]) -> None:
             duplicates = sorted({str(rep) for rep in reps if reps.count(rep) > 1})
             if duplicates:
                 problems.append(f"{arch}/{task} duplicate rep {', '.join(duplicates)}")
-            if set(reps) != expected_reps:
-                absent = sorted(str(rep) for rep in expected_reps - set(reps))
-                extra = sorted(str(rep) for rep in set(reps) - expected_reps)
-                detail = []
-                if absent:
-                    detail.append(f"missing rep {', '.join(absent)}")
-                if extra:
-                    detail.append(f"unexpected rep {', '.join(extra)}")
-                problems.append(f"{arch}/{task} {' and '.join(detail)}")
+            absent = sorted(str(rep) for rep in expected_reps - set(reps))
+            if absent:
+                problems.append(f"{arch}/{task} missing rep {', '.join(absent)}")
     if problems:
         raise ValueError("incomplete benchmark grid: " + "; ".join(problems))
 

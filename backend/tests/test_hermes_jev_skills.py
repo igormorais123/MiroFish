@@ -127,6 +127,12 @@ def test_benchmark_rejects_incomplete_or_duplicate_repetitions():
     partial = full + [_row(t, "B", rep=1) for t in ("t1", "t2")]
     with pytest.raises(ValueError, match="B/t1 missing rep 2, 3"):
         agg.summarize(partial)
+    # The short cell is blamed even when it is the first row in the file.
+    short_first = [_row("t1", "B", rep=1)] + full + [_row(t, "B", rep=r) for t in ("t2",) for r in (1, 2, 3)]
+    with pytest.raises(ValueError) as error:
+        agg.summarize(short_first)
+    assert "B/t1 missing rep 2, 3" in str(error.value)
+    assert "A/" not in str(error.value) and "unexpected" not in str(error.value)
     duplicated = full + [_row(t, "B", rep=r) for t in ("t1", "t2") for r in (1, 2, 3)] + [_row("t1", "B", rep=3)]
     with pytest.raises(ValueError, match="B/t1 duplicate rep 3"):
         agg.summarize(duplicated)
