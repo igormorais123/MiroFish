@@ -16,6 +16,7 @@ produce artificially narrow intervals. Standard library only.
 from __future__ import annotations
 
 import json
+import math
 import random
 import statistics
 import sys
@@ -76,7 +77,8 @@ MEASURE_FIELDS = ("cost_usd", "latency_s")
 
 
 def _is_number(value) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """Finite int or float; bool, NaN and infinities are not measurements."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def validate_rows(rows: list[dict]) -> None:
@@ -97,7 +99,7 @@ def validate_rows(rows: list[dict]) -> None:
             errors.append(f"row {index}: success must be true or false")
         for field in MEASURE_FIELDS:
             if not _is_number(row[field]) or row[field] < 0:
-                errors.append(f"row {index}: {field} must be a non-negative number")
+                errors.append(f"row {index}: {field} must be a finite non-negative number")
         for field in COUNT_FIELDS:
             if not isinstance(row[field], int) or isinstance(row[field], bool) or row[field] < 0:
                 errors.append(f"row {index}: {field} must be a non-negative integer")

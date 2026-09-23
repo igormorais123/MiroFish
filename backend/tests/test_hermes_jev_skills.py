@@ -143,12 +143,22 @@ def test_benchmark_rejects_missing_metrics(field):
 
 def test_benchmark_rejects_bad_metric_types():
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
-    with pytest.raises(ValueError, match="cost_usd must be a non-negative number"):
+    with pytest.raises(ValueError, match="cost_usd must be a finite non-negative number"):
         agg.summarize([_row("t1", "A", cost_usd=-1)])
     with pytest.raises(ValueError, match="success must be true or false"):
         agg.summarize([_row("t1", "A", success="yes")])
     with pytest.raises(ValueError, match="retries must be a non-negative integer"):
         agg.summarize([_row("t1", "A", retries=1.5)])
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_benchmark_rejects_non_finite_metrics(tmp_path, value):
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    line = json.dumps(_row("t1", "A")).replace('"latency_s": 1.0', f'"latency_s": {value}')
+    results = tmp_path / "results.jsonl"
+    results.write_text(line, encoding="utf-8")
+    with pytest.raises(ValueError, match="latency_s must be a finite non-negative number"):
+        agg.summarize(agg.load(str(results)))
 
 
 def test_benchmark_baseline_keeps_file_order_or_explicit_choice():
