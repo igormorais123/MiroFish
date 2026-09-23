@@ -55,6 +55,7 @@ cd frontend && npm run build; echo "exit=$?"
    python3 ~/.hermes/skills/jev/jev-evals/scripts/pre_gate.py evidencias.json
    ```
    O script aplica as regras duras abaixo. Se ele já decidir, respeite e pule para o passo 4.
+   A saída é sempre um JSON com `decision`; evidência ilegível, truncada ou mal formada sai como `HUMAN`, nunca como erro.
 2. **Avaliação por critério** (só se o pré-portão devolver `EVALUATE`). Verifique, nesta ordem:
    - o diff resolve o objetivo pedido, e não outro;
    - nada fora do escopo foi alterado (arquivos, dependências, configuração de deploy);

@@ -140,9 +140,17 @@ def main() -> int:
     if len(sys.argv) != 2:
         print("usage: pre_gate.py evidence.json", file=sys.stderr)
         return 2
-    with open(sys.argv[1], encoding="utf-8") as handle:
-        evidence = json.load(handle)
-    print(json.dumps(decide(evidence), ensure_ascii=False, indent=2))
+    # Unreadable evidence is still a decision: the orchestrator always gets JSON.
+    try:
+        with open(sys.argv[1], encoding="utf-8") as handle:
+            evidence = json.load(handle)
+    except OSError as error:
+        result = {"decision": "HUMAN", "reason": f"evidence file unreadable: {error.strerror}"}
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        result = {"decision": "HUMAN", "reason": f"evidence is not valid JSON: {error}"}
+    else:
+        result = decide(evidence)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 

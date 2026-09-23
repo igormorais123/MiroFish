@@ -129,6 +129,31 @@ def test_pre_gate_malformed_evidence_goes_to_human(evidence):
     assert result["reason"].startswith("invalid evidence")
 
 
+@pytest.mark.parametrize(
+    "content,reason",
+    [
+        ('{"changed_files": [".env"', "evidence is not valid JSON"),
+        ("", "evidence is not valid JSON"),
+        (b"\xff\xfe", "evidence is not valid JSON"),
+        (None, "evidence file unreadable"),
+        ('"texto"', "invalid evidence"),
+    ],
+)
+def test_pre_gate_cli_turns_bad_evidence_into_human(tmp_path, content, reason):
+    evidence = tmp_path / "evidence.json"
+    if isinstance(content, bytes):
+        evidence.write_bytes(content)
+    elif content is not None:
+        evidence.write_text(content, encoding="utf-8")
+    script = SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py"
+    run = subprocess.run(["python3", str(script), str(evidence)], capture_output=True, text=True)
+    assert run.returncode == 0
+    assert "Traceback" not in run.stderr
+    result = json.loads(run.stdout)
+    assert result["decision"] == "HUMAN"
+    assert result["reason"].startswith(reason)
+
+
 INSTALLER = SKILLS_ROOT.parents[1] / "install_jev_skills.sh"
 
 
