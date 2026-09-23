@@ -91,6 +91,11 @@ def test_pre_gate_blocks_secret_env_variants(path):
         ".vercel/project.json",
         "frontend/.vercel/project.json",
         "logs/app.log",
+        "backend/dist/app.js",
+        "packages/foo/dist/app.js",
+        "./frontend/dist/index.html",
+        "frontend\\dist\\index.html",
+        "a/b/node_modules/x.js",
     ],
 )
 def test_pre_gate_blocks_agents_md_never_commit_list(path):
@@ -245,6 +250,38 @@ def test_benchmark_rejects_non_text_identifiers(field, value, message):
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
     with pytest.raises(ValueError, match=message):
         agg.summarize([{**_row("t1", "A"), field: value}])
+
+
+@pytest.mark.parametrize("path", ["docs/distribution.md", "src/dist.py", ".env.dist", "frontend/src/vercel.ts"])
+def test_pre_gate_does_not_overmatch_dir_names(path):
+    gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")
+    assert not gate._is_forbidden(gate._normalize(path))
+
+
+@pytest.mark.parametrize(
+    "content,message",
+    [("{broken", "line 1: invalid JSON"), (None, "No such file")],
+)
+def test_benchmark_cli_reports_bad_files_without_traceback(tmp_path, content, message):
+    results = tmp_path / "results.jsonl"
+    if content is not None:
+        results.write_text(content, encoding="utf-8")
+    script = SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py"
+    run = subprocess.run(["python3", str(script), str(results)], capture_output=True, text=True)
+    assert run.returncode == 1
+    assert message in run.stderr
+    assert "Traceback" not in run.stderr
+
+
+@pytest.mark.parametrize("line", ["[]", '"texto"', "42", "null"])
+def test_benchmark_cli_rejects_non_object_lines(tmp_path, line):
+    results = tmp_path / "results.jsonl"
+    results.write_text(line, encoding="utf-8")
+    script = SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py"
+    run = subprocess.run(["python3", str(script), str(results)], capture_output=True, text=True)
+    assert run.returncode == 1
+    assert "must be a JSON object" in run.stderr
+    assert "Traceback" not in run.stderr
 
 
 def test_benchmark_cli_reports_unhashable_ids_without_traceback(tmp_path):

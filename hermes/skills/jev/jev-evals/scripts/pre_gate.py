@@ -29,17 +29,13 @@ HUMAN_PATTERNS = (
 )
 # Mirrors the "never commit" list in AGENTS.md (item 6) and CLAUDE.md (section 8);
 # .env variants are handled by _is_secret_env. Keep both lists in sync.
+# Directory names are matched at any depth (dist/, a/b/dist/, frontend/.vercel/),
+# so nested build output never needs its own pattern.
+FORBIDDEN_DIR_NAMES = frozenset({"node_modules", "dist", ".vercel"})
 FORBIDDEN_PATTERNS = (
-    "node_modules/*",
-    "*/node_modules/*",
-    "dist/*",
-    "frontend/dist/*",
     "backend/uploads/*",
-    ".vercel/*",
-    "*/.vercel/*",
     "*.log",
 )
-
 
 ENV_TEMPLATE_SUFFIXES = (".example", ".sample", ".template", ".dist")
 
@@ -57,8 +53,19 @@ def _is_secret_env(path: str) -> bool:
     return not any(variant.startswith(suffix) for suffix in ENV_TEMPLATE_SUFFIXES)
 
 
+def _normalize(path: str) -> str:
+    path = path.replace("\\", "/")
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
+def _in_forbidden_dir(path: str) -> bool:
+    return any(part in FORBIDDEN_DIR_NAMES for part in path.split("/")[:-1])
+
+
 def _is_forbidden(path: str) -> bool:
-    return _is_secret_env(path) or _matches(path, FORBIDDEN_PATTERNS)
+    return _is_secret_env(path) or _in_forbidden_dir(path) or _matches(path, FORBIDDEN_PATTERNS)
 
 
 def _is_int(value) -> bool:
@@ -90,7 +97,7 @@ def decide(evidence: dict) -> dict:
         return {"decision": "HUMAN", "reason": "invalid evidence: " + "; ".join(errors)}
     attempt = evidence.get("attempt", 1)
     max_attempts = evidence.get("max_attempts", 3)
-    files = evidence.get("changed_files") or []
+    files = [_normalize(f) for f in evidence.get("changed_files") or []]
     tests_exit = evidence.get("tests_exit_code")
     build_exit = evidence.get("build_exit_code")
 

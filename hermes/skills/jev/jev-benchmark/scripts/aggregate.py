@@ -26,12 +26,17 @@ BOOTSTRAP_SAMPLES = 2000
 
 
 def load(path: str) -> list[dict]:
+    """Read JSONL; malformed lines raise ValueError naming the line number."""
     rows = []
     with open(path, encoding="utf-8") as handle:
-        for line in handle:
+        for number, line in enumerate(handle, start=1):
             line = line.strip()
-            if line:
+            if not line:
+                continue
+            try:
                 rows.append(json.loads(line))
+            except json.JSONDecodeError as error:
+                raise ValueError(f"line {number}: invalid JSON ({error.msg})") from None
     return rows
 
 
@@ -91,6 +96,9 @@ def validate_rows(rows: list[dict]) -> None:
     errors: list[str] = []
     cells: dict[tuple[str, str], list] = defaultdict(list)
     for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"row {index}: must be a JSON object, got {type(row).__name__}")
+            continue
         missing = [field for field in REQUIRED_FIELDS if row.get(field) is None]
         if missing:
             errors.append(f"row {index}: missing {', '.join(missing)}")
@@ -206,13 +214,14 @@ def main() -> int:
     if len(sys.argv) not in (2, 3):
         print("usage: aggregate.py results.jsonl [baseline_arch]", file=sys.stderr)
         return 2
-    rows = load(sys.argv[1])
-    if not rows:
-        print("no results", file=sys.stderr)
-        return 1
+    # Every input problem ends in a one-line error and exit 1, never a traceback.
     try:
+        rows = load(sys.argv[1])
+        if not rows:
+            print("no results", file=sys.stderr)
+            return 1
         summary = summarize(rows, baseline=sys.argv[2] if len(sys.argv) == 3 else None)
-    except ValueError as error:
+    except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(render(summary))
