@@ -80,6 +80,25 @@ def test_pre_gate_blocks_secret_env_variants(path):
     assert gate.decide(evidence)["decision"] == "RETRY"
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "node_modules/x/index.js",
+        "frontend/node_modules/x/index.js",
+        "dist/app.js",
+        "frontend/dist/index.html",
+        "backend/uploads/projects/a.json",
+        ".vercel/project.json",
+        "frontend/.vercel/project.json",
+        "logs/app.log",
+    ],
+)
+def test_pre_gate_blocks_agents_md_never_commit_list(path):
+    gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")
+    evidence = {"changed_files": [path], "tests_exit_code": 0, "build_exit_code": 0}
+    assert gate.decide(evidence)["decision"] == "RETRY"
+
+
 @pytest.mark.parametrize("path", [".env.example", ".env.example.omniroute", "deploy/.env.sample", ".envrc.md"])
 def test_pre_gate_allows_env_templates(path):
     gate = _load(SKILLS_ROOT / "jev-evals" / "scripts" / "pre_gate.py")

@@ -27,12 +27,16 @@ HUMAN_PATTERNS = (
     "docker-compose*.yml",
     "docker-compose*.yaml",
 )
+# Mirrors the "never commit" list in AGENTS.md (item 6) and CLAUDE.md (section 8);
+# .env variants are handled by _is_secret_env. Keep both lists in sync.
 FORBIDDEN_PATTERNS = (
     "node_modules/*",
     "*/node_modules/*",
     "dist/*",
     "frontend/dist/*",
     "backend/uploads/*",
+    ".vercel/*",
+    "*/.vercel/*",
     "*.log",
 )
 
