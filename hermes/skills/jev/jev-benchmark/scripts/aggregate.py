@@ -4,7 +4,8 @@
 Input: JSONL with task_id, arch, rep, success, cost_usd, latency_s, retries,
 human_interventions. Output: a markdown table plus a 95% bootstrap interval for
 the success rate of each architecture, and paired intervals for the difference
-against the first architecture.
+against the baseline (the first architecture in the file, or the one passed as
+second argument). Every architecture must cover the same task ids.
 
 The bootstrap resamples tasks, not individual runs: repetitions of one task are
 averaged first, and the same resampled task ids are used for every architecture
@@ -49,9 +50,7 @@ def paired_bootstrap(
     task_rates: dict[str, dict[str, float]], seed: int = 42
 ) -> dict[str, list[float]]:
     """Resample shared task ids and return, per architecture, the bootstrap means."""
-    shared = sorted(set.intersection(*(set(rates) for rates in task_rates.values())))
-    if not shared:
-        return {arch: [] for arch in task_rates}
+    shared = sorted(next(iter(task_rates.values())))
     rng = random.Random(seed)
     samples: dict[str, list[float]] = {arch: [] for arch in task_rates}
     for _ in range(BOOTSTRAP_SAMPLES):
@@ -61,23 +60,45 @@ def paired_bootstrap(
     return samples
 
 
-def summarize(rows: list[dict]) -> dict[str, dict]:
-    by_arch: dict[str, list[dict]] = defaultdict(list)
-    for row in rows:
-        by_arch[row["arch"]].append(row)
+def _check_same_tasks(task_rates: dict[str, dict[str, float]]) -> None:
+    """Refuse incomplete runs: every architecture must cover the same task ids."""
+    all_tasks = set().union(*(set(rates) for rates in task_rates.values()))
+    missing = {arch: sorted(all_tasks - set(rates)) for arch, rates in task_rates.items()}
+    missing = {arch: tasks for arch, tasks in missing.items() if tasks}
+    if missing:
+        detail = "; ".join(f"{arch} missing {', '.join(tasks)}" for arch, tasks in missing.items())
+        raise ValueError(f"architectures do not cover the same tasks: {detail}")
 
-    task_rates = {arch: _task_success(items) for arch, items in sorted(by_arch.items())}
+
+def summarize(rows: list[dict], baseline: str | None = None) -> dict[str, dict]:
+    """Summarize per architecture, keeping the order in which they first appear.
+
+    The baseline defaults to the first architecture in the file (the control),
+    never to alphabetical order.
+    """
+    by_arch: dict[str, list[dict]] = {}
+    for row in rows:
+        by_arch.setdefault(row["arch"], []).append(row)
+
+    if baseline is None:
+        baseline = next(iter(by_arch))
+    if baseline not in by_arch:
+        raise ValueError(f"baseline {baseline!r} not found; available: {', '.join(by_arch)}")
+    ordered = [baseline] + [arch for arch in by_arch if arch != baseline]
+
+    task_rates = {arch: _task_success(by_arch[arch]) for arch in ordered}
+    _check_same_tasks(task_rates)
     boot = paired_bootstrap(task_rates)
-    baseline = next(iter(task_rates))
 
     summary = {}
-    for arch, items in sorted(by_arch.items()):
+    for arch in ordered:
+        items = by_arch[arch]
         successes = sum(1 for item in items if item.get("success"))
         total_cost = sum(float(item.get("cost_usd", 0)) for item in items)
         rates = task_rates[arch]
-        ci = _percentile_interval(boot[arch]) if boot[arch] else (float("nan"), float("nan"))
+        ci = _percentile_interval(boot[arch])
         diff_ci = None
-        if arch != baseline and boot[arch]:
+        if arch != baseline:
             diff_ci = _percentile_interval([b - a for a, b in zip(boot[baseline], boot[arch])])
         summary[arch] = {
             "runs": len(items),
@@ -113,14 +134,19 @@ def render(summary: dict[str, dict]) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: aggregate.py results.jsonl", file=sys.stderr)
+    if len(sys.argv) not in (2, 3):
+        print("usage: aggregate.py results.jsonl [baseline_arch]", file=sys.stderr)
         return 2
     rows = load(sys.argv[1])
     if not rows:
         print("no results", file=sys.stderr)
         return 1
-    print(render(summarize(rows)))
+    try:
+        summary = summarize(rows, baseline=sys.argv[2] if len(sys.argv) == 3 else None)
+    except ValueError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    print(render(summary))
     return 0
 
 

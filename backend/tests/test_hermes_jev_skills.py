@@ -108,3 +108,27 @@ def test_benchmark_bootstrap_resamples_tasks_not_runs():
     ]
     low, high = agg.summarize(rows)["A"]["success_ci95"]
     assert low == 0.0 and high == 1.0
+
+
+def _rows(arch, tasks, success=True):
+    return [{"task_id": task, "arch": arch, "success": success} for task in tasks]
+
+
+def test_benchmark_rejects_incomplete_task_sets():
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    rows = _rows("A", ["t1", "t2"]) + _rows("B+JEV", ["t1"])
+    with pytest.raises(ValueError, match="B\\+JEV missing t2"):
+        agg.summarize(rows)
+
+
+def test_benchmark_baseline_keeps_file_order_or_explicit_choice():
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    rows = _rows("control", ["t1", "t2"], success=False) + _rows("B+JEV", ["t1", "t2"])
+    summary = agg.summarize(rows)
+    assert list(summary) == ["control", "B+JEV"]
+    assert summary["control"]["diff_vs_baseline_ci95"] is None
+    assert summary["B+JEV"]["diff_vs_baseline_ci95"][0] > 0
+    explicit = agg.summarize(rows, baseline="B+JEV")
+    assert explicit["control"]["diff_vs_baseline_ci95"][1] < 0
+    with pytest.raises(ValueError, match="not found"):
+        agg.summarize(rows, baseline="missing")

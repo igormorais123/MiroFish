@@ -47,8 +47,10 @@ Benchmark = repetir + medir com as mesmas condições.
    ```
 3. Agregue:
    ```bash
-   python3 ~/.hermes/skills/jev/jev-benchmark/scripts/aggregate.py runs/benchmark-AAAAMMDD-slug/results.jsonl
+   python3 ~/.hermes/skills/jev/jev-benchmark/scripts/aggregate.py runs/benchmark-AAAAMMDD-slug/results.jsonl A
    ```
+   O segundo argumento é a arquitetura de controle (base). Sem ele, a base é a primeira arquitetura que aparece no arquivo.
+   O script recusa a rodada se alguma arquitetura não cobrir todas as tarefas: complete as execuções faltantes em vez de comparar conjuntos diferentes.
 4. Interprete com cuidado:
    - o script reamostra **tarefas**, não execuções, e usa as mesmas tarefas sorteadas para todas as arquiteturas (bootstrap pareado); repetições de uma tarefa não são observações independentes;
    - intervalo pareado da diferença contra a base que contém zero → **sem diferença demonstrada**;
