@@ -50,7 +50,10 @@ Benchmark = repetir + medir com as mesmas condições.
    python3 ~/.hermes/skills/jev/jev-benchmark/scripts/aggregate.py runs/benchmark-AAAAMMDD-slug/results.jsonl A
    ```
    O segundo argumento é a arquitetura de controle (base). Sem ele, a base é a primeira arquitetura que aparece no arquivo.
-   O script recusa a rodada se alguma arquitetura não cobrir todas as tarefas: complete as execuções faltantes em vez de comparar conjuntos diferentes.
+   O script recusa a rodada, com a lista do que falta, quando:
+   - alguma linha não traz todos os campos (`task_id`, `arch`, `rep`, `success`, `cost_usd`, `latency_s`, `retries`, `human_interventions`) — métrica ausente não é zero;
+   - alguma arquitetura não cobre todas as tarefas, ou alguma tarefa tem repetição faltando ou duplicada.
+   Complete ou refaça as execuções faltantes em vez de comparar grades diferentes.
 4. Interprete com cuidado:
    - o script reamostra **tarefas**, não execuções, e usa as mesmas tarefas sorteadas para todas as arquiteturas (bootstrap pareado); repetições de uma tarefa não são observações independentes;
    - intervalo pareado da diferença contra a base que contém zero → **sem diferença demonstrada**;

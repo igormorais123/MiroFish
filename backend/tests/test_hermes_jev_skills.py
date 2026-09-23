@@ -31,6 +31,13 @@ def _frontmatter(path: Path) -> dict[str, str]:
     return fields
 
 
+def _row(task, arch, success=True, rep=1, **metrics):
+    base = {"task_id": task, "arch": arch, "rep": rep, "success": success,
+            "cost_usd": 0.01, "latency_s": 1.0, "retries": 0, "human_interventions": 0}
+    base.update(metrics)
+    return base
+
+
 def _load(module_path: Path):
     spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
     module = importlib.util.module_from_spec(spec)
@@ -80,10 +87,10 @@ def test_pre_gate_allows_env_templates(path):
 def test_benchmark_aggregate(tmp_path):
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
     rows = [
-        {"task_id": "t1", "arch": "A", "success": True, "cost_usd": 0.02, "latency_s": 10, "retries": 0, "human_interventions": 0},
-        {"task_id": "t2", "arch": "A", "success": False, "cost_usd": 0.02, "latency_s": 30, "retries": 2, "human_interventions": 1},
-        {"task_id": "t1", "arch": "B+JEV", "success": True, "cost_usd": 0.03, "latency_s": 12, "retries": 1, "human_interventions": 0},
-        {"task_id": "t2", "arch": "B+JEV", "success": True, "cost_usd": 0.03, "latency_s": 14, "retries": 0, "human_interventions": 0},
+        _row("t1", "A", True, cost_usd=0.02, latency_s=10),
+        _row("t2", "A", False, cost_usd=0.02, latency_s=30, retries=2, human_interventions=1),
+        _row("t1", "B+JEV", True, cost_usd=0.03, latency_s=12, retries=1),
+        _row("t2", "B+JEV", True, cost_usd=0.03, latency_s=14),
     ]
     results = tmp_path / "results.jsonl"
     results.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
@@ -92,6 +99,7 @@ def test_benchmark_aggregate(tmp_path):
     assert summary["B+JEV"]["success_rate"] == 1.0
     assert summary["A"]["cost_per_success_usd"] == pytest.approx(0.04)
     assert summary["A"]["tasks"] == 2
+    assert summary["A"]["human_interventions"] == 1
     assert summary["A"]["diff_vs_baseline_ci95"] is None
     assert summary["B+JEV"]["diff_vs_baseline_ci95"] is not None
     assert "B+JEV" in agg.render(summary)
@@ -101,29 +109,51 @@ def test_benchmark_bootstrap_resamples_tasks_not_runs():
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
     # Two tasks, one always solved and one never; many repetitions must not
     # shrink the interval as if each run were independent.
-    rows = [
-        {"task_id": task, "arch": "A", "success": task == "easy", "rep": rep}
-        for task in ("easy", "hard")
-        for rep in range(50)
-    ]
+    rows = [_row(task, "A", task == "easy", rep=rep) for task in ("easy", "hard") for rep in range(50)]
     low, high = agg.summarize(rows)["A"]["success_ci95"]
     assert low == 0.0 and high == 1.0
 
 
-def _rows(arch, tasks, success=True):
-    return [{"task_id": task, "arch": arch, "success": success} for task in tasks]
-
-
 def test_benchmark_rejects_incomplete_task_sets():
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
-    rows = _rows("A", ["t1", "t2"]) + _rows("B+JEV", ["t1"])
-    with pytest.raises(ValueError, match="B\\+JEV missing t2"):
+    rows = [_row("t1", "A"), _row("t2", "A"), _row("t1", "B+JEV")]
+    with pytest.raises(ValueError, match="B\\+JEV missing task t2"):
         agg.summarize(rows)
+
+
+def test_benchmark_rejects_incomplete_or_duplicate_repetitions():
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    full = [_row(t, "A", rep=r) for t in ("t1", "t2") for r in (1, 2, 3)]
+    partial = full + [_row(t, "B", rep=1) for t in ("t1", "t2")]
+    with pytest.raises(ValueError, match="B/t1 missing rep 2, 3"):
+        agg.summarize(partial)
+    duplicated = full + [_row(t, "B", rep=r) for t in ("t1", "t2") for r in (1, 2, 3)] + [_row("t1", "B", rep=3)]
+    with pytest.raises(ValueError, match="B/t1 duplicate rep 3"):
+        agg.summarize(duplicated)
+
+
+@pytest.mark.parametrize("field", ["cost_usd", "latency_s", "retries", "human_interventions", "rep", "success"])
+def test_benchmark_rejects_missing_metrics(field):
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    broken = _row("t1", "A")
+    del broken[field]
+    with pytest.raises(ValueError, match=f"row 1: missing {field}"):
+        agg.summarize([broken, _row("t2", "A")])
+
+
+def test_benchmark_rejects_bad_metric_types():
+    agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
+    with pytest.raises(ValueError, match="cost_usd must be a non-negative number"):
+        agg.summarize([_row("t1", "A", cost_usd=-1)])
+    with pytest.raises(ValueError, match="success must be true or false"):
+        agg.summarize([_row("t1", "A", success="yes")])
+    with pytest.raises(ValueError, match="retries must be a non-negative integer"):
+        agg.summarize([_row("t1", "A", retries=1.5)])
 
 
 def test_benchmark_baseline_keeps_file_order_or_explicit_choice():
     agg = _load(SKILLS_ROOT / "jev-benchmark" / "scripts" / "aggregate.py")
-    rows = _rows("control", ["t1", "t2"], success=False) + _rows("B+JEV", ["t1", "t2"])
+    rows = [_row(t, "control", False) for t in ("t1", "t2")] + [_row(t, "B+JEV") for t in ("t1", "t2")]
     summary = agg.summarize(rows)
     assert list(summary) == ["control", "B+JEV"]
     assert summary["control"]["diff_vs_baseline_ci95"] is None

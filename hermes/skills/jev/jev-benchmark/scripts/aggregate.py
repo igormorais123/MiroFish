@@ -5,7 +5,8 @@ Input: JSONL with task_id, arch, rep, success, cost_usd, latency_s, retries,
 human_interventions. Output: a markdown table plus a 95% bootstrap interval for
 the success rate of each architecture, and paired intervals for the difference
 against the baseline (the first architecture in the file, or the one passed as
-second argument). Every architecture must cover the same task ids.
+second argument). Rows missing a metric, and grids where some (arch, task_id)
+cell lacks a repetition or repeats one, are rejected instead of averaged.
 
 The bootstrap resamples tasks, not individual runs: repetitions of one task are
 averaged first, and the same resampled task ids are used for every architecture
@@ -37,7 +38,7 @@ def _task_success(items: list[dict]) -> dict[str, float]:
     """Mean success per task_id, averaging repetitions within the task."""
     per_task: dict[str, list[int]] = defaultdict(list)
     for item in items:
-        per_task[str(item["task_id"])].append(1 if item.get("success") else 0)
+        per_task[str(item["task_id"])].append(1 if item["success"] else 0)
     return {task: sum(values) / len(values) for task, values in per_task.items()}
 
 
@@ -60,14 +61,74 @@ def paired_bootstrap(
     return samples
 
 
-def _check_same_tasks(task_rates: dict[str, dict[str, float]]) -> None:
-    """Refuse incomplete runs: every architecture must cover the same task ids."""
-    all_tasks = set().union(*(set(rates) for rates in task_rates.values()))
-    missing = {arch: sorted(all_tasks - set(rates)) for arch, rates in task_rates.items()}
-    missing = {arch: tasks for arch, tasks in missing.items() if tasks}
-    if missing:
-        detail = "; ".join(f"{arch} missing {', '.join(tasks)}" for arch, tasks in missing.items())
-        raise ValueError(f"architectures do not cover the same tasks: {detail}")
+REQUIRED_FIELDS = (
+    "task_id",
+    "arch",
+    "rep",
+    "success",
+    "cost_usd",
+    "latency_s",
+    "retries",
+    "human_interventions",
+)
+COUNT_FIELDS = ("retries", "human_interventions")
+MEASURE_FIELDS = ("cost_usd", "latency_s")
+
+
+def _is_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def validate_rows(rows: list[dict]) -> None:
+    """Refuse partial or malformed runs instead of silently averaging them.
+
+    Every row must carry every metric (a missing cost is not a zero cost), and
+    every (arch, task_id) cell must hold the same set of repetitions with no
+    duplicates, so each architecture is measured on the full, identical grid.
+    """
+    errors: list[str] = []
+    cells: dict[tuple[str, str], list] = defaultdict(list)
+    for index, row in enumerate(rows, start=1):
+        missing = [field for field in REQUIRED_FIELDS if row.get(field) is None]
+        if missing:
+            errors.append(f"row {index}: missing {', '.join(missing)}")
+            continue
+        if not isinstance(row["success"], bool):
+            errors.append(f"row {index}: success must be true or false")
+        for field in MEASURE_FIELDS:
+            if not _is_number(row[field]) or row[field] < 0:
+                errors.append(f"row {index}: {field} must be a non-negative number")
+        for field in COUNT_FIELDS:
+            if not isinstance(row[field], int) or isinstance(row[field], bool) or row[field] < 0:
+                errors.append(f"row {index}: {field} must be a non-negative integer")
+        cells[(str(row["arch"]), str(row["task_id"]))].append(row["rep"])
+    if errors:
+        raise ValueError("invalid rows: " + "; ".join(errors))
+
+    archs = sorted({arch for arch, _ in cells})
+    tasks = sorted({task for _, task in cells})
+    expected_reps = set(next(iter(cells.values()))) if cells else set()
+    problems: list[str] = []
+    for arch in archs:
+        for task in tasks:
+            reps = cells.get((arch, task), [])
+            if not reps:
+                problems.append(f"{arch} missing task {task}")
+                continue
+            duplicates = sorted({str(rep) for rep in reps if reps.count(rep) > 1})
+            if duplicates:
+                problems.append(f"{arch}/{task} duplicate rep {', '.join(duplicates)}")
+            if set(reps) != expected_reps:
+                absent = sorted(str(rep) for rep in expected_reps - set(reps))
+                extra = sorted(str(rep) for rep in set(reps) - expected_reps)
+                detail = []
+                if absent:
+                    detail.append(f"missing rep {', '.join(absent)}")
+                if extra:
+                    detail.append(f"unexpected rep {', '.join(extra)}")
+                problems.append(f"{arch}/{task} {' and '.join(detail)}")
+    if problems:
+        raise ValueError("incomplete benchmark grid: " + "; ".join(problems))
 
 
 def summarize(rows: list[dict], baseline: str | None = None) -> dict[str, dict]:
@@ -76,6 +137,7 @@ def summarize(rows: list[dict], baseline: str | None = None) -> dict[str, dict]:
     The baseline defaults to the first architecture in the file (the control),
     never to alphabetical order.
     """
+    validate_rows(rows)
     by_arch: dict[str, list[dict]] = {}
     for row in rows:
         by_arch.setdefault(row["arch"], []).append(row)
@@ -87,14 +149,13 @@ def summarize(rows: list[dict], baseline: str | None = None) -> dict[str, dict]:
     ordered = [baseline] + [arch for arch in by_arch if arch != baseline]
 
     task_rates = {arch: _task_success(by_arch[arch]) for arch in ordered}
-    _check_same_tasks(task_rates)
     boot = paired_bootstrap(task_rates)
 
     summary = {}
     for arch in ordered:
         items = by_arch[arch]
-        successes = sum(1 for item in items if item.get("success"))
-        total_cost = sum(float(item.get("cost_usd", 0)) for item in items)
+        successes = sum(1 for item in items if item["success"])
+        total_cost = sum(float(item["cost_usd"]) for item in items)
         rates = task_rates[arch]
         ci = _percentile_interval(boot[arch])
         diff_ci = None
@@ -108,9 +169,9 @@ def summarize(rows: list[dict], baseline: str | None = None) -> dict[str, dict]:
             "diff_vs_baseline_ci95": diff_ci,
             "mean_cost_usd": total_cost / len(items),
             "cost_per_success_usd": total_cost / successes if successes else None,
-            "median_latency_s": statistics.median(float(item.get("latency_s", 0)) for item in items),
-            "mean_retries": statistics.mean(float(item.get("retries", 0)) for item in items),
-            "human_interventions": sum(int(item.get("human_interventions", 0)) for item in items),
+            "median_latency_s": statistics.median(float(item["latency_s"]) for item in items),
+            "mean_retries": statistics.mean(float(item["retries"]) for item in items),
+            "human_interventions": sum(int(item["human_interventions"]) for item in items),
         }
     return summary
 
