@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Deterministic pre-gate for the JEV eval skill.
+
+Reads an evidence JSON and returns PASS, RETRY, HUMAN or EVALUATE (meaning the
+hard rules could not decide and the model must evaluate the criteria).
+
+Evidence format:
+{
+  "attempt": 1,
+  "max_attempts": 3,
+  "tests_exit_code": 0,
+  "build_exit_code": 0,
+  "changed_files": ["backend/app/x.py"]
+}
+"""
+from __future__ import annotations
+
+import json
+import sys
+from fnmatch import fnmatch
+
+HUMAN_PATTERNS = (
+    "Dockerfile",
+    ".github/workflows/*",
+    "deploy/*",
+    "vercel.json",
+    "docker-compose*.yml",
+    "docker-compose*.yaml",
+)
+FORBIDDEN_PATTERNS = (
+    ".env",
+    "*/.env",
+    "node_modules/*",
+    "*/node_modules/*",
+    "dist/*",
+    "frontend/dist/*",
+    "backend/uploads/*",
+    "*.log",
+)
+
+
+def _matches(path: str, patterns: tuple[str, ...]) -> bool:
+    return any(fnmatch(path, pattern) for pattern in patterns)
+
+
+def decide(evidence: dict) -> dict:
+    attempt = int(evidence.get("attempt", 1))
+    max_attempts = int(evidence.get("max_attempts", 3))
+    files = list(evidence.get("changed_files") or [])
+    tests_exit = evidence.get("tests_exit_code")
+    build_exit = evidence.get("build_exit_code")
+
+    if tests_exit is None and build_exit is None:
+        return {"decision": "HUMAN", "reason": "no test or build evidence"}
+    if not files:
+        return {"decision": "HUMAN", "reason": "empty diff"}
+
+    forbidden = [f for f in files if _matches(f, FORBIDDEN_PATTERNS)]
+    if forbidden:
+        return {
+            "decision": "RETRY" if attempt < max_attempts else "HUMAN",
+            "reason": "forbidden files in diff",
+            "retry_instructions": [f"Remove {f} from the diff" for f in forbidden],
+        }
+
+    sensitive = [f for f in files if _matches(f, HUMAN_PATTERNS)]
+    if sensitive:
+        return {"decision": "HUMAN", "reason": "deploy or CI files changed", "files": sensitive}
+
+    failing = [
+        name
+        for name, code in (("tests", tests_exit), ("build", build_exit))
+        if code not in (None, 0)
+    ]
+    if failing:
+        if attempt >= max_attempts:
+            return {"decision": "HUMAN", "reason": f"{', '.join(failing)} failing after {attempt} attempts"}
+        return {
+            "decision": "RETRY",
+            "reason": f"{', '.join(failing)} failing",
+            "retry_instructions": [f"Fix the failing {name} step and rerun it" for name in failing],
+        }
+
+    return {"decision": "EVALUATE", "reason": "hard rules passed; evaluate criteria"}
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("usage: pre_gate.py evidence.json", file=sys.stderr)
+        return 2
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        evidence = json.load(handle)
+    print(json.dumps(decide(evidence), ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
