@@ -1,12 +1,27 @@
-# Homologação GPT-5.6 Luna — 2026-07-17
+# Homologação GPT-5.6 Luna — 2026-07-17 a 2026-07-20
 
-## Decisão operacional
+## Estado operacional atual — 2026-07-20
+
+- Modelo ativo em backend, agentes, Helena e Graphiti: `codex/gpt-5.6-luna`.
+- Autenticação upstream: OAuth da assinatura ChatGPT/Codex armazenado no cofre privado do OmniRoute. A chave que o MiroFish usa serve apenas para autorizar o gateway interno e não é uma chave paga da API OpenAI.
+- Roteador homologado: OmniRoute `3.8.48`, com cliente Codex `0.144.6`.
+- Esforço homologado: `LUNA_REASONING_EFFORT=low`; relatórios permanecem em `REPORT_SECTION_WORKERS=1`.
+- Prova real em produção: HTTP 200, modelo solicitado `codex/gpt-5.6-luna`, modelo efetivo `gpt-5.6-luna`, sem combo ou fallback intermediário.
+- Prova pelo cliente interno do MiroFish: resposta `MIROFISH_LUNA_OK` e telemetria efetiva `gpt-5.6-luna`.
+- Serviços validados após recriação: `omniroute-inteia`, `mirofish-inteia` e `mirofish-graphiti` saudáveis.
+- Backup verificável e material de restauração: `/root/backups/mirofish-codex-luna-20260720T030700Z`; o container anterior do roteador foi preservado parado como `omniroute-inteia-rollback-20260720T030700Z`.
+
+O bloqueio de 17 de julho tinha duas causas. A versão antiga do OmniRoute ainda não catalogava Luna e dois padrões persistentes (`*code*` e `*codex*`) capturavam rotas explícitas `codex/...`, enviando-as ao combo `coding-power` baseado em GPT-5.5. A atualização adicionou o catálogo Luna; os padrões foram estreitados para os aliases exatos `code` e `codex`, preservando os atalhos sem reescrever nomes de provedor.
+
+Toda alteração futura de modelo deve executar `backend/scripts/check_llm_model.py`. A checagem compara o campo `model` da resposta com o valor esperado e falha se um alias voltar a esconder fallback.
+
+## Decisão histórica — 2026-07-17
 
 - O caminho Luna continua preparado no código, mas a credencial OpenAI disponível no OmniRoute expirou durante o ensaio completo e o catálogo da assinatura Codex não expõe a Luna.
 - Modelo operacional estável da assinatura em 2026-07-17: `codex/gpt-5.5`, sem cobrança marginal de API além da assinatura existente.
 - Não usar o alias `codex/gpt-5.6-luna` como prova de Luna: o roteador o resolve para GPT-5.5 e a resposta identifica corretamente o modelo real.
 - `openai/gpt-5.6-luna-pro` respondeu HTTP 404 e não deve ser configurado enquanto o roteador não o disponibilizar.
-- Perfil recomendado enquanto a Luna não estiver disponível: `codex/gpt-5.5` em `LLM_MODEL_NAME`, `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` e `GRAPHITI_MODEL`. Voltar todos para `openai/gpt-5.6-luna` somente depois de um ensaio real estável.
+- Perfil recomendado naquele momento: `codex/gpt-5.5` em `LLM_MODEL_NAME`, `LLM_AGENT_MODEL`, `LLM_PREMIUM_MODEL`, `LLM_HELENA_MODEL` e `GRAPHITI_MODEL`. Essa orientação foi superada pela homologação real de 20 de julho.
 
 ## Tabela de preço de referência
 
