@@ -1926,7 +1926,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                 response = self.llm.chat(
                     messages=messages,
                     temperature=0.5,
-                    max_tokens=4096,
+                    max_tokens=Config.REPORT_SECTION_MAX_TOKENS,
                     **self._cost_session_kwargs(),
                 )
             except Exception as llm_err:
@@ -2142,7 +2142,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             response = self.llm.chat(
                 messages=messages,
                 temperature=0.5,
-                max_tokens=4096,
+                max_tokens=Config.REPORT_SECTION_MAX_TOKENS,
                 **self._cost_session_kwargs(),
             )
         except Exception as llm_err:
@@ -3035,7 +3035,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.7,
-                    max_tokens=4096
+                    max_tokens=Config.REPORT_SECTION_MAX_TOKENS
                 )
                 if result and len(result.strip()) > 100:
                     logger.info(f"Helena Strategos: analise gerada com {resolved} ({len(result)} chars)")

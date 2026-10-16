@@ -30,6 +30,14 @@ class SearchResult:
     nodes: List[Dict[str, Any]]
     query: str
     total_count: int
+    # Preenchido quando o Graphiti nao respondeu e a busca caiu nos dados
+    # locais. Antes a queda era silenciosa: o relatorio saia como se tivesse
+    # consultado o grafo, e o gate passava sem registrar a degradacao.
+    degraded_reason: Optional[str] = None
+
+    @property
+    def degraded(self) -> bool:
+        return self.degraded_reason is not None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -37,12 +45,23 @@ class SearchResult:
             "edges": self.edges,
             "nodes": self.nodes,
             "query": self.query,
-            "total_count": self.total_count
+            "total_count": self.total_count,
+            "degraded": self.degraded,
+            "degraded_reason": self.degraded_reason,
         }
 
     def to_text(self) -> str:
         """Converte para texto estruturado para consumo do LLM."""
         text_parts = [f"Busca: {self.query}", f"Foram encontradas {self.total_count} informacoes relevantes"]
+
+        # O modelo precisa saber que nao leu o grafo: sem este aviso ele trata
+        # dado local degradado como conhecimento recuperado e afirma com a
+        # mesma seguranca.
+        if self.degraded:
+            text_parts.append(
+                f"\nATENCAO — RESULTADO DEGRADADO: {self.degraded_reason}. "
+                "Nao apresente o que segue como fato recuperado do grafo do caso."
+            )
 
         if self.facts:
             text_parts.append("\n### Fatos relacionados:")
@@ -502,7 +521,8 @@ class ZepToolsService:
             )
 
         except Exception as e:
-            logger.warning(f"Falha na busca Graphiti; tentando dados locais: {str(e)}")
+            motivo = f"Graphiti indisponivel ({str(e)[:160]}); busca atendida por dados locais"
+            logger.warning("Falha na busca Graphiti; tentando dados locais: %s", str(e))
 
             # Fallback: buscar nos dados locais da simulacao
             try:
@@ -513,13 +533,17 @@ class ZepToolsService:
                     reader = SimulationDataReader(sim_id)
                     local_facts = reader.get_facts_for_report(query=query, limit=limit)
                     if local_facts:
-                        logger.info(f"Fallback local: {len(local_facts)} fatos encontrados")
+                        logger.warning(
+                            "Fallback local em uso: %d fatos vieram da simulacao, nao do grafo",
+                            len(local_facts),
+                        )
                         return SearchResult(
                             facts=local_facts,
                             edges=[],
                             nodes=[],
                             query=query,
-                            total_count=len(local_facts)
+                            total_count=len(local_facts),
+                            degraded_reason=motivo,
                         )
             except Exception as fallback_err:
                 logger.warning(f"Fallback local tambem falhou: {fallback_err}")
@@ -529,7 +553,8 @@ class ZepToolsService:
                 edges=[],
                 nodes=[],
                 query=query,
-                total_count=0
+                total_count=0,
+                degraded_reason=motivo,
             )
 
     def get_all_nodes(self, graph_id: str) -> List[NodeInfo]:
