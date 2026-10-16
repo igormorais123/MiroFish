@@ -20,7 +20,8 @@ services:
 
   # ---------- Graphiti Server (grafo de memória temporal) ----------
   graphiti:
-    image: zepai/graphiti:latest
+    # graphiti-core 0.31.1; o patch em graphiti_patches/zep_graphiti.py segue esta versao
+    image: zepai/graphiti@sha256:2bc6010bc47f42390a0167cf307ab93cbf8c7851abdbf23b49149f39542b77a3
     container_name: mirofish-graphiti
     restart: always
     depends_on:
