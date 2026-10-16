@@ -118,11 +118,19 @@ export const getRunStatus = (simulationId) => {
 }
 
 /**
- * Obter status detalhado da execucao (incluindo acoes recentes)
+ * Obter status detalhado da execucao com as acoes novas desde a ultima consulta
  * @param {string} simulationId
+ * @param {Object} cursor - cursor devolvido pela chamada anterior ({ twitter, reddit })
+ *                          Omitir na primeira chamada para receber a cauda recente.
  */
-export const getRunStatusDetail = (simulationId) => {
-  return service.get(`/api/simulation/${simulationId}/run-status/detail`)
+export const getRunStatusDetail = (simulationId, cursor = null) => {
+  const params = {}
+  if (cursor) {
+    for (const key of ['twitter', 'reddit', 'legacy']) {
+      if (Number.isInteger(cursor[key])) params[`since_${key}`] = cursor[key]
+    }
+  }
+  return service.get(`/api/simulation/${simulationId}/run-status/detail`, { params })
 }
 
 /**
@@ -224,3 +232,23 @@ export const getSimulationHistory = (limit = 20, options = {}) => {
   })
 }
 
+
+/**
+ * Pulso operacional da simulacao em execucao (deterministico, sem LLM)
+ * @param {string} simulationId
+ * @param {number} window - tamanho da janela de acoes analisada
+ */
+export const getCopilotPulse = (simulationId, window = 120) => {
+  return service.get(`/api/simulation/${simulationId}/copilot/pulse`, {
+    params: { window }
+  })
+}
+
+/**
+ * Perguntar ao copiloto sobre a simulacao em execucao
+ * @param {string} simulationId
+ * @param {Object} payload - { question, chat_history? }
+ */
+export const askCopilot = (simulationId, payload) => {
+  return service.post(`/api/simulation/${simulationId}/copilot/ask`, payload)
+}

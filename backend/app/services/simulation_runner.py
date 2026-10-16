@@ -227,6 +227,12 @@ class SimulationRunner:
     # Configuracao de atualizacao de memoria do grafo
     _graph_memory_enabled: Dict[str, bool] = {}  # simulation_id -> enabled
 
+    # Cache incremental dos logs de acao (path -> {offset, actions}).
+    # O polling de status reparseava o actions.jsonl inteiro a cada chamada, o que
+    # crescia junto com a simulacao. Aqui so as linhas novas sao lidas e parseadas.
+    _actions_cache: Dict[str, Dict[str, Any]] = {}
+    _actions_cache_lock = threading.Lock()
+
     @classmethod
     def _get_run_dir(cls, simulation_id: str) -> str:
         """Obtem diretorio de execucao validando o ID recebido da API."""
@@ -1208,56 +1214,195 @@ class SimulationRunner:
             agent_id: Filtrar Agent ID
             round_num: Filtrar rodada
         """
+        actions = cls._load_actions_cached(file_path, default_platform)
+
+        if platform_filter is None and agent_id is None and round_num is None:
+            return actions
+
+        return [
+            action for action in actions
+            if (platform_filter is None or action.platform == platform_filter)
+            and (agent_id is None or action.agent_id == agent_id)
+            and (round_num is None or action.round_num == round_num)
+        ]
+
+    @staticmethod
+    def _action_from_line(line: str, default_platform: Optional[str]) -> Optional[AgentAction]:
+        """Converte uma linha do actions.jsonl em AgentAction; None quando nao e acao."""
+        line = line.strip()
+        if not line:
+            return None
+
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            return None
+
+        # Pula registros que nao sao acoes (simulation_start, round_start, round_end, etc.)
+        if "event_type" in data:
+            return None
+
+        # Pula registros sem agent_id (nao sao acoes de Agent)
+        if "agent_id" not in data:
+            return None
+
+        return AgentAction(
+            round_num=data.get("round", 0),
+            timestamp=data.get("timestamp", ""),
+            # Prioriza platform do registro, senao usa o padrao do arquivo
+            platform=data.get("platform") or default_platform or "",
+            agent_id=data.get("agent_id", 0),
+            agent_name=data.get("agent_name", ""),
+            action_type=data.get("action_type", ""),
+            action_args=data.get("action_args", {}),
+            result=data.get("result"),
+            success=data.get("success", True),
+        )
+
+    @classmethod
+    def _load_actions_cached(
+        cls,
+        file_path: str,
+        default_platform: Optional[str] = None,
+    ) -> List[AgentAction]:
+        """
+        Le o log de acoes reaproveitando o parse das leituras anteriores.
+
+        O arquivo e append-only: guardamos o offset ja consumido e so lemos o
+        trecho novo. Uma linha final incompleta (o simulador pode estar
+        escrevendo agora) fica fora do offset e e lida na proxima chamada.
+
+        Retorna as acoes em ordem cronologica de escrita (mais antigas primeiro).
+        """
         if not os.path.exists(file_path):
             return []
-        
+
+        try:
+            current_size = os.path.getsize(file_path)
+        except OSError:
+            return []
+
+        with cls._actions_cache_lock:
+            entry = cls._actions_cache.get(file_path)
+
+            # Arquivo encolheu: foi rotacionado ou reescrito, o cache nao vale mais.
+            if entry is None or current_size < entry["offset"]:
+                entry = {"offset": 0, "actions": []}
+                cls._actions_cache[file_path] = entry
+
+            if current_size > entry["offset"]:
+                new_actions, new_offset = cls._parse_actions_from_offset(
+                    file_path, entry["offset"], default_platform
+                )
+                entry["actions"].extend(new_actions)
+                entry["offset"] = new_offset
+
+            # Copia rasa: o chamador ordena e filtra sem corromper o cache.
+            return list(entry["actions"])
+
+    @classmethod
+    def _parse_actions_from_offset(
+        cls,
+        file_path: str,
+        offset: int,
+        default_platform: Optional[str],
+    ) -> tuple[List[AgentAction], int]:
+        """Parseia o trecho do arquivo a partir de offset ate a ultima linha completa."""
+        try:
+            with open(file_path, 'rb') as f:
+                f.seek(offset)
+                chunk = f.read()
+        except OSError:
+            return [], offset
+
+        last_break = chunk.rfind(b"\n")
+        if last_break == -1:
+            # Nada alem de uma linha ainda incompleta.
+            return [], offset
+
+        consumed = last_break + 1
+        text = chunk[:consumed].decode('utf-8', errors='replace')
+
         actions = []
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                try:
-                    data = json.loads(line)
-                    
-                    # Pula registros que nao sao acoes（como simulation_start, round_start, round_end, etc.）
-                    if "event_type" in data:
-                        continue
-                    
-                    # Pula registros sem agent_id (nao sao acoes de Agent)
-                    if "agent_id" not in data:
-                        continue
-                    
-                    # Obtem plataforma: prioriza platform do registro, senao usa padrao
-                    record_platform = data.get("platform") or default_platform or ""
-                    
-                    # Filtro
-                    if platform_filter and record_platform != platform_filter:
-                        continue
-                    if agent_id is not None and data.get("agent_id") != agent_id:
-                        continue
-                    if round_num is not None and data.get("round") != round_num:
-                        continue
-                    
-                    actions.append(AgentAction(
-                        round_num=data.get("round", 0),
-                        timestamp=data.get("timestamp", ""),
-                        platform=record_platform,
-                        agent_id=data.get("agent_id", 0),
-                        agent_name=data.get("agent_name", ""),
-                        action_type=data.get("action_type", ""),
-                        action_args=data.get("action_args", {}),
-                        result=data.get("result"),
-                        success=data.get("success", True),
-                    ))
-                    
-                except json.JSONDecodeError:
-                    continue
-        
-        return actions
-    
+        for line in text.splitlines():
+            action = cls._action_from_line(line, default_platform)
+            if action is not None:
+                actions.append(action)
+
+        return actions, offset + consumed
+
+    @classmethod
+    def invalidate_actions_cache(cls, simulation_id: Optional[str] = None) -> None:
+        """Descarta o cache de acoes (usar ao limpar ou reiniciar uma simulacao)."""
+        with cls._actions_cache_lock:
+            if simulation_id is None:
+                cls._actions_cache.clear()
+                return
+            prefix = cls._get_run_dir(simulation_id)
+            for path in [p for p in cls._actions_cache if p.startswith(prefix)]:
+                del cls._actions_cache[path]
+
+    @classmethod
+    def get_actions_delta(
+        cls,
+        simulation_id: str,
+        cursor: Optional[Dict[str, int]] = None,
+        initial_limit: int = 200,
+    ) -> Dict[str, Any]:
+        """
+        Retorna apenas as acoes ainda nao entregues ao cliente.
+
+        Cada plataforma tem seu proprio contador porque os arquivos crescem de
+        forma independente; um indice unico sobre a lista mesclada perderia
+        eventos quando as duas plataformas escrevem intercaladas.
+
+        Args:
+            simulation_id: ID da simulacao
+            cursor: {"twitter": n, "reddit": m, "legacy": k} ja entregues
+            initial_limit: teto de acoes na primeira carga (sem cursor)
+
+        Returns:
+            {"actions": [...ordem cronologica ascendente], "cursor": {...}, "total": n}
+        """
+        cursor = cursor or {}
+        is_first_load = not cursor
+        sim_dir = cls._get_run_dir(simulation_id)
+
+        sources = [
+            ("twitter", os.path.join(sim_dir, "twitter", "actions.jsonl"), "twitter"),
+            ("reddit", os.path.join(sim_dir, "reddit", "actions.jsonl"), "reddit"),
+        ]
+
+        delta: List[AgentAction] = []
+        next_cursor: Dict[str, int] = {}
+        total = 0
+
+        for key, path, default_platform in sources:
+            actions = cls._load_actions_cached(path, default_platform)
+            start = max(0, int(cursor.get(key) or 0))
+            delta.extend(actions[start:])
+            next_cursor[key] = len(actions)
+            total += len(actions)
+
+        # Formato antigo de arquivo unico, quando nao ha logs por plataforma.
+        if total == 0:
+            legacy_actions = cls._load_actions_cached(
+                os.path.join(sim_dir, "actions.jsonl"), None
+            )
+            start = max(0, int(cursor.get("legacy") or 0))
+            delta.extend(legacy_actions[start:])
+            next_cursor["legacy"] = len(legacy_actions)
+            total += len(legacy_actions)
+
+        # Cronologica ascendente: o cliente acrescenta no fim da timeline.
+        delta.sort(key=lambda action: action.timestamp)
+
+        if is_first_load and initial_limit > 0 and len(delta) > initial_limit:
+            delta = delta[-initial_limit:]
+
+        return {"actions": delta, "cursor": next_cursor, "total": total}
+
+
     @classmethod
     def get_all_actions(
         cls,
@@ -1494,9 +1639,12 @@ class SimulationRunner:
         
         sim_dir = cls._get_run_dir(simulation_id)
         
+        # Os logs vao ser apagados: o parse cacheado deixa de valer.
+        cls.invalidate_actions_cache(simulation_id)
+
         if not os.path.exists(sim_dir):
             return {"success": True, "message": "Diretorio da simulacao nao existe, nao precisa limpar"}
-        
+
         cleaned_files = []
         errors = []
 

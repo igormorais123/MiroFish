@@ -1,11 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
-import MainView from '../views/MainView.vue'
-import SimulationView from '../views/SimulationView.vue'
-import SimulationRunView from '../views/SimulationRunView.vue'
-import ReportView from '../views/ReportView.vue'
-import InteractionView from '../views/InteractionView.vue'
 
+// Home entra no bundle inicial (e a primeira tela). As demais views carregam sob
+// demanda: o relatorio e a interacao arrastam mermaid e d3, que nao precisam
+// estar no caminho critico de quem so abriu a home.
 const routes = [
   {
     path: '/',
@@ -15,31 +13,31 @@ const routes = [
   {
     path: '/process/:projectId',
     name: 'Process',
-    component: MainView,
+    component: () => import('../views/MainView.vue'),
     props: true
   },
   {
     path: '/simulation/:simulationId',
     name: 'Simulation',
-    component: SimulationView,
+    component: () => import('../views/SimulationView.vue'),
     props: true
   },
   {
     path: '/simulation/:simulationId/start',
     name: 'SimulationRun',
-    component: SimulationRunView,
+    component: () => import('../views/SimulationRunView.vue'),
     props: true
   },
   {
     path: '/report/:reportId',
     name: 'Report',
-    component: ReportView,
+    component: () => import('../views/ReportView.vue'),
     props: true
   },
   {
     path: '/interaction/:reportId',
     name: 'Interaction',
-    component: InteractionView,
+    component: () => import('../views/InteractionView.vue'),
     props: true
   }
 ]
