@@ -1024,7 +1024,7 @@ Demanda: {simulation_requirement}
 
 [Escala]
 - Agentes: {total_agents}
-- Rodadas executadas: {total_rounds}
+- Rodadas: {rounds_scope}
 - Plataformas: {platforms}
 
 [Pacote de Decisao Preditiva - fonte obrigatoria para percentuais]
@@ -2979,15 +2979,38 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
             [run_state_dict, sim_dict],
             ["current_round", "rounds_count", "total_rounds", "max_rounds"],
         )
+        # Quantas rodadas o desenho previa. Sem este numero no prompt, uma
+        # execucao que parou em 12 de 240 chegava ao relatorio como "12 | 12" —
+        # truncamento apresentado como duracao nominal.
+        configured_rounds = ReportAgent._first_positive_from_dicts(
+            [sim_dict, run_state_dict],
+            ["total_rounds", "max_rounds", "rounds_planned", "num_rounds"],
+        )
         platforms = ReportAgent._extract_known_platforms(
             diversity_dict,
             run_state_dict,
             sim_dict,
         )
 
+        # Execucao parcial e limitacao do estudo, nao caracteristica do desenho:
+        # precisa chegar ao relatorio como tal.
+        if total_rounds and configured_rounds and total_rounds < configured_rounds:
+            cobertura = round(total_rounds / configured_rounds * 100)
+            escopo = (
+                f"{total_rounds} de {configured_rounds} rodadas previstas "
+                f"({cobertura}% do desenho) — execucao truncada, "
+                "trate como limitacao declarada do estudo"
+            )
+        elif total_rounds:
+            escopo = f"{total_rounds} rodadas, execucao completa"
+        else:
+            escopo = "desconhecido"
+
         return {
             "total_agents": total_agents or "desconhecido",
             "total_rounds": total_rounds or "desconhecido",
+            "configured_rounds": configured_rounds or "desconhecido",
+            "rounds_scope": escopo,
             "platforms": ", ".join(platforms) or "desconhecido",
         }
 
@@ -3017,7 +3040,7 @@ O relatorio nao pode ser generico. Planeje e escreva com estas entregas:
         user_prompt = HELENA_USER_PROMPT_TEMPLATE.format(
             simulation_requirement=self.simulation_requirement,
             total_agents=scale_context["total_agents"],
-            total_rounds=scale_context["total_rounds"],
+            rounds_scope=scale_context["rounds_scope"],
             platforms=scale_context["platforms"],
             decision_packet=decision_packet_prompt_block(decision_packet),
             report_content=report_content[:12000],  # Truncar para caber no contexto
