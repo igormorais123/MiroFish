@@ -68,12 +68,14 @@ def _validate_structured_payload(data, response_model):
 class LunaOpenAIClient(OpenAIClient):
     """Graphiti client compatible with GPT-5 models routed by OmniRoute."""
 
+    # graphiti-core 0.31+ passa reasoning e verbosity; repassados fora do caminho GPT-5,
+    # onde o esforco vem de LUNA_REASONING_EFFORT.
     async def _create_structured_completion(
-        self, model, messages, temperature, max_tokens, response_model
+        self, model, messages, temperature, max_tokens, response_model, **kwargs
     ):
         if not _is_gpt5(model):
             return await super()._create_structured_completion(
-                model, messages, temperature, max_tokens, response_model
+                model, messages, temperature, max_tokens, response_model, **kwargs
             )
         # Alguns gateways nao preservam o JSON Schema do beta.parse e o modelo
         # pode devolver cerca Markdown ou um alias como "entities". Pedimos
@@ -97,16 +99,20 @@ class LunaOpenAIClient(OpenAIClient):
         )
         data = _decode_json_content(response.choices[0].message.content or '{}')
         parsed = _validate_structured_payload(data, response_model)
+        # output_text atende graphiti-core 0.31+; choices mantem o formato anterior.
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(parsed=parsed, refusal=None))]
+            output_text=parsed.model_dump_json(),
+            refusal=None,
+            usage=None,
+            choices=[SimpleNamespace(message=SimpleNamespace(parsed=parsed, refusal=None))],
         )
 
     async def _create_completion(
-        self, model, messages, temperature, max_tokens, response_model=None
+        self, model, messages, temperature, max_tokens, response_model=None, **kwargs
     ):
         if not _is_gpt5(model):
             return await super()._create_completion(
-                model, messages, temperature, max_tokens, response_model
+                model, messages, temperature, max_tokens, response_model, **kwargs
             )
         return await self.client.chat.completions.create(
             model=model,
@@ -258,6 +264,10 @@ def get_fact_result_from_edge(edge: EntityEdge):
         invalid_at=edge.invalid_at,
         created_at=edge.created_at,
         expired_at=edge.expired_at,
+        # Campos exigidos pelo FactResult da imagem zepai/graphiti atual.
+        source_node_uuid=edge.source_node_uuid,
+        target_node_uuid=edge.target_node_uuid,
+        episodes=edge.episodes or [],
     )
 
 
